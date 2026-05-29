@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../shared/app_colors.dart';
+import '../../menu_publico/public_menu_screen.dart';
 import '../models/menu_feed_item.dart';
 
-/// Equivalente a MenuCard.jsx — tarjeta de menú en grilla 2 columnas.
-/// Blanco, border slate-100, banner con image/placeholder + logo overlay.
+/// Tarjeta de menú en formato lista (una columna).
+/// Logo a la izquierda centrado, información a la derecha.
+/// Alto fijo garantizado por los SizedBox internos → todos los items iguales.
 class MenuCardWidget extends StatelessWidget {
   const MenuCardWidget({
     super.key,
@@ -14,167 +16,185 @@ class MenuCardWidget extends StatelessWidget {
   final MenuFeedItem menu;
   final bool liked;
 
+  void _open(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicMenuScreen(slug: menu.slug),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => _open(context),
+      child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.kCardBorder),
       ),
-      clipBehavior: Clip.hardEdge,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Banner ────────────────────────────────────────────────────────
-          SizedBox(
-            height: 100,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _buildBanner(),
-                // Logo overlay — círculo bottom-left
-                if (menu.logoUrl != null && menu.logoUrl!.isNotEmpty)
-                  Positioned(
-                    bottom: 6,
-                    left: 10,
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                        color: Colors.white,
-                      ),
-                      clipBehavior: Clip.hardEdge,
-                      child: Image.network(
-                        menu.logoUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Icon(
-                          Icons.store_outlined,
-                          size: 14,
-                          color: AppColors.kTextMuted,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // ── Contenido ─────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.all(10),
+          _CardLogo(logoUrl: menu.logoUrl, icono: menu.iconoCategoria),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Nombre
-                Text(
-                  menu.nombreNegocio,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.kTextPrimary,
-                    fontSize: 11,
-                    height: 1.3,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                // Slogan
-                if (menu.slogan != null && menu.slogan!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    menu.slogan!,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.kTextMuted,
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-                // Footer: ciudad + likes
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    if (menu.ciudad != null && menu.ciudad!.isNotEmpty) ...[
-                      const Icon(
-                        Icons.location_on_outlined,
-                        size: 9,
-                        color: AppColors.kTextMuted,
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          menu.ciudad!,
-                          style: const TextStyle(
-                            fontSize: 9,
-                            color: AppColors.kTextMuted,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ] else
-                      const Spacer(),
-                    if (menu.meEncantas > 0 || liked) ...[
-                      Icon(
-                        liked ? Icons.favorite : Icons.favorite_border,
-                        size: 9,
-                        color: liked ? AppColors.kBlue : AppColors.kTextMuted,
-                      ),
-                      if (menu.meEncantas > 0) ...[
-                        const SizedBox(width: 2),
-                        Text(
-                          '${menu.meEncantas}',
-                          style: TextStyle(
-                            fontSize: 9,
-                            color:
-                                liked ? AppColors.kBlue : AppColors.kTextMuted,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ],
+                _CardName(name: menu.nombreNegocio),
+                const SizedBox(height: 3),
+                _CardSlogan(slogan: menu.slogan),
+                const SizedBox(height: 5),
+                _CardFooter(
+                  ciudad: menu.ciudad,
+                  meEncantas: menu.meEncantas,
+                  liked: liked,
                 ),
               ],
             ),
           ),
         ],
       ),
+    ),
     );
   }
+}
 
-  Widget _buildBanner() {
-    if (menu.bannerUrl != null && menu.bannerUrl!.isNotEmpty) {
-      return Image.network(
-        menu.bannerUrl!,
-        fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _placeholderBanner(),
-        loadingBuilder: (_, child, progress) =>
-            progress == null ? child : _skeletonBanner(),
-      );
-    }
-    return _placeholderBanner();
-  }
+// ── Sub-widgets (responsabilidad única) ──────────────────────────────────────
 
-  Widget _placeholderBanner() {
+class _CardLogo extends StatelessWidget {
+  const _CardLogo({required this.logoUrl, required this.icono});
+  final String? logoUrl;
+  final String? icono;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasLogo = logoUrl != null && logoUrl!.isNotEmpty;
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFFE0E7FF), Color(0xFFEDE9FE)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: AppColors.kBgPage,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.kCardBorder),
       ),
-      child: Center(
-        child: Text(
-          menu.iconoCategoria ?? '',
-          style: const TextStyle(fontSize: 28),
-        ),
-      ),
+      clipBehavior: Clip.hardEdge,
+      child: hasLogo
+          ? Image.network(
+              logoUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _fallback(),
+            )
+          : _fallback(),
     );
   }
 
-  Widget _skeletonBanner() => Container(color: AppColors.kSkeleton);
+  Widget _fallback() {
+    final hasIcono = icono != null && icono!.isNotEmpty;
+    return Center(
+      child: hasIcono
+          ? Text(icono!, style: const TextStyle(fontSize: 22))
+          : const Icon(Icons.restaurant_menu_outlined,
+              size: 22, color: AppColors.kTextMuted),
+    );
+  }
+}
+
+class _CardName extends StatelessWidget {
+  const _CardName({required this.name});
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      name,
+      style: const TextStyle(
+        fontWeight: FontWeight.w700,
+        color: AppColors.kTextPrimary,
+        fontSize: 13,
+        height: 1.3,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+/// Alto fijo de 28 px → reserva siempre 2 líneas aunque el slogan esté vacío.
+class _CardSlogan extends StatelessWidget {
+  const _CardSlogan({required this.slogan});
+  final String? slogan;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 28,
+      child: Text(
+        slogan ?? '',
+        style: const TextStyle(
+          fontSize: 11,
+          color: AppColors.kTextMuted,
+          height: 1.4,
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+}
+
+class _CardFooter extends StatelessWidget {
+  const _CardFooter({
+    required this.ciudad,
+    required this.meEncantas,
+    required this.liked,
+  });
+
+  final String? ciudad;
+  final int meEncantas;
+  final bool liked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        if (ciudad != null && ciudad!.isNotEmpty) ...[
+          const Icon(Icons.location_on_outlined,
+              size: 10, color: AppColors.kTextMuted),
+          const SizedBox(width: 2),
+          Expanded(
+            child: Text(
+              ciudad!,
+              style: const TextStyle(fontSize: 10, color: AppColors.kTextMuted),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ] else
+          const Spacer(),
+        if (meEncantas > 0 || liked) ...[
+          Icon(
+            liked ? Icons.favorite : Icons.favorite_border,
+            size: 10,
+            color: liked ? AppColors.kBlue : AppColors.kTextMuted,
+          ),
+          if (meEncantas > 0) ...[
+            const SizedBox(width: 2),
+            Text(
+              '$meEncantas',
+              style: TextStyle(
+                fontSize: 10,
+                color: liked ? AppColors.kBlue : AppColors.kTextMuted,
+              ),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
 }

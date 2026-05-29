@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_cache.dart';
 import '../../shared/app_colors.dart';
 import 'logro_model.dart';
 import 'logro_service.dart';
@@ -19,14 +20,22 @@ class _LogrosScreenState extends State<LogrosScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    final cached = AppCache.get<List<Logro>>('logros');
+    if (cached != null) {
+      _logros = cached;
+      _loading = false;
+    }
+    _bgFetch();
   }
 
-  Future<void> _load() async {
+  Future<void> _bgFetch() async {
     final data = await LogroService.miProgreso();
     if (!mounted) return;
+    AppCache.set('logros', data);
     setState(() { _logros = data; _loading = false; });
   }
+
+  Future<void> _load() => _bgFetch();
 
   List<Logro> get _pendientes    => _logros.where((l) => !l.desbloqueado).toList();
   List<Logro> get _desbloqueados => _logros.where((l) => l.desbloqueado).toList();

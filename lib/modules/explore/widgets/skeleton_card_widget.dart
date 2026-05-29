@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../shared/app_colors.dart';
 
-/// Equivalente a SkeletonCard.jsx — placeholder animado mientras carga el feed.
+/// Placeholder animado que imita el layout de MenuCardWidget (lista horizontal).
 class SkeletonCardWidget extends StatefulWidget {
   const SkeletonCardWidget({super.key});
 
@@ -37,43 +37,65 @@ class _SkeletonCardWidgetState extends State<SkeletonCardWidget>
     return FadeTransition(
       opacity: _anim,
       child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.kCardBorder),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Banner placeholder
+            // Logo placeholder
             Container(
-              height: 100,
-              decoration: const BoxDecoration(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
                 color: AppColors.kSkeleton,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-            // Content placeholder
-            Padding(
-              padding: const EdgeInsets.all(10),
+            const SizedBox(width: 12),
+            // Info placeholder
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Name line
-                  FractionallySizedBox(
-                    widthFactor: 0.75,
-                    child: Container(
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: AppColors.kSkeleton,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                  // Nombre
+                  Container(
+                    height: 12,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.kSkeleton,
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  // Slogan line
+                  // Slogan línea 1
                   Container(
-                    height: 8,
+                    height: 10,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.kSkeleton,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Slogan línea 2
+                  Container(
+                    height: 10,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: AppColors.kSkeleton,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  // Footer
+                  Container(
+                    height: 9,
+                    width: 70,
                     decoration: BoxDecoration(
                       color: AppColors.kSkeleton,
                       borderRadius: BorderRadius.circular(4),

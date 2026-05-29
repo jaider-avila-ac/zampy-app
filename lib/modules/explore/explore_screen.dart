@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../core/app_cache.dart';
+import '../menu_publico/public_menu_screen.dart';
 import '../../core/push_service.dart';
 import '../../shared/app_colors.dart';
 import '../../shared/widgets/app_drawer.dart';
-import '../../shared/widgets/bottom_nav.dart';
 import '../auth/auth_service.dart';
 import '../notifications/notification_service.dart';
 import '../notifications/notifications_screen.dart';
@@ -44,12 +45,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
   // ── Liked ──────────────────────────────────────────────────────────────────
   Set<int> _likedIds = {};
 
-  // ── Nav ────────────────────────────────────────────────────────────────────
-  int _navIndex = 0;
-
   // ── Usuario ────────────────────────────────────────────────────────────────
   String _userName = '';
   int _unreadCount = 0;
+
+  // ── Scaffold key (para abrir el Drawer desde el AppBar) ───────────────────
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   // ── WebSocket ──────────────────────────────────────────────────────────────
   StreamSubscription<void>? _wsSub;
@@ -59,8 +60,18 @@ class _ExploreScreenState extends State<ExploreScreen> {
   void initState() {
     super.initState();
     _scrollCtrl.addListener(_onScroll);
+    // Mostrar cache al instante antes del fetch
+    final cachedFeed = AppCache.get<ExploreFeed>('explore_feed');
+    final cachedInfinite = AppCache.get<List<MenuFeedItem>>('explore_infinite');
+    if (cachedFeed != null) {
+      _feed = cachedFeed;
+      _feedLoading = false;
+    }
+    if (cachedInfinite != null) {
+      _infiniteItems.addAll(cachedInfinite);
+      _infiniteOffset = cachedInfinite.length;
+    }
     _loadInitialData();
-    // Conectar WebSocket STOMP (igual que NotificacionContext.jsx)
     PushService.connect();
     _wsSub = PushService.onNewNotification.listen((_) {
       if (mounted) setState(() => _unreadCount++);
@@ -77,6 +88,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
     _searchTimer?.cancel();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Refresh (pull-to-refresh) ──────────────────────────────────────────────
+  Future<void> _refresh() async {
+    setState(() {
+      _feedLoading = true;
+      _infiniteItems.clear();
+      _infiniteOffset = 0;
+      _infiniteHasMore = true;
+    });
+    await _loadInitialData();
   }
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
@@ -101,35 +123,39 @@ class _ExploreScreenState extends State<ExploreScreen> {
     // Feed principal
     final feed = await ExploreService.getFeed();
     if (!mounted) return;
+
+    final seen = <int>{};
+    List<MenuFeedItem> filterSeen(List<MenuFeedItem> list) =>
+        list.where((m) => m.menId != 0 && seen.add(m.menId)).toList();
+
+    final dedupedTodos    = filterSeen(feed.todos);
+    final dedupedNearby   = filterSeen(feed.nearby);
+    final dedupedTrending = filterSeen(feed.trending);
+    final dedupedNuevo    = filterSeen(feed.nuevo);
+
+    final newFeed = ExploreFeed(
+      todos:    dedupedTodos,
+      nearby:   dedupedNearby,
+      trending: dedupedTrending,
+      nuevo:    dedupedNuevo,
+    );
+
+    // Guardar en cache antes de actualizar la UI
+    AppCache.set('explore_feed', newFeed);
+    AppCache.set('explore_infinite', dedupedTodos);
+
     setState(() {
-      // ── Dedup cross-secciones (igual que dedupedFeed en ExplorePage.jsx) ──
-      // El Set `seen` se comparte entre todas las listas:
-      //   1. todos   → agrega todos sus IDs a seen (base del infinite scroll)
-      //   2. nearby  → filtra lo que ya está en seen
-      //   3. trending→ filtra lo que ya está en seen
-      //   4. nuevo   → filtra lo que ya está en seen
-      // Así ningún menú aparece en dos secciones al mismo tiempo.
-      final seen = <int>{};
-
-      List<MenuFeedItem> filterSeen(List<MenuFeedItem> list) =>
-          list.where((m) => m.menId != 0 && seen.add(m.menId)).toList();
-
-      final dedupedTodos    = filterSeen(feed.todos);
-      final dedupedNearby   = filterSeen(feed.nearby);
-      final dedupedTrending = filterSeen(feed.trending);
-      final dedupedNuevo    = filterSeen(feed.nuevo);
-
-      _feed = ExploreFeed(
-        todos:    dedupedTodos,
-        nearby:   dedupedNearby,
-        trending: dedupedTrending,
-        nuevo:    dedupedNuevo,
-      );
+      _feed = newFeed;
       _feedLoading = false;
-
-      // Los "todos" deduplicados son la base del infinite scroll
-      _infiniteItems.addAll(dedupedTodos);
-      _infiniteOffset = dedupedTodos.length;
+      // Solo reemplazar el infinite si los datos cambiaron
+      // (evita parpadeo cuando el cache ya mostraba los mismos items)
+      if (_infiniteItems.isEmpty ||
+          _infiniteItems.first.menId != dedupedTodos.firstOrNull?.menId) {
+        _infiniteItems
+          ..clear()
+          ..addAll(dedupedTodos);
+        _infiniteOffset = dedupedTodos.length;
+      }
     });
   }
 
@@ -222,16 +248,16 @@ class _ExploreScreenState extends State<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppColors.kBgPage,
       drawer: AppDrawer(unreadCount: _unreadCount),
       appBar: _buildAppBar(),
-      bottomNavigationBar: AppBottomNav(
-        currentIndex: _navIndex,
-        onTap: _onNavTap,
-        unreadCount: _unreadCount,
-      ),
-      body: CustomScrollView(
+      body: RefreshIndicator(
+        color: AppColors.kBlue,
+        onRefresh: _refresh,
+        child: CustomScrollView(
         controller: _scrollCtrl,
+        physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -250,6 +276,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -273,7 +300,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 IconButton(
                   icon: const Icon(Icons.menu_rounded,
                       size: 20, color: AppColors.kTextSecondary),
-                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 // Título
                 const Expanded(
@@ -318,7 +345,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
   // ── Demo Banner ────────────────────────────────────────────────────────────
   Widget _buildDemoBanner() {
     return GestureDetector(
-      onTap: () {}, // TODO: navegar al menú demo cuando exista la pantalla
+      onTap: () => Navigator.push(context, MaterialPageRoute(
+          builder: (_) => const PublicMenuScreen(isDemo: true))),
       child: Container(
         height: 176,
         decoration: BoxDecoration(
@@ -506,7 +534,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
   // ── Resultados de búsqueda ─────────────────────────────────────────────────
   Widget _buildSearchResults() {
     if (_searchLoading) {
-      return _twoColGrid(6, (i) => const SkeletonCardWidget());
+      return _menuList(6, (i) => const SkeletonCardWidget());
     }
     if (_searchResults == null) return const SizedBox.shrink();
     if (_searchResults!.isEmpty) {
@@ -521,7 +549,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
         ),
       );
     }
-    return _twoColGrid(
+    return _menuList(
       _searchResults!.length,
       (i) => MenuCardWidget(
         menu: _searchResults![i],
@@ -613,8 +641,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
   // ── Sección Infinite Scroll ────────────────────────────────────────────────
   Widget _buildInfiniteSection() {
-    final total =
-        _infiniteItems.length + (_infiniteLoading ? 6 : 0);
+    final total = _infiniteItems.length + (_infiniteLoading ? 3 : 0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -633,58 +660,69 @@ class _ExploreScreenState extends State<ExploreScreen> {
           ],
         ),
         const SizedBox(height: 10),
-        _twoColGrid(total, (i) {
+        _menuList(total, (i) {
           if (i >= _infiniteItems.length) return const SkeletonCardWidget();
           return MenuCardWidget(
             menu: _infiniteItems[i],
             liked: _likedIds.contains(_infiniteItems[i].menId),
           );
         }),
-        if (!_infiniteHasMore && _infiniteItems.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          const Center(
-            child: Text(
-              'Ya viste todo',
-              style: TextStyle(fontSize: 11, color: AppColors.kTextMuted),
+        if (_infiniteLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.kBlue),
+              ),
             ),
           ),
-        ],
+        if (!_infiniteHasMore && _infiniteItems.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Row(
+              children: const [
+                Expanded(child: Divider(color: AppColors.kCardBorder)),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'Has llegado al final',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.kTextMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(color: AppColors.kCardBorder)),
+              ],
+            ),
+          ),
       ],
     );
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  Widget _twoColGrid(int count, Widget Function(int) builder) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.82,
+  // ── Helper ────────────────────────────────────────────────────────────────
+  Widget _menuList(int count, Widget Function(int) builder) {
+    return Column(
+      children: List.generate(
+        count,
+        (i) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: builder(i),
+        ),
       ),
-      itemCount: count,
-      itemBuilder: (_, i) => builder(i),
     );
   }
 
-  void _onNavTap(int index) {
-    if (index == 3) {
-      _goToNotifications();
-      return;
-    }
-    setState(() => _navIndex = index);
-  }
-
   Future<void> _goToNotifications() async {
-    setState(() => _navIndex = 3);
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const NotificationsScreen()),
     );
-    // Al volver, resetear el contador (igual que resetUnread() en React)
-    if (mounted) setState(() { _navIndex = 0; _unreadCount = 0; });
+    if (mounted) setState(() => _unreadCount = 0);
   }
 }
 

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../core/app_cache.dart';
 import '../../core/push_service.dart';
 import '../../modules/auth/auth_service.dart';
 import '../../modules/auth/login_screen.dart';
 import '../../modules/logros/logro_service.dart';
 import '../../modules/logros/logros_screen.dart';
+import '../../modules/ajustes/ajustes_screen.dart';
+import '../../modules/ajustes/profile_screen.dart';
+import '../../modules/invitaciones/invitaciones_screen.dart';
 import '../../modules/notifications/notifications_screen.dart';
+import '../../modules/suscripciones/suscripciones_screen.dart';
 import '../app_colors.dart';
 
 /// Equivalente al Sidebar.jsx adaptado a móvil como Drawer.
@@ -27,11 +32,14 @@ class AppDrawer extends StatefulWidget {
 }
 
 class _AppDrawerState extends State<AppDrawer> {
-  String _nombre    = '';
-  String _email     = '';
+  String _nombre = '';
+  String _email  = '';
   String? _avatar;
-  bool _tieneMenu   = false;
-  bool _loadingMeta = true;
+
+  // Caché estático — sobrevive reinicios del widget durante la sesión.
+  // Se limpia en logout para que el próximo usuario empiece desde cero.
+  static bool? _cachedTieneMenu;
+  static Map<String, dynamic>? _cachedUserData;
 
   @override
   void initState() {
@@ -42,28 +50,31 @@ class _AppDrawerState extends State<AppDrawer> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Recargar datos cada vez que el Drawer vuelve a ser visible
-    // (garantiza que tras un cambio de usuario los datos sean actuales)
     _loadUserData();
   }
 
   Future<void> _loadUserData() async {
-    // Datos del usuario desde secure storage (siempre frescos)
+    // Aplica caché de inmediato para que el nombre aparezca sin parpadeo
+    if (_cachedUserData != null) _applyUserData(_cachedUserData!);
+
     final data = await AuthService.getAuthData();
-    // ¿Tiene al menos un menú? (para mostrar Logros)
-    final hasMen = await LogroService.tieneMenus();
+    _cachedTieneMenu ??= await LogroService.tieneMenus();
 
     if (!mounted) return;
+    if (data != null) {
+      _cachedUserData = data;
+      _applyUserData(data);
+    }
+  }
+
+  void _applyUserData(Map<String, dynamic> data) {
+    if (!mounted) return;
     setState(() {
-      if (data != null) {
-        final nombre   = (data['nombre']   as String? ?? '').trim();
-        final apellido = (data['apellido'] as String? ?? '').trim();
-        _nombre  = apellido.isEmpty ? nombre : '$nombre $apellido';
-        _email   = (data['email']  as String? ?? '').trim();
-        _avatar  = data['avatar'] as String?;
-      }
-      _tieneMenu   = hasMen;
-      _loadingMeta = false;
+      final nombre   = (data['nombre']   as String? ?? '').trim();
+      final apellido = (data['apellido'] as String? ?? '').trim();
+      _nombre = apellido.isEmpty ? nombre : '$nombre $apellido';
+      _email  = (data['email']  as String? ?? '').trim();
+      _avatar = data['avatar'] as String?;
     });
   }
 
@@ -72,7 +83,10 @@ class _AppDrawerState extends State<AppDrawer> {
                          : _email.isNotEmpty ? _email[0].toUpperCase() : 'U';
 
   Future<void> _doLogout() async {
-    Navigator.pop(context); // cerrar Drawer
+    Navigator.pop(context);
+    _cachedTieneMenu = null;
+    _cachedUserData  = null;
+    AppCache.clear();
     PushService.disconnect();
     await AuthService.logout();
     if (!mounted) return;
@@ -81,6 +95,21 @@ class _AppDrawerState extends State<AppDrawer> {
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (_) => false,
     );
+  }
+
+  void _goToLogros() {
+    if (_cachedTieneMenu == true) {
+      _navigate(const LogrosScreen());
+    } else {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aún no tienes menús creados'),
+          duration: Duration(seconds: 2),
+          backgroundColor: AppColors.kTextSecondary,
+        ),
+      );
+    }
   }
 
   void _navigate(Widget screen) {
@@ -185,29 +214,25 @@ class _AppDrawerState extends State<AppDrawer> {
             badge: widget.unreadCount,
             onTap: () => _navigate(const NotificationsScreen()),
           ),
-          // Logros — solo si tiene menús (misma lógica que React)
-          if (_loadingMeta)
-            const SizedBox.shrink()
-          else if (_tieneMenu)
-            _NavItem(
-              icon: Icons.emoji_events_outlined,
-              label: 'Logros',
-              onTap: () => _navigate(const LogrosScreen()),
-            ),
+          _NavItem(
+            icon: Icons.emoji_events_outlined,
+            label: 'Logros',
+            onTap: _goToLogros,
+          ),
           _NavItem(
             icon: Icons.people_outline,
             label: 'Invitaciones',
-            onTap: () => _comingSoon('Invitaciones'),
+            onTap: () => _navigate(const InvitacionesScreen()),
           ),
           _NavItem(
             icon: Icons.settings_outlined,
             label: 'Ajustes',
-            onTap: () => _comingSoon('Ajustes'),
+            onTap: () => _navigate(const AjustesScreen()),
           ),
           _NavItem(
             icon: Icons.credit_card_outlined,
             label: 'Suscripciones',
-            onTap: () => _comingSoon('Suscripciones'),
+            onTap: () => _navigate(const SuscripcionesScreen()),
           ),
         ],
       ),
@@ -217,65 +242,88 @@ class _AppDrawerState extends State<AppDrawer> {
   // ── Perfil + Cerrar sesión ─────────────────────────────────────────────────
   Widget _buildProfile() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
       child: Row(
         children: [
-          // Avatar — foto si existe, inicial si no
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.kBlue,
-              shape: BoxShape.circle,
-              image: _avatar != null && _avatar!.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(_avatar!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child: _avatar == null || _avatar!.isEmpty
-                ? Center(
-                    child: Text(
-                      _initial,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
+          // Avatar + nombre + email — tappable → ProfileScreen
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () async {
+                Navigator.pop(context); // cerrar Drawer
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+                // Invalidar caché al volver para reflejar cambios del perfil
+                _cachedUserData = null;
+                _loadUserData();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                child: Row(
+                  children: [
+                    // Avatar
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.kBlue,
+                        shape: BoxShape.circle,
+                        image: _avatar != null && _avatar!.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(_avatar!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: _avatar == null || _avatar!.isEmpty
+                          ? Center(
+                              child: Text(
+                                _initial,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    // Nombre y email
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_nombre.isNotEmpty)
+                            Text(
+                              _nombre,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.kTextPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          if (_email.isNotEmpty)
+                            Text(
+                              _email,
+                              style: const TextStyle(
+                                  fontSize: 11, color: AppColors.kTextMuted),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
                       ),
                     ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 10),
-          // Nombre y email
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_nombre.isNotEmpty)
-                  Text(
-                    _nombre,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.kTextPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                if (_email.isNotEmpty)
-                  Text(
-                    _email,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.kTextMuted),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
-          // Logout
+          // Logout (separado del tappable area)
           IconButton(
             icon: const Icon(Icons.logout_rounded,
                 size: 18, color: AppColors.kTextMuted),

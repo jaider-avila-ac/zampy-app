@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_cache.dart';
 import '../../shared/app_colors.dart';
 import 'models/notification_item.dart';
 import 'notification_service.dart';
@@ -19,17 +20,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
+    final cached = AppCache.get<List<NotificationItem>>('notifications');
+    if (cached != null) { _items = cached; _loading = false; }
+    _bgFetch();
   }
 
-  Future<void> _loadNotifications() async {
+  Future<void> _bgFetch() async {
     final data = await NotificationService.getNotificaciones();
     if (!mounted) return;
-    setState(() {
-      _items = data;
-      _loading = false;
-    });
+    AppCache.set('notifications', data);
+    setState(() { _items = data; _loading = false; });
   }
+
+  Future<void> _loadNotifications() => _bgFetch();
 
   // ── Marcar una como leída (optimista) ──────────────────────────────────────
   Future<void> _markRead(int id) async {

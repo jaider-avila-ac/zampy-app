@@ -49,23 +49,20 @@ class ExploreSectionWidget extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        // Grid 2 columnas
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.82,
+        // Lista columna única
+        Column(
+          children: List.generate(
+            loading ? 4 : items!.length,
+            (i) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: loading
+                  ? const SkeletonCardWidget()
+                  : MenuCardWidget(
+                      menu: items![i],
+                      liked: likedIds.contains(items![i].menId),
+                    ),
+            ),
           ),
-          itemCount: loading ? 6 : items!.length,
-          itemBuilder: (_, i) => loading
-              ? const SkeletonCardWidget()
-              : MenuCardWidget(
-                  menu: items![i],
-                  liked: likedIds.contains(items![i].menId),
-                ),
         ),
         // Mensaje vacío
         if (!loading && (items?.isEmpty ?? true) && emptyMsg != null)
