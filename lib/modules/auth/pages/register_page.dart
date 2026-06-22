@@ -2,38 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import '../../../context/auth_context.dart';
 import '../../../shared/app_colors.dart';
 import '../components/google_icon.dart';
-import '../hooks/use_login_form.dart';
+import '../hooks/use_register_form.dart';
 
-// Equivalente al panel derecho (mobile) de AuthLayout + LoginPage.jsx en React
-// Fondo totalmente blanco — sin panel azul izquierdo (ese es solo desktop en React)
+// Equivalente a src/modules/auth/pages/RegisterPage.jsx en React
 
-class LoginPage extends StatefulWidget {
-  // query params opcionales para alertas (mismo que React: ?registered=true, ?verified=true, etc.)
-  final bool registered;
-  final bool verified;
-  final String? oauthError;
-
-  const LoginPage({
-    super.key,
-    this.registered = false,
-    this.verified   = false,
-    this.oauthError,
-  });
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  late final UseLoginForm _form;
+class _RegisterPageState extends State<RegisterPage> {
+  late final UseRegisterForm _form;
 
   @override
   void initState() {
     super.initState();
-    _form = UseLoginForm();
+    _form = UseRegisterForm();
   }
 
   @override
@@ -46,22 +34,17 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _form,
-      child: const _LoginView(),
+      child: const _RegisterView(),
     );
   }
 }
 
-class _LoginView extends StatelessWidget {
-  const _LoginView();
+class _RegisterView extends StatelessWidget {
+  const _RegisterView();
 
   @override
   Widget build(BuildContext context) {
-    final form = context.watch<UseLoginForm>();
-    final auth = context.watch<AuthContext>();
-    final page = context.findAncestorWidgetOfExactType<LoginPage>();
-    final registered = page?.registered ?? false;
-    final verified   = page?.verified   ?? false;
-    final oauthError = page?.oauthError;
+    final form = context.watch<UseRegisterForm>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -71,7 +54,7 @@ class _LoginView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo — mismo que la versión mobile de React (imagotipo indigo)
+              // Logo
               Center(
                 child: SvgPicture.asset(
                   'assets/logos/imagotipo-indigo-zammpy.svg',
@@ -82,9 +65,8 @@ class _LoginView extends StatelessWidget {
               ),
               const SizedBox(height: 36),
 
-              // Título
               const Text(
-                'Bienvenido',
+                'Crea tu cuenta',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
@@ -93,38 +75,38 @@ class _LoginView extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Inicia sesión en tu cuenta',
+                'Empieza gratis, sin tarjeta',
                 style: TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
               ),
               const SizedBox(height: 20),
 
-              // Alertas
-              if (registered)
-                _Alert(
-                  color: const Color(0xFFDCFCE7),
-                  textColor: const Color(0xFF166534),
-                  text: '¡Cuenta creada! Revisa tu correo para verificarla.',
-                ),
-              if (verified)
-                _Alert(
-                  color: const Color(0xFFDCFCE7),
-                  textColor: const Color(0xFF166534),
-                  text: '¡Correo verificado! Ya puedes iniciar sesión.',
-                ),
-              if (oauthError != null)
-                _Alert(
-                  color: const Color(0xFFFEE2E2),
-                  textColor: const Color(0xFF991B1B),
-                  text: oauthError,
-                ),
               if (form.error.isNotEmpty)
-                _Alert(
-                  color: const Color(0xFFFEE2E2),
-                  textColor: const Color(0xFF991B1B),
-                  text: form.error,
-                ),
+                _Alert(text: form.error),
 
-              // Email
+              // Nombre + Apellido en fila (grid-2 de React)
+              Row(
+                children: [
+                  Expanded(
+                    child: _UnderlineField(
+                      controller: form.nombreCtrl,
+                      label: 'Nombre',
+                      hint: 'Juan',
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _UnderlineField(
+                      controller: form.apellidoCtrl,
+                      label: 'Apellido',
+                      hint: 'García',
+                      textInputAction: TextInputAction.next,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
               _UnderlineField(
                 controller: form.emailCtrl,
                 label: 'Correo electrónico',
@@ -134,47 +116,31 @@ class _LoginView extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Contraseña
               _UnderlineField(
                 controller: form.passwordCtrl,
                 label: 'Contraseña',
                 hint: '••••••••',
                 obscure: !form.showPass,
                 textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(context, form, auth),
+                onSubmitted: (_) => _submit(context, form),
                 suffix: GestureDetector(
                   onTap: form.toggleShowPass,
                   child: Icon(
-                    form.showPass ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    form.showPass
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     size: 18,
                     color: AppColors.kTextMuted,
                   ),
                 ),
               ),
-
-              // Olvidé mi contraseña
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => context.push('/auth/forgot-password'),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: Text(
-                    '¿Olvidaste tu contraseña?',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.kBlue,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
+              const SizedBox(height: 6),
+              Text(
+                'Mínimo 8 caracteres',
+                style: TextStyle(fontSize: 11, color: AppColors.kTextMuted),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 24),
 
-              // Botón iniciar sesión
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -184,43 +150,40 @@ class _LoginView extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  onPressed: form.loading ? null : () => _submit(context, form, auth),
+                  onPressed: form.loading ? null : () => _submit(context, form),
                   child: form.loading
                       ? const SizedBox(
                           width: 18, height: 18,
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2))
-                      : const Text('Iniciar sesión',
+                      : const Text('Crear cuenta',
                           style: TextStyle(
                               fontSize: 15, fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Divisor "o"
               const _Divider(),
               const SizedBox(height: 20),
 
-              // Botón Google
               _GoogleButton(loading: form.loading),
               const SizedBox(height: 28),
 
-              // Crear cuenta
               Center(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('¿No tienes una cuenta?',
+                    Text('¿Ya tienes una cuenta?',
                         style: TextStyle(
                             fontSize: 14, color: AppColors.kTextSecondary)),
                     TextButton(
-                      onPressed: () => context.go('/register'),
+                      onPressed: () => context.go('/login'),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.only(left: 4),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      child: Text('Crear una cuenta',
+                      child: Text('Iniciar sesión',
                           style: TextStyle(
                               fontSize: 14,
                               color: AppColors.kBlue,
@@ -236,24 +199,22 @@ class _LoginView extends StatelessWidget {
     );
   }
 
-  Future<void> _submit(
-      BuildContext context, UseLoginForm form, AuthContext auth) async {
-    final ok = await form.submit(auth);
-    if (ok && context.mounted) {
-      context.go('/');
+  Future<void> _submit(BuildContext context, UseRegisterForm form) async {
+    final email = await form.submit();
+    if (email != null && context.mounted) {
+      context.go('/auth/verify-code', extra: email);
     }
   }
 }
 
-// ── Campo con sólo borde inferior (estilo React) ──────────────────────────────
 class _UnderlineField extends StatelessWidget {
   const _UnderlineField({
     required this.controller,
     required this.label,
     required this.hint,
-    this.obscure          = false,
-    this.keyboardType     = TextInputType.text,
-    this.textInputAction  = TextInputAction.next,
+    this.obscure         = false,
+    this.keyboardType    = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
     this.onSubmitted,
     this.suffix,
   });
@@ -280,19 +241,19 @@ class _UnderlineField extends StatelessWidget {
                 letterSpacing: 0.3)),
         const SizedBox(height: 6),
         TextField(
-          controller:       controller,
-          obscureText:      obscure,
-          keyboardType:     keyboardType,
-          textInputAction:  textInputAction,
-          onSubmitted:      onSubmitted,
+          controller:      controller,
+          obscureText:     obscure,
+          keyboardType:    keyboardType,
+          textInputAction: textInputAction,
+          onSubmitted:     onSubmitted,
           style: const TextStyle(fontSize: 15, color: AppColors.kTextPrimary),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: AppColors.kTextMuted, fontSize: 14),
+            hintStyle:
+                TextStyle(color: AppColors.kTextMuted, fontSize: 14),
             suffixIcon: suffix != null
                 ? Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: suffix)
+                    padding: const EdgeInsets.only(right: 4), child: suffix)
                 : null,
             suffixIconConstraints:
                 const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -301,7 +262,8 @@ class _UnderlineField extends StatelessWidget {
             enabledBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: Color(0xFFCBD5E1))),
             focusedBorder: UnderlineInputBorder(
-                borderSide: BorderSide(color: AppColors.kBlue, width: 1.5)),
+                borderSide:
+                    BorderSide(color: AppColors.kBlue, width: 1.5)),
             contentPadding:
                 const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
             isDense: true,
@@ -312,15 +274,8 @@ class _UnderlineField extends StatelessWidget {
   }
 }
 
-// ── Alerta de color ───────────────────────────────────────────────────────────
 class _Alert extends StatelessWidget {
-  const _Alert({
-    required this.color,
-    required this.textColor,
-    required this.text,
-  });
-  final Color  color;
-  final Color  textColor;
+  const _Alert({required this.text});
   final String text;
 
   @override
@@ -329,16 +284,15 @@ class _Alert extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color,
+        color: const Color(0xFFFEE2E2),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(text,
-          style: TextStyle(fontSize: 13, color: textColor)),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF991B1B))),
     );
   }
 }
 
-// ── Divisor "o" ───────────────────────────────────────────────────────────────
 class _Divider extends StatelessWidget {
   const _Divider();
 
@@ -356,7 +310,6 @@ class _Divider extends StatelessWidget {
   }
 }
 
-// ── Botón de Google ───────────────────────────────────────────────────────────
 class _GoogleButton extends StatelessWidget {
   const _GoogleButton({required this.loading});
   final bool loading;
@@ -373,25 +326,18 @@ class _GoogleButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(10)),
           padding: const EdgeInsets.symmetric(vertical: 13),
         ),
-        onPressed: loading ? null : () => _googleSignIn(context),
-        child: Row(
+        onPressed: loading ? null : () {},
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const GoogleIcon(size: 18),
-            const SizedBox(width: 10),
-            const Text('Continuar con Google',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            GoogleIcon(size: 18),
+            SizedBox(width: 10),
+            Text('Continuar con Google',
+                style:
+                    TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
-    );
-  }
-
-  void _googleSignIn(BuildContext context) {
-    // TODO: implementar Google Sign-In nativo con google_sign_in package
-    // El backend acepta POST /api/v1/auth/google/token con { idToken }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Google Sign-In próximamente')),
     );
   }
 }
