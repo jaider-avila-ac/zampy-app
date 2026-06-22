@@ -250,9 +250,9 @@ class _DemoBanner extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.20),
+                    color: Colors.white.withValues(alpha: 0.20),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.30)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.30)),
                   ),
                   child: const Icon(Icons.arrow_forward, size: 16, color: Colors.white),
                 ),

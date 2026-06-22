@@ -25,7 +25,11 @@ class _LocationBannerState extends State<LocationBanner> {
     setState(() => _asking = true);
     try {
       final pos = await requestDeviceLocation();
-      widget.onGranted(pos.lat, pos.lon);
+      if (pos == null) {
+        widget.onDismiss();
+        return;
+      }
+      widget.onGranted(pos.latitude, pos.longitude);
     } catch (_) {
       await setGeoStatus('denied');
       widget.onDismiss();

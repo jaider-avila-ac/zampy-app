@@ -3,55 +3,63 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 
 // Equivalente a src/hooks/useGeoLocation.js en React
-// Maneja estado de geolocalización y caché en almacenamiento seguro
 
 const _storage = FlutterSecureStorage(
   aOptions: AndroidOptions(encryptedSharedPreferences: true),
 );
 
-// Estado guardado: 'granted' | 'denied' | null
+const _keyGeoStatus = 'geo_status';
+const _keyLocation  = 'geo_location';
+
 Future<String?> getStoredGeoStatus() async {
-  return _storage.read(key: 'geo_status');
+  try { return await _storage.read(key: _keyGeoStatus); } catch (_) { return null; }
 }
 
 Future<void> setGeoStatus(String status) async {
-  await _storage.write(key: 'geo_status', value: status);
+  try { await _storage.write(key: _keyGeoStatus, value: status); } catch (_) {}
 }
 
-// Ubicación guardada: {lat, lon, ciudad}
 Future<Map<String, dynamic>?> getStoredLocation() async {
   try {
-    final raw = await _storage.read(key: 'geo_location');
+    final raw = await _storage.read(key: _keyLocation);
     if (raw == null) return null;
     return jsonDecode(raw) as Map<String, dynamic>;
-  } catch {
-    return null;
-  }
+  } catch (_) { return null; }
 }
 
 Future<void> storeLocation(double lat, double lon, String? ciudad) async {
-  await _storage.write(
-    key: 'geo_location',
-    value: jsonEncode({'lat': lat, 'lon': lon, 'ciudad': ciudad}),
-  );
-  await setGeoStatus('granted');
+  try {
+    await _storage.write(
+      key: _keyLocation,
+      value: jsonEncode({'lat': lat, 'lon': lon, 'ciudad': ciudad}),
+    );
+  } catch (_) {}
 }
 
-// Solicitar permiso y posición del dispositivo
-// Equivalente a requestBrowserLocation() en useGeoLocation.js
-Future<({double lat, double lon})> requestDeviceLocation() async {
-  bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-  if (!serviceEnabled) throw Exception('Servicio de ubicación desactivado');
+// Solicita permiso y devuelve la posición o null si es denegado
+Future<Position?> requestDeviceLocation() async {
+  try {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return null;
 
-  LocationPermission permission = await Geolocator.checkPermission();
-  if (permission == LocationPermission.denied) {
-    permission = await Geolocator.requestPermission();
-    if (permission == LocationPermission.denied) throw Exception('Permiso denegado');
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        await setGeoStatus('denied');
+        return null;
+      }
+    }
+    if (permission == LocationPermission.deniedForever) {
+      await setGeoStatus('denied');
+      return null;
+    }
+
+    await setGeoStatus('granted');
+    return await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+    );
+  } catch (_) {
+    return null;
   }
-  if (permission == LocationPermission.deniedForever) throw Exception('Permiso denegado permanentemente');
-
-  final pos = await Geolocator.getCurrentPosition(
-    locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium, timeLimit: Duration(seconds: 10)),
-  );
-  return (lat: pos.latitude, lon: pos.longitude);
 }
