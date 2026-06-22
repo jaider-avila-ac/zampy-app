@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../../context/auth_context.dart';
 import '../../../context/notificacion_context.dart';
@@ -109,14 +110,11 @@ class _ExploreView extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: 16),
-                const Expanded(
-                  child: Text(
-                    'Explorar',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.kTextPrimary,
-                    ),
+                Expanded(
+                  child: SvgPicture.asset(
+                    'assets/logos/imagotipo-indigo-zammpy.svg',
+                    height: 28,
+                    alignment: Alignment.centerLeft,
                   ),
                 ),
                 if (auth.isLoggedIn) ...[

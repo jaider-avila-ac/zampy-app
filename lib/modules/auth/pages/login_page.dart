@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/app_colors.dart';
 
@@ -19,13 +20,10 @@ class LoginPage extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Zammpy',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 32,
-                      color: AppColors.kBlue,
-                      letterSpacing: -1,
-                    )),
+                SvgPicture.asset(
+                  'assets/logos/imagotipo-indigo-zammpy.svg',
+                  height: 40,
+                ),
                 const SizedBox(height: 8),
                 Text('Próximamente — Fase 2',
                     style: TextStyle(fontSize: 13, color: AppColors.kTextMuted)),
