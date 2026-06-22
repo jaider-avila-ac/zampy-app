@@ -181,7 +181,7 @@ class ExploreController extends ChangeNotifier {
   Future<Map<String, dynamic>?> _nominatimGet(Uri uri) async {
     try {
       final res = await http.get(uri, headers: {
-        'User-Agent': 'ZammpyApp/1.0 (jaider.avila.2003@gmail.com)',
+        'User-Agent': 'Zammpy/1.0',
       }).timeout(const Duration(seconds: 10));
       if (res.statusCode != 200) return null;
       return jsonDecode(res.body) as Map<String, dynamic>;

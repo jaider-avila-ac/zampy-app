@@ -19,7 +19,6 @@ dependencies:
 
   # HTTP
   http: ^1.2.1
-  http_parser: ^4.0.2
 
   # Almacenamiento seguro (JWT tokens)
   flutter_secure_storage: ^9.2.2
@@ -27,32 +26,14 @@ dependencies:
   # SVG
   flutter_svg: ^2.0.10+1
 
-  # WebView — para menú público en-app, pagos Wompi en-app, OAuth Google en-app
-  webview_flutter: ^4.10.0
-
   # Geolocalización
   geolocator: ^14.0.2
-
-  # WebSocket (notificaciones en tiempo real)
-  stomp_dart_client: ^3.0.1
-
-  # Notificaciones push locales
-  flutter_local_notifications: ^17.2.3
-
-  # Selector de imágenes
-  image_picker: ^1.1.2
-
-  # Lanzar URLs externas (solo cuando sea necesario)
-  url_launcher: ^6.3.1
 
   # Compartir contenido con otras apps (sistema share sheet)
   share_plus: ^10.0.2
 
   # Google Sign-In nativo (selector de cuentas Android)
   google_sign_in: ^6.2.2
-
-  # SQLite para caché local
-  sqflite: ^2.3.3
 
   # Íconos Material adicionales
   cupertino_icons: ^1.0.8

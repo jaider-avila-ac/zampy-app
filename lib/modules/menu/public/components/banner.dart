@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart' hide MenuTheme;
 import '../models/public_menu_model.dart';
 
-// Equivalente a src/components/Banner.jsx en React — versión móvil únicamente
-// Flutter es solo móvil, así que implementamos el layout mobile de Banner.jsx
+// Equivalente a src/components/Banner.jsx en React — layout móvil
+// React: banner h-72, logo -mt-12 (Stack overlap), info centrada debajo
 
 class Banner extends StatelessWidget {
-  const Banner({
-    super.key,
-    required this.info,
-    required this.theme,
-  });
-
+  const Banner({super.key, required this.info, required this.theme});
   final MenuInfo  info;
   final MenuTheme theme;
 
@@ -22,85 +17,74 @@ class Banner extends StatelessWidget {
 
     return Column(
       children: [
-        // ── Banner imagen — h-72 (288px) igual que React móvil ────────────
-        SizedBox(
-          height: 288,
-          width: double.infinity,
-          child: _BannerImage(bannerUrl: info.bannerUrl, theme: theme),
+        // ── Banner + Logo en Stack (equivalente a -mt-12 de React) ───────
+        Stack(
+          clipBehavior: Clip.none,
+          alignment:    Alignment.bottomCenter,
+          children: [
+            // Banner: h-72 igual que React móvil
+            SizedBox(
+              height: 288,
+              width:  double.infinity,
+              child:  _BannerImage(bannerUrl: info.bannerUrl, theme: theme),
+            ),
+            // Logo: mitad sobresale del banner — equivale a -mt-12 (48px)
+            Positioned(
+              bottom: -52,
+              child: _Logo(logoUrl: info.logoUrl, name: info.name, theme: theme),
+            ),
+          ],
         ),
 
-        // ── Logo centrado solapando banner — -mt-12 en React ──────────────
-        Transform.translate(
-          offset: const Offset(0, -48), // -mt-12
-          child: _Logo(logoUrl: info.logoUrl, name: info.name, theme: theme),
-        ),
+        // Espacio para el logo que sobresale (altura logo 104px / 2 = 52px)
+        const SizedBox(height: 60),
 
-        // ── Info centrada debajo del logo ──────────────────────────────────
-        Transform.translate(
-          offset: const Offset(0, -32),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                // Nombre del negocio
-                Text(
-                  info.name,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 24,
-                    letterSpacing: -0.5,
-                    color: theme.text,
-                  ),
+        // ── Info centrada debajo del logo ─────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Column(
+            children: [
+              Text(
+                info.name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight:  FontWeight.w900,
+                  fontSize:    24,
+                  letterSpacing: -0.5,
+                  color:       theme.text,
                 ),
-                if (info.slogan != null && info.slogan!.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    info.slogan!,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: theme.textMuted),
-                  ),
-                ],
-                const SizedBox(height: 10),
-
-                // Chips de contacto
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    if (locationText.isNotEmpty)
-                      _InfoChip(
-                        icon: Icons.public,
-                        text: locationText,
-                        theme: theme,
-                      ),
-                    if (info.address != null && info.address!.isNotEmpty)
-                      _InfoChip(
-                        icon: Icons.location_on_outlined,
-                        text: info.address!,
-                        theme: theme,
-                      ),
-                    if (info.schedule != null && info.schedule!.isNotEmpty)
-                      _InfoChip(
-                        icon: Icons.access_time_outlined,
-                        text: info.schedule!,
-                        theme: theme,
-                      ),
-                    if (info.whatsapp != null && info.whatsapp!.isNotEmpty)
-                      _InfoChip(
-                        icon: Icons.phone_outlined,
-                        text: info.whatsapp!,
-                        theme: theme,
-                      ),
-                  ],
-                ),
-
-                // Redes sociales
+              ),
+              if (info.slogan != null && info.slogan!.isNotEmpty) ...[
                 const SizedBox(height: 6),
+                Text(
+                  info.slogan!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: theme.textMuted),
+                ),
+              ],
+              const SizedBox(height: 12),
+              // Chips de contacto e info
+              Wrap(
+                alignment:  WrapAlignment.center,
+                spacing:    6,
+                runSpacing: 6,
+                children: [
+                  if (locationText.isNotEmpty)
+                    _InfoChip(icon: Icons.public, text: locationText, theme: theme),
+                  if (info.address != null && info.address!.isNotEmpty)
+                    _InfoChip(icon: Icons.location_on_outlined, text: info.address!, theme: theme),
+                  if (info.schedule != null && info.schedule!.isNotEmpty)
+                    _InfoChip(icon: Icons.access_time_outlined, text: info.schedule!, theme: theme),
+                  if ((info.whatsapp ?? info.phone) != null)
+                    _InfoChip(icon: Icons.phone_outlined, text: (info.whatsapp ?? info.phone)!, theme: theme),
+                ],
+              ),
+              // Redes sociales
+              if ([info.instagram, info.facebook, info.tiktok, info.website].any((v) => v != null)) ...[
+                const SizedBox(height: 8),
                 Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 6,
+                  alignment:  WrapAlignment.center,
+                  spacing:    6,
                   runSpacing: 6,
                   children: [
                     if (info.instagram != null)
@@ -114,7 +98,7 @@ class Banner extends StatelessWidget {
                   ],
                 ),
               ],
-            ),
+            ],
           ),
         ),
       ],
@@ -130,8 +114,12 @@ class _BannerImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (bannerUrl != null && bannerUrl!.isNotEmpty) {
-      return Image.network(bannerUrl!, fit: BoxFit.cover, width: double.infinity,
-          errorBuilder: (_, e, st) => _fallback());
+      return Image.network(
+        bannerUrl!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        errorBuilder: (ctx, err, st) => _fallback(),
+      );
     }
     return _fallback();
   }
@@ -139,9 +127,12 @@ class _BannerImage extends StatelessWidget {
   Widget _fallback() => Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [theme.primary, Color.alphaBlend(Colors.white.withValues(alpha: 0.3), theme.primary)],
+            colors: [
+              theme.primary,
+              Color.alphaBlend(Colors.white.withValues(alpha: 0.3), theme.primary),
+            ],
             begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            end:   Alignment.bottomRight,
           ),
         ),
       );
@@ -154,32 +145,34 @@ class _Logo extends StatelessWidget {
   final MenuTheme theme;
 
   @override
-  Widget build(BuildContext context) {
-    // w-32 h-32 rounded-full border-4 border-white shadow-xl — igual que React móvil
-    return Container(
-      width: 128, height: 128,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: 4),
-        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4))],
-      ),
-      child: ClipOval(
-        child: logoUrl != null && logoUrl!.isNotEmpty
-            ? Image.network(logoUrl!, fit: BoxFit.cover,
-                errorBuilder: (_, e, st) => _initialsLogo())
-            : _initialsLogo(),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Container(
+        width:  104,
+        height: 104,
+        decoration: BoxDecoration(
+          shape:     BoxShape.circle,
+          border:    Border.all(color: Colors.white, width: 4),
+          boxShadow: const [
+            BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4)),
+          ],
+        ),
+        child: ClipOval(
+          child: logoUrl != null && logoUrl!.isNotEmpty
+              ? Image.network(
+                  logoUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (ctx, err, st) => _initialsLogo(),
+                )
+              : _initialsLogo(),
+        ),
+      );
 
   Widget _initialsLogo() => Container(
         color: theme.primary,
-        child: Center(
-          child: Text(
-            name.isNotEmpty ? name[0].toUpperCase() : '?',
-            style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w900, fontSize: 40,
-            ),
+        alignment: Alignment.center,
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(
+            color: Colors.white, fontWeight: FontWeight.w900, fontSize: 36,
           ),
         ),
       );
@@ -195,9 +188,9 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: theme.surfaceAlt,
+          color:        theme.surfaceAlt,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: theme.border),
+          border:       Border.all(color: theme.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -205,8 +198,11 @@ class _InfoChip extends StatelessWidget {
             Icon(icon, size: 12, color: theme.primary),
             const SizedBox(width: 4),
             Flexible(
-              child: Text(text, style: TextStyle(fontSize: 11, color: theme.textMuted),
-                  overflow: TextOverflow.ellipsis),
+              child: Text(
+                text,
+                style: TextStyle(fontSize: 11, color: theme.textMuted),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -223,18 +219,24 @@ class _SocialChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: theme.surfaceAlt,
+          color:        theme.surfaceAlt,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: theme.border),
+          border:       Border.all(color: theme.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 8, height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+            Container(
+              width: 8, height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
             const SizedBox(width: 4),
-            Text(label, style: TextStyle(fontSize: 11,
-                fontWeight: FontWeight.w600, color: theme.text)),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600, color: theme.text,
+              ),
+            ),
           ],
         ),
       );

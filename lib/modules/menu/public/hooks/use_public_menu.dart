@@ -38,32 +38,49 @@ class UsePublicMenu extends ChangeNotifier {
   }
 
   // GET /api/v1/public/menu/:slug
+  // El backend devuelve { id, slug, ownerId, theme, published: { info, categories, products } }
+  // React hace: { ...menu.published, menuId: menu.id, slug, ownerId, theme }
   static Future<PublicMenuData?> _getPublicData(String slug) async {
     final res = await http
         .get(Uri.parse('$kApiBase/api/v1/public/menu/$slug'))
         .timeout(const Duration(seconds: 15));
     if (res.statusCode == 404) return null;
     if (res.statusCode < 200 || res.statusCode >= 300) return null;
-    final json = jsonDecode(res.body) as Map<String, dynamic>;
-    if (json['published'] == false) return null;
-    return PublicMenuData.fromJson(json);
+    final root      = jsonDecode(res.body) as Map<String, dynamic>;
+    final published = root['published'] as Map<String, dynamic>?;
+    if (published == null) return null;
+    return PublicMenuData.fromJson({
+      ...published,
+      'menuId':  root['id'],
+      'slug':    root['slug'],
+      'ownerId': root['ownerId'],
+      'theme':   root['theme'],
+    });
   }
 
-  // GET /api/v1/public/menu/demo (o similar)
+  // GET /api/v1/public/demo — mismo formato que getPublicData
   static Future<PublicMenuData?> _getDemoData() async {
     try {
       final res = await http
-          .get(Uri.parse('$kApiBase/api/v1/public/menu/demo'))
+          .get(Uri.parse('$kApiBase/api/v1/public/demo'))
           .timeout(const Duration(seconds: 15));
       if (res.statusCode < 200 || res.statusCode >= 300) return _staticDemoData();
-      final json = jsonDecode(res.body) as Map<String, dynamic>;
-      return PublicMenuData.fromJson(json);
+      final root      = jsonDecode(res.body) as Map<String, dynamic>;
+      final published = root['published'] as Map<String, dynamic>?;
+      if (published == null) return _staticDemoData();
+      return PublicMenuData.fromJson({
+        ...published,
+        'menuId':  root['id'],
+        'slug':    root['slug'],
+        'ownerId': root['ownerId'],
+        'theme':   root['theme'],
+      });
     } catch (_) {
       return _staticDemoData();
     }
   }
 
-  // Demo estático fallback si el backend no tiene /demo
+  // Fallback estático si el backend no responde
   static PublicMenuData _staticDemoData() {
     return PublicMenuData(
       info: const MenuInfo(
