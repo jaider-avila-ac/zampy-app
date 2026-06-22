@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
+import '../../../components/layout/sidebar.dart';
 import '../../../context/auth_context.dart';
 import '../../../context/notificacion_context.dart';
 import '../../../shared/app_colors.dart';
@@ -41,6 +42,7 @@ class _ExploreView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.kBgPage,
+      drawer: const AppSidebar(),
       appBar: _buildAppBar(context, auth, notifCtx),
       body: RefreshIndicator(
         color: AppColors.kBlue,
@@ -109,16 +111,22 @@ class _ExploreView extends StatelessWidget {
             height: 56,
             child: Row(
               children: [
-                const SizedBox(width: 16),
+                // Hamburger — abre el Sidebar (Drawer)
+                Builder(builder: (ctx) => IconButton(
+                  icon: const Icon(Icons.menu, size: 22, color: AppColors.kTextPrimary),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                )),
+                // Logo centrado — imagotipo-indigo-zammpy.svg igual que Sidebar.jsx
                 Expanded(
-                  child: SvgPicture.asset(
-                    'assets/logos/imagotipo-indigo-zammpy.svg',
-                    height: 28,
-                    alignment: Alignment.centerLeft,
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/logos/imagotipo-indigo-zammpy.svg',
+                      height: 26,
+                    ),
                   ),
                 ),
                 if (auth.isLoggedIn) ...[
-                  // Ícono de notificaciones con badge
+                  // Notificaciones con badge
                   Stack(
                     children: [
                       IconButton(
