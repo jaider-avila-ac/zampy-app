@@ -1,0 +1,9 @@
+{
+  "_comment": "Este archivo es ignorado — google_sign_in usa serverClientId desde Dart directamente. Si necesitas Firebase Analytics/Crashlytics en el futuro, reemplaza este archivo con el real de Firebase Console.",
+  "project_info": {
+    "project_number": "354623240504",
+    "project_id": "placeholder"
+  },
+  "client": [],
+  "configuration_version": "1"
+}

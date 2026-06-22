@@ -45,6 +45,9 @@ dependencies:
   # Lanzar URLs externas (solo cuando sea necesario)
   url_launcher: ^6.3.1
 
+  # Google Sign-In nativo (selector de cuentas Android)
+  google_sign_in: ^6.2.2
+
   # SQLite para caché local
   sqflite: ^2.3.3
 

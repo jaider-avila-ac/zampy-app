@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../context/auth_context.dart';
+import '../../../services/google_auth_service.dart';
 import '../../../shared/app_colors.dart';
 import '../components/google_icon.dart';
 import '../hooks/use_login_form.dart';
@@ -357,12 +358,21 @@ class _Divider extends StatelessWidget {
 }
 
 // ── Botón de Google ───────────────────────────────────────────────────────────
-class _GoogleButton extends StatelessWidget {
+class _GoogleButton extends StatefulWidget {
   const _GoogleButton({required this.loading});
   final bool loading;
 
   @override
+  State<_GoogleButton> createState() => _GoogleButtonState();
+}
+
+class _GoogleButtonState extends State<_GoogleButton> {
+  bool _busy = false;
+
+  @override
   Widget build(BuildContext context) {
+    final isDisabled = widget.loading || _busy;
+
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
@@ -373,25 +383,39 @@ class _GoogleButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(10)),
           padding: const EdgeInsets.symmetric(vertical: 13),
         ),
-        onPressed: loading ? null : () => _googleSignIn(context),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const GoogleIcon(size: 18),
-            const SizedBox(width: 10),
-            const Text('Continuar con Google',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          ],
-        ),
+        onPressed: isDisabled ? null : _signIn,
+        child: _busy
+            ? const SizedBox(
+                width: 18, height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2))
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GoogleIcon(size: 18),
+                  SizedBox(width: 10),
+                  Text('Continuar con Google',
+                      style: TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                ],
+              ),
       ),
     );
   }
 
-  void _googleSignIn(BuildContext context) {
-    // TODO: implementar Google Sign-In nativo con google_sign_in package
-    // El backend acepta POST /api/v1/auth/google/token con { idToken }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Google Sign-In próximamente')),
-    );
+  Future<void> _signIn() async {
+    setState(() => _busy = true);
+    try {
+      final auth = context.read<AuthContext>();
+      final ok = await GoogleAuthService.signIn(auth);
+      if (ok && mounted) context.go('/');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 }
