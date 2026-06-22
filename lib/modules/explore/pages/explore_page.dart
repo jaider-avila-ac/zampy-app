@@ -116,13 +116,14 @@ class _ExploreView extends StatelessWidget {
                   icon: const Icon(Icons.menu, size: 22, color: AppColors.kTextPrimary),
                   onPressed: () => Scaffold.of(ctx).openDrawer(),
                 )),
-                // Logo centrado — imagotipo-indigo-zammpy.svg igual que Sidebar.jsx
+                // Logo alineado a la izquierda — imagotipo-indigo-zammpy.svg
                 Expanded(
-                  child: Center(
-                    child: SvgPicture.asset(
-                      'assets/logos/imagotipo-indigo-zammpy.svg',
-                      height: 26,
-                    ),
+                  child: SvgPicture.asset(
+                    'assets/logos/imagotipo-indigo-zammpy.svg',
+                    height: 26,
+                    alignment: Alignment.centerLeft,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF4A37F2), BlendMode.srcIn),
                   ),
                 ),
                 if (auth.isLoggedIn) ...[

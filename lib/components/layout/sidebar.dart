@@ -59,6 +59,8 @@ class AppSidebar extends StatelessWidget {
                   SvgPicture.asset(
                     'assets/logos/imagotipo-indigo-zammpy.svg',
                     height: 28,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF4A37F2), BlendMode.srcIn),
                   ),
                   const Spacer(),
                   // Botón X para cerrar (equivalente al <X> de React móvil)

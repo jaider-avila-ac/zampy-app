@@ -23,6 +23,8 @@ class LoginPage extends StatelessWidget {
                 SvgPicture.asset(
                   'assets/logos/imagotipo-indigo-zammpy.svg',
                   height: 40,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF4A37F2), BlendMode.srcIn),
                 ),
                 const SizedBox(height: 8),
                 Text('Próximamente — Fase 2',
