@@ -4,9 +4,12 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Notificaciones push — Android 13+ (API 33) requiere permiso en runtime -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Ubicación (geolocator) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
-        android:label="zampy_app"
+        android:label="Zammpy"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
