@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import '../../../services/explore_service.dart';
 import '../../../services/public_api_service.dart';
 import '../../../services/interaccion_service.dart';
@@ -9,10 +9,6 @@ import '../../../hooks/use_geo_location.dart';
 import '../../menu/public/models/public_menu_model.dart';
 
 // Equivalente a src/modules/explore/hooks/useExplore.js en React
-
-const _storage = FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
-);
 
 class ExploreController extends ChangeNotifier {
   // ── Búsqueda ────────────────────────────────────────────────────────────────
@@ -184,21 +180,14 @@ class ExploreController extends ChangeNotifier {
 
   Future<Map<String, dynamic>?> _nominatimGet(Uri uri) async {
     try {
-      // http directo sin importar el paquete de nuevo
-      final client = await _createHttpClient(uri);
-      return client;
+      final res = await http.get(uri, headers: {
+        'User-Agent': 'ZammpyApp/1.0 (jaider.avila.2003@gmail.com)',
+      }).timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return null;
+      return jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       return null;
     }
-  }
-
-  // Nominatim requiere User-Agent
-  Future<Map<String, dynamic>?> _createHttpClient(Uri uri) async {
-    try {
-      final raw = await _storage.read(key: '_nominatim_$uri');
-      if (raw != null) return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {}
-    return null;
   }
 
   void handleDismissLocation() {

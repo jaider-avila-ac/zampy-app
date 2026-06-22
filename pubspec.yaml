@@ -45,6 +45,9 @@ dependencies:
   # Lanzar URLs externas (solo cuando sea necesario)
   url_launcher: ^6.3.1
 
+  # Compartir contenido con otras apps (sistema share sheet)
+  share_plus: ^10.0.2
+
   # Google Sign-In nativo (selector de cuentas Android)
   google_sign_in: ^6.2.2
 

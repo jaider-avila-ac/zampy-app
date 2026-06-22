@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../hooks/use_public_menu.dart';
+import '../components/share_modal.dart';
 import '../../../../components/menu_page.dart';
 import '../../../../shared/app_colors.dart';
 
@@ -65,29 +66,39 @@ class _PublicMenuView extends StatelessWidget {
       );
     }
 
+    final theme = ctrl.menuData!.theme;
+
     return Scaffold(
-      backgroundColor: ctrl.menuData!.theme.bg,
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: Column(
           children: [
-            // AppBar mínimo con botón atrás
+            // Toolbar: back + QR/share (equivalente a Navbar con onQr en React)
             Container(
               height: 48,
-              color: ctrl.menuData!.theme.surface,
+              color:  theme.surface,
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                    icon:      const Icon(Icons.arrow_back_ios_new, size: 18),
                     onPressed: () => Navigator.of(context).maybePop(),
-                    color: ctrl.menuData!.theme.text,
+                    color:     theme.text,
+                  ),
+                  const Spacer(),
+                  // Botón QR (equivalente al botón QrCode en Navbar de React)
+                  IconButton(
+                    icon:      const Icon(Icons.qr_code, size: 20),
+                    onPressed: () => ShareModal.show(context, slug, theme),
+                    color:     theme.text,
+                    tooltip:   'Compartir / QR',
                   ),
                 ],
               ),
             ),
             Expanded(
               child: MenuPage(
-                menuData: ctrl.menuData!,
-                menuSlug: slug,
+                menuData:    ctrl.menuData!,
+                menuSlug:    slug,
                 isPublished: true,
               ),
             ),

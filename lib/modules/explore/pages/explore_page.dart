@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../components/layout/sidebar.dart';
 import '../../../context/auth_context.dart';
@@ -57,7 +58,7 @@ class _ExploreView extends StatelessWidget {
                 delegate: SliverChildListDelegate([
                   // ── Banner demo ─────────────────────────────────────────
                   _DemoBanner(
-                    onTap: () => Navigator.pushNamed(context, '/preview/demo'),
+                    onTap: () => context.push('/preview/demo'),
                   ),
                   const SizedBox(height: 20),
 
@@ -135,7 +136,7 @@ class _ExploreView extends StatelessWidget {
                             size: 20, color: AppColors.kTextSecondary),
                         onPressed: () {
                           notifCtx.resetUnread();
-                          Navigator.pushNamed(context, '/notifications');
+                          context.push('/notifications');
                         },
                       ),
                       if (notifCtx.unread > 0)
@@ -149,7 +150,7 @@ class _ExploreView extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/perfil'),
+                      onTap: () => context.push('/perfil'),
                       child: _UserAvatar(name: auth.displayName, avatarUrl: auth.avatarUrl),
                     ),
                   ),
@@ -157,7 +158,7 @@ class _ExploreView extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 12),
                     child: TextButton(
-                      onPressed: () => Navigator.pushNamed(context, '/login'),
+                      onPressed: () => context.push('/login'),
                       style: TextButton.styleFrom(
                         backgroundColor: AppColors.kBlue,
                         foregroundColor: Colors.white,
@@ -426,7 +427,7 @@ class _SearchResults extends StatelessWidget {
         return MenuCard(
           menu:  item,
           liked: ctrl.likedIds.contains(item.menId),
-          onTap: () => Navigator.pushNamed(context, '/menu/${item.slug}'),
+          onTap: () => context.push('/menu/${item.slug}'),
           onToggleLike: () => ctrl.toggleLike(item, auth.isLoggedIn),
         );
       },
@@ -474,7 +475,7 @@ class _Feed extends StatelessWidget {
     }
 
     void openMenu(MenuFeedItem item) =>
-        Navigator.pushNamed(context, '/menu/${item.slug}');
+        context.push('/menu/${item.slug}');
 
     void toggleLike(MenuFeedItem item) =>
         ctrl.toggleLike(item, auth.isLoggedIn);
