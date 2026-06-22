@@ -1,4 +1,4 @@
-package com.example.zampy_app
+package com.zammpy.app
 
 import io.flutter.embedding.android.FlutterActivity
 

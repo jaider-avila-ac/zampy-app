@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.zampy_app"
+    namespace = "com.zammpy.app"
 
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
@@ -24,7 +24,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.zampy_app"
+        applicationId = "com.zammpy.app"
 
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
