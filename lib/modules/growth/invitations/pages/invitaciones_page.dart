@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../hooks/use_invitaciones.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
+import '../../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/growth/invitations/pages/InvitacionesPage.jsx
 
@@ -37,6 +38,7 @@ class _InvitacionesView extends StatelessWidget {
       },
       child: Scaffold(
         backgroundColor: AppColors.kBgPage,
+        drawer: const AppSidebar(),
         appBar: const AppHeader(title: 'Invitaciones'),
         body: SingleChildScrollView(
           padding: const EdgeInsets.all(20),

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../../../../../services/api.dart';
 import '../../../../../shared/app_colors.dart';
 import '../../../../../shared/app_header.dart';
+import '../../../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/menu/editor/stats/pages/EstadisticasPage.jsx en React
 
@@ -82,6 +83,7 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.kBgPage,
+      drawer: const AppSidebar(),
       appBar: AppHeader(title: _menuName),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.kBlue))

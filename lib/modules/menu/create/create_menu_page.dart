@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../services/menu_editor_service.dart';
 import '../../../services/themes_catalog_service.dart';
 import '../../../shared/app_colors.dart';
+import '../../../shared/app_header.dart';
+import '../../../components/layout/sidebar.dart';
 import '../../../shared/location_cascade_widget.dart';
 import '../../../shared/logo_crop_dialog.dart';
 import '../../../shared/schedule_widget.dart';
@@ -223,37 +225,13 @@ class _CreateMenuPageState extends State<CreateMenuPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: Column(
+      drawer: const AppSidebar(),
+      appBar: AppHeader(
+        title: 'Crear nuevo menú',
+        subtitle: _kSteps[_step].desc,
+      ),
+      body: Column(
           children: [
-            // ── Top bar ────────────────────────────────────────────────────────
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, size: 20),
-                    onPressed: _goBack,
-                    color: const Color(0xFF64748B),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Crear nuevo menú',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
-                        Text(
-                          _kSteps[_step].desc,
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
             // ── Progress bar ───────────────────────────────────────────────────
             _ProgressBar(
               step:  _step,
@@ -280,7 +258,6 @@ class _CreateMenuPageState extends State<CreateMenuPage> {
             ),
           ],
         ),
-      ),
     );
   }
 

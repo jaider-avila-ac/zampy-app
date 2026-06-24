@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
+import '../../../components/layout/sidebar.dart';
 import '../hooks/use_mis_menus.dart';
 
 // Equivalente a src/modules/dashboard/pages/MisMenusPage.jsx en React
@@ -27,12 +28,22 @@ class _MisMenusView extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = context.watch<UseMisMenus>();
 
-    return GestureDetector(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, _) {
+        if (GoRouter.of(context).canPop()) {
+          GoRouter.of(context).pop();
+        } else {
+          context.go('/');
+        }
+      },
+      child: GestureDetector(
       // Cerrar dropdown al tocar fuera (equiv. document.addEventListener('click', close))
       onTap: ctrl.closeDropdown,
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
         backgroundColor: AppColors.kBgPage,
+        drawer: const AppSidebar(),
         appBar: AppHeader(
           title: 'Mis Menús',
           actions: [
@@ -142,6 +153,7 @@ class _MisMenusView extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

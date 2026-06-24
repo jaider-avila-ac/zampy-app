@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../services/suscripcion_service.dart';
 import '../../../services/menu_editor_service.dart';
 import '../../../shared/app_colors.dart';
+import '../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/subscription/pages/PlanesPage.jsx en React
 
@@ -130,24 +131,33 @@ class _PlanesPageState extends State<PlanesPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      drawer: const AppSidebar(),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF6B7280)),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
+          Builder(builder: (ctx) {
+            final hasDrawer = Scaffold.maybeOf(ctx)?.hasDrawer ?? false;
+            if (!hasDrawer) return const SizedBox.shrink();
+            return IconButton(
+              icon: const Icon(Icons.menu, size: 22, color: Color(0xFF0F172A)),
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+            );
+          }),
+        ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, color: Color(0xFFE2E8F0)),
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
           children: [
-            // ── Volver ────────────────────────────────────────────────────
-            GestureDetector(
-              onTap: () => context.pop(),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.arrow_back, size: 15, color: Color(0xFF6B7280)),
-                  SizedBox(width: 6),
-                  Text('Volver al editor',
-                      style: TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
-                ],
-              ),
-            ),
-            const SizedBox(height: 28),
 
             // ── Intro ──────────────────────────────────────────────────────
             Text(titulo,

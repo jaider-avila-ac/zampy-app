@@ -64,7 +64,18 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                 color:      AppColors.kTextPrimary,
               ),
             ),
-      actions: actions,
+      actions: [
+        // Hamburger — aparece automáticamente si el Scaffold tiene drawer
+        Builder(builder: (ctx) {
+          final hasDrawer = Scaffold.maybeOf(ctx)?.hasDrawer ?? false;
+          if (!hasDrawer) return const SizedBox.shrink();
+          return IconButton(
+            icon: const Icon(Icons.menu, color: AppColors.kTextPrimary, size: 22),
+            onPressed: () => Scaffold.of(ctx).openDrawer(),
+          );
+        }),
+        if (actions != null) ...actions!,
+      ],
       bottom: const PreferredSize(
         preferredSize: Size.fromHeight(1),
         child: Divider(height: 1, color: AppColors.kCardBorder),

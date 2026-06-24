@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../data/category_icons.dart';
 import '../../../../services/menu_editor_service.dart';
 import '../../../../shared/app_colors.dart';
+import '../../../../components/layout/sidebar.dart';
 import '../models/editor_menu_model.dart';
 
 // Equivalente a src/modules/menu/editor/ProductFormPage.jsx en React
@@ -227,6 +228,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: const AppSidebar(),
       appBar: AppBar(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
@@ -245,6 +247,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
           ],
         ),
         actions: [
+          Builder(builder: (ctx) {
+            final hasDrawer = Scaffold.maybeOf(ctx)?.hasDrawer ?? false;
+            if (!hasDrawer) return const SizedBox.shrink();
+            return IconButton(
+              icon: const Icon(Icons.menu, size: 22),
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+            );
+          }),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: FilledButton(

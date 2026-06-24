@@ -12,6 +12,7 @@ import '../tabs/design_tab.dart';
 import '../tabs/grupos_tab.dart';
 import '../tabs/products_tab.dart';
 import '../tabs/publish_tab.dart';
+import '../../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/menu/editor/MenuEditorPage.jsx en React
 // Página principal del editor con tabs: Categorías, Productos, Grupos, Diseño,
@@ -190,6 +191,7 @@ class _MenuEditorPageState extends State<MenuEditorPage> with RouteAware {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: const AppSidebar(),
       body: SafeArea(
         child: Column(
           children: [
@@ -315,6 +317,18 @@ class _TopBar extends StatelessWidget {
             padding: const EdgeInsets.all(6),
             constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
           ),
+
+          // Hamburger
+          Builder(builder: (ctx) {
+            final hasDrawer = Scaffold.maybeOf(ctx)?.hasDrawer ?? false;
+            if (!hasDrawer) return const SizedBox.shrink();
+            return IconButton(
+              icon: const Icon(Icons.menu, size: 20, color: Color(0xFF64748B)),
+              padding: const EdgeInsets.all(6),
+              constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+            );
+          }),
         ],
       ),
     );

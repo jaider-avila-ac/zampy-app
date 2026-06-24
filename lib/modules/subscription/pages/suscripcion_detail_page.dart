@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../services/suscripcion_service.dart';
 import '../../../shared/app_colors.dart';
+import '../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/subscription/pages/SuscripcionDetailPage.jsx en React
 
@@ -87,6 +88,7 @@ class _SuscripcionDetailPageState extends State<SuscripcionDetailPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: const AppSidebar(),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -96,6 +98,16 @@ class _SuscripcionDetailPageState extends State<SuscripcionDetailPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          Builder(builder: (ctx) {
+            final hasDrawer = Scaffold.maybeOf(ctx)?.hasDrawer ?? false;
+            if (!hasDrawer) return const SizedBox.shrink();
+            return IconButton(
+              icon: const Icon(Icons.menu, size: 22),
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+            );
+          }),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

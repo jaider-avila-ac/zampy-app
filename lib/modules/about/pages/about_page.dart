@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../shared/app_header.dart';
+import '../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/about/pages/AboutPage.jsx en React
 
@@ -29,6 +30,7 @@ class AboutPage extends StatelessWidget {
       onPopInvokedWithResult: (_, _) => _goBack(context),
       child: Scaffold(
       backgroundColor: Colors.white,
+      drawer: const AppSidebar(),
       appBar: const AppHeader(title: 'Acerca de'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
@@ -137,7 +139,7 @@ class AboutPage extends StatelessWidget {
               children: [
                 _LegalLink(
                   label: 'Términos y Condiciones',
-                  onTap: () => _launch('https://zammpy.com/terminos'),
+                  onTap: () => _launch('https://www.zammpy.com/terminos-y-condiciones'),
                 ),
                 const SizedBox(width: 20),
                 _LegalLink(

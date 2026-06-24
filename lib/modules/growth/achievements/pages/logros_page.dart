@@ -5,6 +5,7 @@ import '../hooks/use_logros.dart';
 import '../components/logro_card.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
+import '../../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/growth/achievements/pages/LogrosPage.jsx
 
@@ -40,6 +41,7 @@ class _LogrosView extends StatelessWidget {
       onPopInvokedWithResult: (_, _) => _goBack(context),
       child: Scaffold(
         backgroundColor: AppColors.kBgPage,
+        drawer: const AppSidebar(),
         appBar: AppHeader(
           title: 'Logros',
           actions: [

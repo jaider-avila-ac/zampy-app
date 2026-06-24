@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../context/auth_context.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
+import '../../../components/layout/sidebar.dart';
 import '../hooks/use_profile.dart';
 
 // Equivalente a src/modules/profile/pages/ProfilePage.jsx en React
@@ -30,6 +31,7 @@ class _ProfileView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.kBgPage,
+      drawer: const AppSidebar(),
       appBar: const AppHeader(title: 'Mi perfil'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),

@@ -6,6 +6,7 @@ import '../hooks/use_notifications.dart';
 import '../components/notification_item.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
+import '../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/notifications/pages/NotificationsPage.jsx
 
@@ -54,6 +55,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
       onPopInvokedWithResult: (_, _) => _goBack(),
       child: Scaffold(
         backgroundColor: AppColors.kBgPage,
+        drawer: const AppSidebar(),
         appBar: AppHeader(
           title:    'Notificaciones',
           subtitle: ctrl.unread > 0 ? '${ctrl.unread} sin leer' : null,

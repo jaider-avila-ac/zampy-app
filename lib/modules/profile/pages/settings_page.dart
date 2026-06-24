@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart'; // context.push('/perfil')
 import 'package:provider/provider.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
+import '../../../components/layout/sidebar.dart';
 import '../hooks/use_settings.dart';
 
 // Equivalente a src/modules/profile/pages/SettingsPage.jsx en React
@@ -29,6 +30,7 @@ class _SettingsView extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.kBgPage,
+      drawer: const AppSidebar(),
       appBar: const AppHeader(title: 'Ajustes'),
       body: RefreshIndicator(
         color: AppColors.kBlue,

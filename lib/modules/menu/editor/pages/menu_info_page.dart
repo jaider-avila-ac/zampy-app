@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../services/menu_editor_service.dart';
 import '../../../../services/themes_catalog_service.dart';
 import '../../../../shared/app_colors.dart';
+import '../../../../shared/app_header.dart';
+import '../../../../components/layout/sidebar.dart';
 import '../../../../shared/location_cascade_widget.dart';
 import '../../../../shared/logo_crop_dialog.dart';
 import '../../../../shared/schedule_widget.dart';
@@ -303,22 +305,10 @@ class _MenuInfoPageState extends State<MenuInfoPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        leading: BackButton(onPressed: _goBack),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Editar información',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-            Text(
-              _kSteps[_step].desc,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+      drawer: const AppSidebar(),
+      appBar: AppHeader(
+        title: 'Editar información',
+        subtitle: _kSteps[_step].desc,
       ),
       body: Column(
         children: [
