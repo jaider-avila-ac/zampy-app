@@ -94,8 +94,9 @@ class MenuEditorService {
     return data as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> publish(int id) async {
-    final data = await _req('POST', '/api/v1/menus/$id/publish');
+  static Future<Map<String, dynamic>> publish(int id, {bool trial = false}) async {
+    final path = trial ? '/api/v1/menus/$id/publish?trial=true' : '/api/v1/menus/$id/publish';
+    final data = await _req('POST', path);
     return data as Map<String, dynamic>;
   }
 

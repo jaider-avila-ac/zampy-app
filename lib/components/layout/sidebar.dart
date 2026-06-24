@@ -11,7 +11,8 @@ import '../../shared/app_colors.dart';
 
 // Rutas públicas (sin sesión)
 const _navPublic = [
-  _NavItem(path: '/',              icon: Icons.home_outlined,            label: 'Inicio'),
+  _NavItem(path: '/',       icon: Icons.home_outlined,  label: 'Inicio'),
+  _NavItem(path: '/about',  icon: Icons.info_outline,   label: 'Acerca de'),
 ];
 
 // Rutas privadas (con sesión) — mismo orden que React Sidebar.jsx
@@ -23,6 +24,7 @@ const _navPrivate = [
   _NavItem(path: '/invitaciones',  icon: Icons.people_outlined,          label: 'Invitaciones'),
   _NavItem(path: '/settings',      icon: Icons.settings_outlined,        label: 'Ajustes'),
   _NavItem(path: '/suscripcion',   icon: Icons.credit_card_outlined,     label: 'Suscripciones'),
+  _NavItem(path: '/about',         icon: Icons.info_outline,             label: 'Acerca de'),
 ];
 
 class _NavItem {

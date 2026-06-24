@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../../../components/layout/sidebar.dart';
 import '../../../context/auth_context.dart';
@@ -92,6 +93,20 @@ class _ExploreViewState extends State<_ExploreView> with RouteAware {
   void didPopNext() {
     final ctrl = context.read<ExploreController>();
     ctrl.loadFeed(ctrl.ciudad);
+  }
+
+  void _abrirQrScanner() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _QrScannerSheet(
+        onSlugDetected: (slug) {
+          Navigator.of(context).pop();
+          context.push('/menu/$slug');
+        },
+      ),
+    );
   }
 
   @override
@@ -240,6 +255,12 @@ class _ExploreViewState extends State<_ExploreView> with RouteAware {
                   ),
                 ),
                 if (auth.isLoggedIn) ...[
+                  // Escáner QR
+                  IconButton(
+                    icon: const Icon(Icons.qr_code_scanner_outlined,
+                        size: 20, color: AppColors.kTextSecondary),
+                    onPressed: _abrirQrScanner,
+                  ),
                   // Notificaciones con badge
                   Stack(
                     children: [
@@ -710,6 +731,169 @@ class _UserAvatar extends StatelessWidget {
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
                     color: AppColors.kBlue))
             : const Icon(Icons.person_outline, size: 15, color: AppColors.kBlue),
+      ),
+    );
+  }
+}
+
+// ── Escáner QR ────────────────────────────────────────────────────────────────
+class _QrScannerSheet extends StatefulWidget {
+  const _QrScannerSheet({required this.onSlugDetected});
+
+  final void Function(String slug) onSlugDetected;
+
+  @override
+  State<_QrScannerSheet> createState() => _QrScannerSheetState();
+}
+
+class _QrScannerSheetState extends State<_QrScannerSheet> {
+  late final MobileScannerController _ctrl;
+  bool    _handled  = false;
+  String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = MobileScannerController();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_handled) return;
+    final raw  = capture.barcodes.firstOrNull?.rawValue ?? '';
+    final slug = _zammpySlug(raw);
+    if (slug != null) {
+      _handled = true;
+      widget.onSlugDetected(slug);
+    } else if (raw.isNotEmpty) {
+      _handled = true;
+      setState(() => _errorMsg = 'El QR no pertenece a un menú de Zammpy');
+      // Después de 2 s resetear para que pueda escanear de nuevo
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) setState(() { _errorMsg = null; _handled = false; });
+      });
+    }
+  }
+
+  String? _zammpySlug(String url) {
+    try {
+      final uri  = Uri.parse(url);
+      final host = uri.host.toLowerCase();
+      const valid = {'zammpy.com', 'www.zammpy.com', 'app.zammpy.com'};
+      if (!valid.contains(host)) return null;
+      final segs = uri.pathSegments;
+      if (segs.length >= 2 && segs[0] == 'menu' && segs[1].isNotEmpty) {
+        return segs[1];
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = MediaQuery.of(context).size.height * 0.78;
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: SizedBox(
+        height: h,
+        child: Stack(
+          children: [
+            // Cámara
+            MobileScanner(controller: _ctrl, onDetect: _onDetect),
+
+            // Marco de escaneo — rojo si hay error, azul si está listo
+            Center(
+              child: Container(
+                width: 220, height: 220,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _errorMsg != null
+                        ? const Color(0xFFEF4444)
+                        : AppColors.kBlue,
+                    width: 3,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+
+            // Mensaje de error inline — aparece sobre el marco
+            if (_errorMsg != null)
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 240),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          color: Colors.white, size: 16),
+                      const SizedBox(width: 8),
+                      Text(_errorMsg!,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Encabezado con título y botón cerrar
+            Positioned(
+              top: 0, left: 0, right: 0,
+              child: Container(
+                color: Colors.black54,
+                padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.qr_code_scanner_outlined,
+                        color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text('Escanear menú Zammpy',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 22),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Hint inferior
+            Positioned(
+              bottom: 32, left: 0, right: 0,
+              child: Container(
+                color: Colors.black45,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Text(
+                  _errorMsg == null
+                      ? 'Apunta al código QR de un menú Zammpy'
+                      : 'Intenta con otro código QR',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

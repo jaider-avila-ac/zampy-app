@@ -139,7 +139,7 @@ class _GruposTabState extends State<GruposTab> {
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
                         SizedBox(height: 3),
                         Text(
-                          'Crea grupos reutilizables y asígnalos a varios productos. Solo son informativos, no generan selectores.',
+                          'Crea grupos reutilizables y asígnalos a varios productos.',
                           style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
                       ],

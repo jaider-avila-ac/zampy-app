@@ -26,6 +26,7 @@ import 'modules/subscription/pages/suscripcion_overview_page.dart';
 import 'modules/subscription/pages/suscripcion_detail_page.dart';
 import 'modules/subscription/pages/planes_page.dart';
 import 'modules/subscription/pages/checkout_page.dart';
+import 'modules/about/pages/about_page.dart';
 
 // Equivalente a src/App.jsx + src/router/ en React
 // Rutas Fase 1 + Fase 2
@@ -205,6 +206,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/auth/reset-password',
       builder: (context, state) => const ResetPasswordPage(),
+    ),
+    GoRoute(
+      path: '/about',
+      builder: (context, state) => const AboutPage(),
     ),
   ],
 );

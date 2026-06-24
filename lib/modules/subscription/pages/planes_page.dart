@@ -17,9 +17,9 @@ class PlanesPage extends StatefulWidget {
 class _PlanesPageState extends State<PlanesPage> {
   Map<String, dynamic>? _precio;
   Map<String, dynamic>? _sub;
-  bool _loading     = true;
-  bool _trialLoading = false;
-  String _error     = '';
+  bool   _loading      = true;
+  bool   _trialLoading = false;
+  String _error        = '';
 
   @override
   void initState() {
@@ -28,16 +28,15 @@ class _PlanesPageState extends State<PlanesPage> {
   }
 
   Future<void> _load() async {
+    setState(() { _loading = true; _error = ''; });
     try {
       final precioFuture = SuscripcionService.getPrecio();
       final subFuture    = SuscripcionService.getMiSuscripcion(widget.menuId)
           .catchError((_) => null as Map<String, dynamic>?);
       final precio = await precioFuture;
       final sub    = await subFuture;
-
       if (!mounted) return;
 
-      // Si ya está activo/aviso/esperando → volver al editor
       final estado = sub?['estado'] as String? ?? '';
       if (['ACTIVE', 'PAYMENT_REMINDER', 'WAITING_ACTIVATION'].contains(estado)) {
         context.go('/menus/${widget.menuId}/edit');
@@ -59,365 +58,513 @@ class _PlanesPageState extends State<PlanesPage> {
     }
   }
 
-  bool get _isFirstPublish {
-    final tipoPlan   = _sub?['tipoPlan'] as String?;
-    final trialUsado = _sub?['trialUsado'] as bool? ?? false;
-    return tipoPlan == null && !trialUsado;
+  // ── Derivados (igual que React) ────────────────────────────────────────────
+  String? get _subEstado      => _sub?['estado']     as String?;
+  bool    get _trialUsado     => _sub?['trialUsado'] as bool? ?? false;
+  bool    get _isFirstPublish => (_subEstado == null || _subEstado!.isEmpty) && !_trialUsado;
+  bool    get _isPastDue      => _subEstado == 'PAST_DUE';
+
+  // duracionMinutos vive en precio.planes.trial.duracionMinutos (no en precio raíz)
+  int get _trialDuracion {
+    final planes = _precio?['planes'] as Map<String, dynamic>?;
+    final trial  = planes?['trial']   as Map<String, dynamic>?;
+    return (trial?['duracionMinutos'] as num?)?.toInt() ?? 0;
   }
 
-  int get _trialDuracion => (_precio?['trialDuracion'] as num?)?.toInt() ?? 0;
+  List<Map<String, dynamic>> get _plansList {
+    final planes = _precio?['planes'] as Map<String, dynamic>? ?? {};
+    return planes.entries
+        .where((e) => e.key != 'trial')
+        .map((e) => {'code': e.key, ...(e.value as Map<String, dynamic>)})
+        .toList();
+  }
 
   Future<void> _usarTrial() async {
-    setState(() => _trialLoading = true);
+    setState(() { _trialLoading = true; _error = ''; });
     try {
-      await MenuEditorService.publish(widget.menuId);
+      await MenuEditorService.publish(widget.menuId, trial: true);
       if (mounted) context.go('/menus/${widget.menuId}/edit');
     } catch (e) {
       if (mounted) {
-        setState(() => _trialLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-        );
+        setState(() {
+          _error       = e.toString().replaceFirst('Exception: ', '');
+          _trialLoading = false;
+        });
       }
     }
   }
 
-  void _seleccionarPlan(String codigoPlan) {
-    final estado = _sub?['estado'] as String? ?? '';
-    final tipo   = estado == 'PAST_DUE' || estado == 'CANCELLED' ? 'renovacion' : 'checkout';
-    context.push('/billing/${widget.menuId}/checkout?tipo=$tipo&plan=$codigoPlan');
+  void _seleccionarPlan(String code) {
+    if (_isPastDue) {
+      context.push('/billing/${widget.menuId}/checkout?tipo=renovacion');
+    } else {
+      context.push('/billing/${widget.menuId}/checkout?tipo=checkout&plan=$code');
+    }
+  }
+
+  // ── Título / descripción dinámicos (igual que React) ──────────────────────
+  (String, String) get _header {
+    if (_isPastDue) {
+      return (
+        'Renueva tu suscripción',
+        'Tu suscripción venció. Renueva ahora para mantener tu precio — si se suspende deberás contratar al precio vigente.',
+      );
+    }
+    if (_isFirstPublish) { return ('Publica tu menú', 'Elige cómo quieres comenzar.'); }
+    return ('Elige un plan', 'Selecciona el plan que mejor se ajuste a tu negocio.');
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final (titulo, descripcion) = _header;
+    final promo      = _precio?['promo']      as Map<String, dynamic>?;
+    final infoBloque = _precio?['infoBloque'] as Map<String, dynamic>?;
+    final plansList  = _plansList;
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Planes', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+          children: [
+            // ── Volver ────────────────────────────────────────────────────
+            GestureDetector(
+              onTap: () => context.pop(),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.arrow_back, size: 15, color: Color(0xFF6B7280)),
+                  SizedBox(width: 6),
+                  Text('Volver al editor',
+                      style: TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+
+            // ── Intro ──────────────────────────────────────────────────────
+            Text(titulo,
+                style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF111827))),
+            const SizedBox(height: 4),
+            Text(descripcion,
+                style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280))),
+            const SizedBox(height: 28),
+
+            // ── Promo banner ───────────────────────────────────────────────
+            if (promo != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                margin: const EdgeInsets.only(bottom: 28),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEEF2FF),
+                  border: Border.all(color: const Color(0xFFC7D2FE)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome,
+                        size: 15, color: Color(0xFF4338CA)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(promo['mensaje'] as String? ?? '',
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1E1B4B))),
+                    ),
+                    if (promo['etiqueta'] != null) ...[
+                      const SizedBox(width: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.kBlue,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text(promo['etiqueta'] as String,
+                            style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+
+            // ── Error ──────────────────────────────────────────────────────
+            if (_error.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.warning_amber_outlined,
+                        size: 14, color: Color(0xFFB91C1C)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(_error,
+                          style: const TextStyle(
+                              fontSize: 13, color: Color(0xFFB91C1C))),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // ── Botón trial ────────────────────────────────────────────────
+            if (_isFirstPublish && _trialDuracion > 0) ...[
+              _TrialButton(
+                duracionMinutos: _trialDuracion,
+                loading: _trialLoading,
+                onTap: _usarTrial,
+              ),
+              const SizedBox(height: 20),
+            ],
+
+            // ── Cards de planes ────────────────────────────────────────────
+            ...plansList.asMap().entries.map((entry) {
+              final idx  = entry.key;
+              final plan = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: _PlanCard(
+                  plan:      plan,
+                  iconIndex: idx,
+                  isCurrent: plan['code'] == (_sub?['tipoPlan'] as String?),
+                  isPastDue: _isPastDue,
+                  onSelect:  () => _seleccionarPlan(plan['code'] as String),
+                ),
+              );
+            }),
+
+            const SizedBox(height: 8),
+
+            // ── Info bloque inferior ───────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF2FF),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.shield_outlined,
+                      size: 20, color: Color(0xFF4338CA)),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          infoBloque?['titulo'] as String? ??
+                              'Todos nuestros planes incluyen',
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF111827)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          infoBloque?['descripcion'] as String? ??
+                              'Soporte por chat, actualizaciones constantes y seguridad para tu negocio.',
+                          style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6B7280),
+                              height: 1.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error.isNotEmpty
-              ? _ErrorView(error: _error, onRetry: _load)
-              : _buildContent(),
-    );
-  }
-
-  Widget _buildContent() {
-    final planes = _precio?['planes'] as Map<String, dynamic>? ?? {};
-    final plansList = planes.entries
-        .where((e) => e.key != 'trial')
-        .map((e) => {'codigo': e.key, ...(e.value as Map<String, dynamic>)})
-        .toList();
-
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        const Text(
-          'Elige tu plan',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Publica tu menú y empieza a recibir clientes',
-          style: TextStyle(fontSize: 14, color: Color(0xFF64748B)),
-        ),
-        const SizedBox(height: 24),
-
-        // ── Botón trial ──
-        if (_isFirstPublish && _trialDuracion > 0) ...[
-          _TrialButton(
-            dias: _trialDuracion,
-            loading: _trialLoading,
-            onTap: _usarTrial,
-          ),
-          const SizedBox(height: 20),
-          const Row(
-            children: [
-              Expanded(child: Divider()),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text('o elige un plan',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
-              ),
-              Expanded(child: Divider()),
-            ],
-          ),
-          const SizedBox(height: 20),
-        ],
-
-        // ── Tarjetas de planes ──
-        ...plansList.map((plan) => Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: _PlanCard(
-            plan: plan,
-            onSelect: () => _seleccionarPlan(plan['codigo'] as String),
-          ),
-        )),
-
-        const SizedBox(height: 12),
-        const Center(
-          child: Text(
-            'Todos los precios incluyen IVA · Cancela cuando quieras',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-          ),
-        ),
-      ],
     );
   }
 }
 
 // ── Botón trial ───────────────────────────────────────────────────────────────
 class _TrialButton extends StatelessWidget {
-  const _TrialButton({required this.dias, required this.loading, required this.onTap});
-  final int  dias;
+  const _TrialButton({
+    required this.duracionMinutos,
+    required this.loading,
+    required this.onTap,
+  });
+
+  final int  duracionMinutos;
   final bool loading;
   final VoidCallback onTap;
+
+  // Equivalente a fmtTiempo(0, minutos) de React
+  static String _fmt(int m) {
+    if (m <= 0)   { return '0 minutos'; }
+    if (m < 60)   { return '$m minuto${m != 1 ? 's' : ''}'; }
+    if (m < 1440) { final h = (m / 60).round(); return '$h hora${h != 1 ? 's' : ''}'; }
+    final d = (m / 1440).round();
+    return '$d día${d != 1 ? 's' : ''}';
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: loading ? null : onTap,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF16A34A), Color(0xFF15803D)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: Opacity(
+        opacity: loading ? 0.6 : 1,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF111827),
+            borderRadius: BorderRadius.circular(16),
           ),
-          borderRadius: BorderRadius.circular(16),
+          child: loading
+              ? const Center(
+                  child: SizedBox(
+                      width: 20, height: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.5)))
+              : Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${_fmt(duracionMinutos)} gratis',
+                              style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white)),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Sin tarjeta de crédito · Prueba todas las funciones',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.65)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
         ),
-        child: loading
-            ? const Center(
-                child: SizedBox(
-                    width: 22, height: 22,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.star_outline, color: Colors.white, size: 18),
-                      const SizedBox(width: 8),
-                      Text('$dias días gratis',
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white)),
-                      const Spacer(),
-                      const Icon(Icons.arrow_forward, color: Colors.white, size: 16),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Sin tarjeta de crédito · Publica ahora',
-                    style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.85)),
-                  ),
-                ],
-              ),
       ),
     );
   }
 }
 
 // ── Tarjeta de plan ───────────────────────────────────────────────────────────
+// Equivalente a PlanCard en React (incluyendo badge flotante, icono por índice,
+// campo `display` para precio, y beneficios del backend)
 class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.plan, required this.onSelect});
+  const _PlanCard({
+    required this.plan,
+    required this.iconIndex,
+    required this.isCurrent,
+    required this.isPastDue,
+    required this.onSelect,
+  });
+
   final Map<String, dynamic> plan;
+  final int  iconIndex;
+  final bool isCurrent;
+  final bool isPastDue;
   final VoidCallback onSelect;
+
+  // [Box, Rocket, Sparkles] de React → equivalentes Material
+  static const _icons = [
+    Icons.inventory_2_outlined,
+    Icons.rocket_launch_outlined,
+    Icons.auto_awesome,
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final nombre         = plan['nombre'] as String? ?? plan['codigo'] as String? ?? '';
-    final precio         = (plan['precio'] as num?)?.toInt() ?? 0;
-    final limiteProductos = (plan['limiteProductos'] as num?)?.toInt();
-    final descripcion    = plan['descripcion'] as String?;
-    final esRecomendado  = plan['recomendado'] as bool? ?? false;
+    final etiqueta   = plan['etiqueta'] as String?
+        ?? ((plan['popular'] as bool? ?? false) ? 'Más popular' : null);
+    final isHighlight = etiqueta != null;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(
-          color: esRecomendado ? AppColors.kBlue : const Color(0xFFE2E8F0),
-          width: esRecomendado ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (esRecomendado)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.kBlue,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-              ),
-              child: const Center(
-                child: Text('Más popular',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white)),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(nombre,
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0F172A))),
-                          if (descripcion != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(descripcion,
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Color(0xFF64748B))),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '\$${_formatPrice(precio)}',
-                          style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.kBlue),
-                        ),
-                        const Text('/mes',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                      ],
-                    ),
-                  ],
-                ),
+    final nombre = (isPastDue && isCurrent)
+        ? 'Renovar — ${plan['nombre'] ?? plan['code']}'
+        : (plan['nombre'] as String? ?? plan['code'] as String? ?? '');
 
-                if (limiteProductos != null) ...[
-                  const SizedBox(height: 12),
-                  _Feature(
-                    icon: Icons.fastfood_outlined,
-                    text: 'Hasta $limiteProductos productos',
-                  ),
-                ],
+    final limite              = plan['limite']              as num?;
+    final limiteCategorias    = plan['limiteCategorias']    as num?;
+    final limiteColaboradores = plan['limiteColaboradores'] as num?;
+    final beneficiosExtra     = (plan['beneficios']         as List?)?.cast<String>() ?? [];
 
-                // Features adicionales del plan si las hay
-                ..._buildFeatures(plan),
-
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: onSelect,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: esRecomendado ? AppColors.kBlue : const Color(0xFF0F172A),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: Text('Elegir $nombre',
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w700)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildFeatures(Map<String, dynamic> plan) {
-    final features = plan['features'] as List?;
-    if (features == null || features.isEmpty) return [];
-    return [
-      const SizedBox(height: 8),
-      ...features.map<Widget>((f) => _Feature(
-        icon: Icons.check_circle_outline,
-        text: f.toString(),
-      )),
+    final beneficios = [
+      if (limite              != null) 'Hasta ${limite.toInt()} productos',
+      if (limiteCategorias    != null) 'Hasta ${limiteCategorias.toInt()} categorías',
+      if (limiteColaboradores != null) 'Hasta ${limiteColaboradores.toInt()} colaboradores',
+      ...beneficiosExtra,
     ];
-  }
 
-  String _formatPrice(int cents) {
-    final n = (cents / 100).round();
-    final s = n.toString();
-    final buf = StringBuffer();
-    for (var i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
-      buf.write(s[i]);
-    }
-    return buf.toString();
-  }
-}
+    final icon = _icons[iconIndex % _icons.length];
 
-class _Feature extends StatelessWidget {
-  const _Feature({required this.icon, required this.text});
-  final IconData icon;
-  final String   text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: 6),
-        child: Row(
-          children: [
-            Icon(icon, size: 13, color: const Color(0xFF16A34A)),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(text,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF475569))),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // ── Card ──────────────────────────────────────────────────────────
+        Container(
+          margin: EdgeInsets.only(top: etiqueta != null ? 14 : 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(
+              color: isHighlight ? AppColors.kBlue : const Color(0xFFE5E7EB),
+              width: isHighlight ? 2 : 1,
             ),
-          ],
-        ),
-      );
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.error, required this.onRetry});
-  final String error;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
+            borderRadius: BorderRadius.circular(16),
+          ),
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.error_outline, size: 40, color: Color(0xFF94A3B8)),
-              const SizedBox(height: 12),
-              Text(error,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF64748B))),
+              // Icono
+              Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: isHighlight
+                      ? const Color(0xFFE0E7FF)
+                      : const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon,
+                    size: 18,
+                    color: isHighlight
+                        ? const Color(0xFF4338CA)
+                        : const Color(0xFF6B7280)),
+              ),
               const SizedBox(height: 16),
-              FilledButton(
-                onPressed: onRetry,
-                child: const Text('Reintentar'),
+
+              // Nombre
+              Text(nombre,
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827))),
+              const SizedBox(height: 16),
+
+              // Precio — `display` viene pre-formateado del backend
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    plan['display'] as String? ?? '',
+                    style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF4338CA)),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('/mes',
+                      style: TextStyle(
+                          fontSize: 13, color: Color(0xFF9CA3AF))),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: Color(0xFFF3F4F6), height: 1),
+
+              // Beneficios
+              if (beneficios.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                ...beneficios.map((b) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle_outline,
+                              size: 14, color: Color(0xFF4338CA)),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(b,
+                                style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF374151))),
+                          ),
+                        ],
+                      ),
+                    )),
+              ],
+
+              const SizedBox(height: 20),
+
+              // CTA
+              SizedBox(
+                width: double.infinity,
+                child: isHighlight
+                    ? FilledButton(
+                        onPressed: onSelect,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.kBlue,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Elegir plan →',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w700)),
+                      )
+                    : OutlinedButton(
+                        onPressed: onSelect,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                              color: Color(0xFF4338CA), width: 2),
+                          foregroundColor: const Color(0xFF4338CA),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Elegir plan →',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w700)),
+                      ),
               ),
             ],
           ),
         ),
-      );
+
+        // ── Badge flotante centrado (-top-3.5 left-1/2 de React) ──────────
+        if (etiqueta != null)
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.kBlue,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(etiqueta,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white)),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }
