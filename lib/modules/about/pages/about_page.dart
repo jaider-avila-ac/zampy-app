@@ -78,7 +78,7 @@ class AboutPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _CreadorAvatar(asset: 'assets/creadores/jaider-avila.png', name: 'Jaider Ávila'),
+                      _CreadorAvatar(asset: 'assets/creadores/jaider-avila.png', name: 'Jaider Avila'),
                       const SizedBox(width: 16),
                       _CreadorAvatar(asset: 'assets/creadores/juan-pablo-perez.png', name: 'Juan Pablo Pérez'),
                     ],
