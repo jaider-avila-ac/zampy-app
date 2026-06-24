@@ -11,10 +11,6 @@ class Banner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final locationText = [info.paisNombre, info.div1Nombre, info.div2Nombre]
-        .where((s) => s != null && s.isNotEmpty)
-        .join(', ');
-
     return Column(
       children: [
         // ── Banner + Logo en Stack (equivalente a -mt-12 de React) ───────
@@ -28,16 +24,16 @@ class Banner extends StatelessWidget {
               width:  double.infinity,
               child:  _BannerImage(bannerUrl: info.bannerUrl, theme: theme),
             ),
-            // Logo: mitad sobresale del banner — equivale a -mt-12 (48px)
+            // Logo: mitad sobresale del banner — 132px → 66px fuera
             Positioned(
-              bottom: -52,
+              bottom: -66,
               child: _Logo(logoUrl: info.logoUrl, name: info.name, theme: theme),
             ),
           ],
         ),
 
-        // Espacio para el logo que sobresale (altura logo 104px / 2 = 52px)
-        const SizedBox(height: 60),
+        // Espacio para el logo que sobresale (132px / 2 = 66px + 8px margen)
+        const SizedBox(height: 74),
 
         // ── Info centrada debajo del logo ─────────────────────────────────
         Padding(
@@ -63,37 +59,37 @@ class Banner extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              // Chips de contacto e info
+              // Chips de contacto — solo los que el negocio tiene (igual que React)
               Wrap(
                 alignment:  WrapAlignment.center,
                 spacing:    6,
                 runSpacing: 6,
                 children: [
-                  if (locationText.isNotEmpty)
-                    _InfoChip(icon: Icons.public, text: locationText, theme: theme),
-                  if (info.address != null && info.address!.isNotEmpty)
+                  if (info.locationText.isNotEmpty)
+                    _InfoChip(icon: Icons.public, text: info.locationText, theme: theme),
+                  if (info.hasAddress)
                     _InfoChip(icon: Icons.location_on_outlined, text: info.address!, theme: theme),
-                  if (info.schedule != null && info.schedule!.isNotEmpty)
+                  if (info.hasSchedule)
                     _InfoChip(icon: Icons.access_time_outlined, text: info.schedule!, theme: theme),
-                  if ((info.whatsapp ?? info.phone) != null)
+                  if (info.hasWhatsapp || info.hasPhone)
                     _InfoChip(icon: Icons.phone_outlined, text: (info.whatsapp ?? info.phone)!, theme: theme),
                 ],
               ),
-              // Redes sociales
-              if ([info.instagram, info.facebook, info.tiktok, info.website].any((v) => v != null)) ...[
+              // Redes sociales — solo si el negocio las tiene (igual que React)
+              if (info.hasInstagram || info.hasFacebook || info.hasTiktok || info.hasWebsite) ...[
                 const SizedBox(height: 8),
                 Wrap(
                   alignment:  WrapAlignment.center,
                   spacing:    6,
                   runSpacing: 6,
                   children: [
-                    if (info.instagram != null)
+                    if (info.hasInstagram)
                       _SocialChip(label: 'Instagram', color: const Color(0xFFE1306C), theme: theme),
-                    if (info.facebook != null)
+                    if (info.hasFacebook)
                       _SocialChip(label: 'Facebook', color: const Color(0xFF1877F2), theme: theme),
-                    if (info.tiktok != null)
+                    if (info.hasTiktok)
                       _SocialChip(label: 'TikTok', color: const Color(0xFF010101), theme: theme),
-                    if (info.website != null)
+                    if (info.hasWebsite)
                       _SocialChip(label: 'Web', color: const Color(0xFF6366F1), theme: theme),
                   ],
                 ),
@@ -146,13 +142,13 @@ class _Logo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width:  104,
-        height: 104,
+        width:  132,
+        height: 132,
         decoration: BoxDecoration(
           shape:     BoxShape.circle,
           border:    Border.all(color: Colors.white, width: 4),
           boxShadow: const [
-            BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 4)),
+            BoxShadow(color: Colors.black26, blurRadius: 16, offset: Offset(0, 6)),
           ],
         ),
         child: ClipOval(
@@ -172,7 +168,7 @@ class _Logo extends StatelessWidget {
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
           style: const TextStyle(
-            color: Colors.white, fontWeight: FontWeight.w900, fontSize: 36,
+            color: Colors.white, fontWeight: FontWeight.w900, fontSize: 46,
           ),
         ),
       );

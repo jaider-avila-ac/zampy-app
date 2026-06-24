@@ -138,7 +138,7 @@ class _RegisterView extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Mínimo 8 caracteres',
+                'Mínimo 6 caracteres',
                 style: TextStyle(fontSize: 11, color: AppColors.kTextMuted),
               ),
               const SizedBox(height: 24),

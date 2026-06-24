@@ -16,19 +16,25 @@ class MenuTheme {
   final Color navText;
   final Color navBorder;
   final String skinId;
+  final double cardRadius;
+  final double buttonRadius;
+  final double badgeRadius;
 
   const MenuTheme({
     required this.primary,
-    this.bg         = const Color(0xFFF8FAFC),
-    this.surface    = const Color(0xFFFFFFFF),
-    this.surfaceAlt = const Color(0xFFF1F5F9),
-    this.text       = const Color(0xFF0F172A),
-    this.textMuted  = const Color(0xFF64748B),
-    this.border     = const Color(0xFFE2E8F0),
-    this.navBg      = const Color(0xFFFFFFFF),
-    this.navText    = const Color(0xFF0F172A),
-    this.navBorder  = const Color(0xFFE2E8F0),
-    this.skinId     = 'default',
+    this.bg           = const Color(0xFFF8FAFC),
+    this.surface      = const Color(0xFFFFFFFF),
+    this.surfaceAlt   = const Color(0xFFF1F5F9),
+    this.text         = const Color(0xFF0F172A),
+    this.textMuted    = const Color(0xFF64748B),
+    this.border       = const Color(0xFFE2E8F0),
+    this.navBg        = const Color(0xFFFFFFFF),
+    this.navText      = const Color(0xFF0F172A),
+    this.navBorder    = const Color(0xFFE2E8F0),
+    this.skinId       = 'default',
+    this.cardRadius   = 16.0,
+    this.buttonRadius = 20.0,
+    this.badgeRadius  = 99.0,
   });
 
   // Parsea el objeto theme.colors que devuelve el backend
@@ -51,11 +57,17 @@ class MenuTheme {
     final navText    = _isLight(navBg) ? text : const Color(0xFFFFFFFF);
     final skinId     = json['skinId']?.toString() ?? 'default';
 
+    final rad          = json['radius'] as Map<String, dynamic>? ?? {};
+    final cardRadius   = (rad['card']   as num?)?.toDouble() ?? 16.0;
+    final buttonRadius = (rad['button'] as num?)?.toDouble() ?? 20.0;
+    final badgeRadius  = (rad['badge']  as num?)?.toDouble() ?? 99.0;
+
     return MenuTheme(
       primary: primary, bg: bg, surface: surface,
       surfaceAlt: surfaceAlt, text: text, textMuted: textMuted,
       border: border, navBg: navBg, navText: navText, navBorder: navBorder,
       skinId: skinId,
+      cardRadius: cardRadius, buttonRadius: buttonRadius, badgeRadius: badgeRadius,
     );
   }
 
@@ -95,14 +107,29 @@ class MenuInfo {
   final String? paisNombre;
   final String? div1Nombre;
   final String? div2Nombre;
+  final List<String> tags;
 
   const MenuInfo({
     required this.name,
     this.slogan, this.bannerUrl, this.logoUrl, this.address,
     this.schedule, this.phone, this.whatsapp, this.instagram,
     this.facebook, this.tiktok, this.website, this.paisNombre,
-    this.div1Nombre, this.div2Nombre,
+    this.div1Nombre, this.div2Nombre, this.tags = const [],
   });
+
+  // Helpers — igual que React: solo muestra si no es null y no está vacío
+  bool get hasInstagram => instagram != null && instagram!.isNotEmpty;
+  bool get hasFacebook  => facebook  != null && facebook!.isNotEmpty;
+  bool get hasTiktok    => tiktok    != null && tiktok!.isNotEmpty;
+  bool get hasWebsite   => website   != null && website!.isNotEmpty;
+  bool get hasWhatsapp  => whatsapp  != null && whatsapp!.isNotEmpty;
+  bool get hasPhone     => phone     != null && phone!.isNotEmpty;
+  bool get hasAddress   => address   != null && address!.isNotEmpty;
+  bool get hasSchedule  => schedule  != null && schedule!.isNotEmpty;
+
+  String get locationText => [paisNombre, div1Nombre, div2Nombre]
+      .where((s) => s != null && s.isNotEmpty)
+      .join(', ');
 
   factory MenuInfo.fromJson(Map<String, dynamic> json) => MenuInfo(
     name:       json['name']       as String? ?? json['nombreNegocio'] as String? ?? '',
@@ -120,6 +147,7 @@ class MenuInfo {
     paisNombre: json['paisNombre'] as String?,
     div1Nombre: json['div1Nombre'] as String?,
     div2Nombre: json['div2Nombre'] as String?,
+    tags:       (json['tags']      as List?)?.cast<String>() ?? const [],
   );
 }
 
@@ -161,6 +189,70 @@ class ProductVariant {
   );
 }
 
+// ── Tamaño de producto (React: product.sizes) ─────────────────────────────────
+class ProductSize {
+  final String id;
+  final String label;
+  final double price;
+
+  const ProductSize({required this.id, required this.label, this.price = 0});
+
+  factory ProductSize.fromJson(Map<String, dynamic> json) => ProductSize(
+    id:    json['id']?.toString() ?? '',
+    label: json['label'] as String? ?? json['name'] as String? ?? '',
+    price: (json['price'] as num?)?.toDouble() ?? 0,
+  );
+}
+
+// ── Modificador de producto (ingredientes / adiciones) ────────────────────────
+class ProductModifier {
+  final String id;
+  final String label;
+  final double price;
+
+  const ProductModifier({required this.id, required this.label, this.price = 0});
+
+  factory ProductModifier.fromJson(Map<String, dynamic> json) => ProductModifier(
+    id:    json['id']?.toString() ?? '',
+    label: json['label'] as String? ?? json['name'] as String? ?? '',
+    price: (json['price'] as num?)?.toDouble() ?? 0,
+  );
+}
+
+// ── Grupo informativo (React: grupos) ─────────────────────────────────────────
+// items puede llegar como strings ["BBQ", "Mostaza"] o como objetos {id, name, isActive}
+class MenuGrupo {
+  final String       id;
+  final String       name;
+  final bool         isActive;
+  final List<String> items;
+
+  const MenuGrupo({required this.id, required this.name, this.isActive = true, this.items = const []});
+
+  factory MenuGrupo.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'] as List? ?? [];
+    final parsedItems = rawItems
+        .where((item) {
+          if (item is Map) return item['isActive'] != false;
+          return true;
+        })
+        .map((item) {
+          if (item is String) return item;
+          if (item is Map) return (item['name'] as String?) ?? '';
+          return item.toString();
+        })
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    return MenuGrupo(
+      id:       json['id']?.toString() ?? '',
+      name:     json['name'] as String? ?? '',
+      isActive: json['isActive'] as bool? ?? true,
+      items:    parsedItems,
+    );
+  }
+}
+
 // ── Producto ─────────────────────────────────────────────────────────────────
 class MenuProduct {
   final String        id;
@@ -173,11 +265,15 @@ class MenuProduct {
   final String?       imageUrl;
   final String        categoryId;
   final bool          isVisible;
-  final List<String>  tags;
-  final List<String>  components;
-  final List<ProductVariant> variants;
-  final double?       rating;
-  final int?          totalVotos;
+  final List<String>           tags;
+  final List<String>           components;
+  final List<ProductVariant>   variants;
+  final List<ProductSize>      sizes;
+  final List<ProductModifier>  ingredients;
+  final List<ProductModifier>  extras;
+  final List<String>           grupoIds;
+  final double?                rating;
+  final int?                   totalVotos;
 
   const MenuProduct({
     required this.id,
@@ -187,15 +283,31 @@ class MenuProduct {
     this.description, this.promoPrice, this.promoActive = false,
     this.promoEndsAt, this.imageUrl, this.isVisible = true,
     this.tags = const [], this.components = const [],
-    this.variants = const [], this.rating, this.totalVotos,
+    this.variants = const [],
+    this.sizes = const [], this.ingredients = const [],
+    this.extras = const [], this.grupoIds = const [],
+    this.rating, this.totalVotos,
   });
 
   factory MenuProduct.fromJson(Map<String, dynamic> json) {
-    final tagsList = (json['tags'] as List?)?.cast<String>() ?? [];
-    final compList = (json['components'] as List?)?.cast<String>() ?? [];
-    final varList  = (json['variants']  as List?)
-        ?.map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
-        .toList() ?? [];
+    final tagsList  = (json['tags']      as List?)?.cast<String>() ?? [];
+    final compList  = (json['components'] as List?)?.cast<String>() ?? [];
+    final varList   = (json['variants']   as List? ?? [])
+        .map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
+        .toList();
+    final sizeList  = (json['sizes']       as List? ?? [])
+        .map((s) => ProductSize.fromJson(s as Map<String, dynamic>))
+        .toList();
+    final ingList   = (json['ingredients'] as List? ?? [])
+        .map((i) => ProductModifier.fromJson(i as Map<String, dynamic>))
+        .toList();
+    final extList   = (json['extras']      as List? ?? [])
+        .map((e) => ProductModifier.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final grupoIdsList = (json['grupoIds'] as List? ?? [])
+        .map((e) => e?.toString() ?? '')
+        .where((s) => s.isNotEmpty)
+        .toList();
 
     return MenuProduct(
       id:          json['id']?.toString()          ?? '',
@@ -211,6 +323,10 @@ class MenuProduct {
       tags:        tagsList,
       components:  compList,
       variants:    varList,
+      sizes:       sizeList,
+      ingredients: ingList,
+      extras:      extList,
+      grupoIds:    grupoIdsList,
       rating:      (json['rating']      as num?)?.toDouble(),
       totalVotos:  (json['totalVotos']  as num?)?.toInt(),
     );
@@ -230,21 +346,49 @@ class MenuProduct {
     (promoEndsAt == null || DateTime.now().isBefore(DateTime.parse(promoEndsAt!)));
 }
 
+// ── Design del menú (skinId + paletteId del backend) ─────────────────────────
+class MenuDesign {
+  final dynamic skinId;
+  final dynamic paletteId;
+
+  const MenuDesign({this.skinId, this.paletteId});
+
+  factory MenuDesign.fromJson(Map<String, dynamic>? json) => MenuDesign(
+        skinId:    json?['skinId'],
+        paletteId: json?['paletteId'],
+      );
+}
+
 // ── Menú completo ─────────────────────────────────────────────────────────────
 class PublicMenuData {
-  final MenuInfo              info;
-  final MenuTheme             theme;
-  final List<MenuCategory>    categories;
-  final List<MenuProduct>     products;
-  final int?                  ownerId;
+  final MenuInfo           info;
+  final MenuTheme          theme;
+  final List<MenuCategory> categories;
+  final List<MenuProduct>  products;
+  final List<MenuGrupo>    grupos;
+  final MenuDesign?        design;
+  final int?               ownerId;
 
   const PublicMenuData({
     required this.info,
     required this.theme,
     required this.categories,
     required this.products,
+    this.grupos  = const [],
+    this.design,
     this.ownerId,
   });
+
+  // Crea una copia con un tema diferente (para el ThemeSelector del demo)
+  PublicMenuData copyWithTheme(MenuTheme newTheme) => PublicMenuData(
+        info:       info,
+        theme:      newTheme,
+        categories: categories,
+        products:   products,
+        grupos:     grupos,
+        design:     design,
+        ownerId:    ownerId,
+      );
 
   factory PublicMenuData.fromJson(Map<String, dynamic> json) {
     final cats = (json['categories'] as List? ?? [])
@@ -257,11 +401,18 @@ class PublicMenuData {
         .where((p) => p.isVisible)
         .toList();
 
+    final gruposList = (json['grupos'] as List? ?? [])
+        .map((g) => MenuGrupo.fromJson(g as Map<String, dynamic>))
+        .where((g) => g.isActive)
+        .toList();
+
     return PublicMenuData(
       info:       MenuInfo.fromJson(json['info'] as Map<String, dynamic>? ?? json),
       theme:      MenuTheme.fromJson(json['theme'] as Map<String, dynamic>?),
       categories: cats,
       products:   prods,
+      grupos:     gruposList,
+      design:     MenuDesign.fromJson(json['design'] as Map<String, dynamic>?),
       ownerId:    (json['ownerId'] as num?)?.toInt(),
     );
   }

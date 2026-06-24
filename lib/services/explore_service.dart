@@ -23,17 +23,14 @@ class ExploreService {
   ExploreService._();
 
   // GET /api/v1/explore/feed?ciudad=...
+  // Deja que las excepciones de red suban al llamador (loadFeed detecta noInternet).
   static Future<Map<String, dynamic>> getFeed({String? ciudad}) async {
-    try {
-      final qs = ciudad != null ? '?ciudad=${Uri.encodeComponent(ciudad)}' : '';
-      final res = await http
-          .get(Uri.parse('$kApiBase/api/v1/explore/feed$qs'))
-          .timeout(const Duration(seconds: 15));
-      if (res.statusCode < 200 || res.statusCode >= 300) return _emptyFeed;
-      return (jsonDecode(res.body) as Map<String, dynamic>);
-    } catch (_) {
-      return _emptyFeed;
-    }
+    final qs = ciudad != null ? '?ciudad=${Uri.encodeComponent(ciudad)}' : '';
+    final res = await http
+        .get(Uri.parse('$kApiBase/api/v1/explore/feed$qs'))
+        .timeout(const Duration(seconds: 15));
+    if (res.statusCode < 200 || res.statusCode >= 300) return _emptyFeed;
+    return (jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   // GET /api/v1/explore/scroll?cursor=...&ciudad=...&exclude=...

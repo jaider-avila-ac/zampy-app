@@ -32,8 +32,26 @@ dependencies:
   # Compartir contenido con otras apps (sistema share sheet)
   share_plus: ^10.0.2
 
+  # Abrir URLs externas (WhatsApp, Maps, etc.)
+  url_launcher: ^6.3.1
+
+  # WebSocket STOMP — equivalente a @stomp/stompjs en React
+  stomp_dart_client: ^0.4.4
+
+  # Permisos del sistema (notificaciones, etc.)
+  permission_handler: ^11.3.1
+
+  # Selector de imágenes desde galería/cámara
+  image_picker: ^1.1.2
+
+  # Generar código QR en el cliente (React usa react-qrcode-logo)
+  qr_flutter: ^4.1.0
+
   # Google Sign-In nativo (selector de cuentas Android)
   google_sign_in: ^6.2.2
+
+  # WebView en-app para pagos con pasarela externa (PSE, Nequi, Daviplata)
+  webview_flutter: ^4.10.0
 
   # Íconos Material adicionales
   cupertino_icons: ^1.0.8
@@ -43,6 +61,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.3
 
 flutter_launcher_icons:
   android: true
@@ -51,6 +70,19 @@ flutter_launcher_icons:
   adaptive_icon_background: "assets/logos/launcher-icon.png"
   adaptive_icon_foreground: "assets/logos/launcher-icon.png"
   min_sdk_android: 21
+
+flutter_native_splash:
+  # Fondo: slate-950, oscuro pero no negro
+  color: "#0F172A"
+  # Logo: ícono completo de la app (hámster con fondo azul)
+  image: assets/logos/launcher-icon.png
+  android_12:
+    color: "#0F172A"
+    image: assets/logos/launcher-icon.png
+    # En Android 12 el ícono se muestra en un círculo — usar el azul del logo
+    icon_background_color: "#4A37F2"
+  android: true
+  ios: false
 
 flutter:
   uses-material-design: true

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../hooks/use_public_menu.dart';
-import '../components/share_modal.dart';
 import '../../../../components/menu_page.dart';
 import '../../../../shared/app_colors.dart';
 
 // Equivalente a src/pages/PublicMenuPage.jsx en React
-// Página de ruta /menu/:slug — carga y renderiza un menú público
+// Carga el menú y delega el render completo (Navbar incluido) a MenuPage
 
 class PublicMenuPage extends StatelessWidget {
   const PublicMenuPage({super.key, required this.slug});
@@ -39,11 +38,6 @@ class _PublicMenuView extends StatelessWidget {
     if (ctrl.notFound || ctrl.menuData == null) {
       return Scaffold(
         backgroundColor: AppColors.kBgPage,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: const BackButton(color: AppColors.kTextPrimary),
-        ),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -66,43 +60,13 @@ class _PublicMenuView extends StatelessWidget {
       );
     }
 
-    final theme = ctrl.menuData!.theme;
-
     return Scaffold(
-      backgroundColor: theme.bg,
+      backgroundColor: ctrl.menuData!.theme.bg,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Toolbar: back + QR/share (equivalente a Navbar con onQr en React)
-            Container(
-              height: 48,
-              color:  theme.surface,
-              child: Row(
-                children: [
-                  IconButton(
-                    icon:      const Icon(Icons.arrow_back_ios_new, size: 18),
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    color:     theme.text,
-                  ),
-                  const Spacer(),
-                  // Botón QR (equivalente al botón QrCode en Navbar de React)
-                  IconButton(
-                    icon:      const Icon(Icons.qr_code, size: 20),
-                    onPressed: () => ShareModal.show(context, slug, theme),
-                    color:     theme.text,
-                    tooltip:   'Compartir / QR',
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: MenuPage(
-                menuData:    ctrl.menuData!,
-                menuSlug:    slug,
-                isPublished: true,
-              ),
-            ),
-          ],
+        child: MenuPage(
+          menuData:    ctrl.menuData!,
+          menuSlug:    slug,
+          isPublished: true,
         ),
       ),
     );

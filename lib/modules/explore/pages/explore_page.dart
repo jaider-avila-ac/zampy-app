@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemNavigator;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +14,8 @@ import '../components/skeleton_card.dart';
 import '../components/section.dart';
 import '../components/location_banner.dart';
 import '../components/infinite_explorer.dart';
+import '../../../shared/splash_screen.dart';
+import '../../../app.dart' show routeObserver;
 
 // Equivalente a src/modules/explore/pages/ExplorePage.jsx en React
 // Página principal pública — no requiere autenticación
@@ -32,16 +35,114 @@ class ExplorePage extends StatelessWidget {
   }
 }
 
-class _ExploreView extends StatelessWidget {
+class _ExploreView extends StatefulWidget {
   const _ExploreView();
 
   @override
-  Widget build(BuildContext context) {
-    final ctrl      = context.watch<ExploreController>();
-    final auth      = context.watch<AuthContext>();
-    final notifCtx  = context.watch<NotificacionContext>();
+  State<_ExploreView> createState() => _ExploreViewState();
+}
 
-    return Scaffold(
+class _ExploreViewState extends State<_ExploreView> with RouteAware {
+  bool _splashVisible = false;
+  bool _initialized   = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listener de auth para recargar likes al iniciar/cerrar sesión
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<AuthContext>().addListener(_onAuthChanged);
+    });
+  }
+
+  void _onAuthChanged() {
+    if (!mounted) return;
+    final auth = context.read<AuthContext>();
+    final ctrl = context.read<ExploreController>();
+    if (auth.isLoggedIn) {
+      ctrl.reloadLikes();
+    } else {
+      ctrl.clearLikes();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Suscribir al RouteObserver para detectar cuando el usuario vuelve al explorador
+    final route = ModalRoute.of(context);
+    if (route != null) routeObserver.subscribe(this, route);
+
+    if (!_initialized) {
+      _initialized   = true;
+      final ctrl     = context.read<ExploreController>();
+      _splashVisible = ctrl.feedLoading;
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    try { context.read<AuthContext>().removeListener(_onAuthChanged); } catch (_) {}
+    super.dispose();
+  }
+
+  // Volvió al explorador desde otra pantalla → refetch en background (sin spinner)
+  @override
+  void didPopNext() {
+    final ctrl = context.read<ExploreController>();
+    ctrl.loadFeed(ctrl.ciudad);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl     = context.watch<ExploreController>();
+    final auth     = context.watch<AuthContext>();
+    final notifCtx = context.watch<NotificacionContext>();
+
+    return Stack(
+      children: [
+        _buildContent(context, ctrl, auth, notifCtx),
+        if (_splashVisible)
+          SplashOverlay(
+            loading:    ctrl.feedLoading,
+            // Bloquear entrada si no hay internet Y no hay datos reales que mostrar
+            noInternet: ctrl.noInternet && !ctrl.hasFeedData,
+            onDismissed: () => setState(() => _splashVisible = false),
+            onRetry:     () => ctrl.loadFeed(ctrl.ciudad),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildContent(BuildContext context, ExploreController ctrl,
+      AuthContext auth, NotificacionContext notifCtx) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (_, _) async {
+        final salir = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('¿Salir de Zammpy?',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            content: const Text('¿Deseas cerrar la aplicación?',
+                style: TextStyle(fontSize: 14)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Salir'),
+              ),
+            ],
+          ),
+        );
+        if (salir == true) SystemNavigator.pop();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.kBgPage,
       drawer: const AppSidebar(),
       appBar: _buildAppBar(context, auth, notifCtx),
@@ -83,18 +184,29 @@ class _ExploreView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
+                  // ── Banner sin internet (solo cuando hay datos en pantalla) ─
+                  if (ctrl.noInternet && ctrl.hasFeedData) ...[
+                    const _NoInternetBanner(),
+                    const SizedBox(height: 12),
+                  ],
+
                   // ── Resultados de búsqueda ───────────────────────────────
                   if (ctrl.showingSearch)
                     _SearchResults(ctrl: ctrl, auth: auth)
                   else
-                    _Feed(ctrl: ctrl, auth: auth),
+                    _Feed(
+                      key:  ValueKey(ctrl.offlineRecoveredVersion),
+                      ctrl: ctrl,
+                      auth: auth,
+                    ),
                 ]),
               ),
             ),
           ],
         ),
       ),
-    );
+    ),   // cierre Scaffold
+    );   // cierre PopScope
   }
 
   PreferredSizeWidget _buildAppBar(
@@ -437,7 +549,7 @@ class _SearchResults extends StatelessWidget {
 
 // ── Feed principal ────────────────────────────────────────────────────────────
 class _Feed extends StatelessWidget {
-  const _Feed({required this.ctrl, required this.auth});
+  const _Feed({super.key, required this.ctrl, required this.auth});
   final ExploreController ctrl;
   final AuthContext        auth;
 
@@ -529,6 +641,39 @@ class _Feed extends StatelessWidget {
           onToggleLike: toggleLike,
         ),
       ],
+    );
+  }
+}
+
+// ── Banner sin conexión (cuando ya hay datos en pantalla) ─────────────────────
+class _NoInternetBanner extends StatelessWidget {
+  const _NoInternetBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color:        const Color(0xFFFFF7ED),
+        border:       Border.all(color: const Color(0xFFFED7AA)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, size: 14, color: Color(0xFFC2410C)),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Sin conexión · Mostrando datos guardados',
+              style: TextStyle(
+                fontSize:   12,
+                fontWeight: FontWeight.w500,
+                color:      Color(0xFF9A3412),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

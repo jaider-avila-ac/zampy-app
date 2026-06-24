@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/app_cache.dart';
 
 // Equivalente a src/context/AuthContext.jsx en React
 // Provee: user, isLoggedIn, token, login(), logout()
@@ -54,6 +55,7 @@ class AuthContext extends ChangeNotifier {
     _token = null;
     _user  = null;
     await _storage.delete(key: 'auth');
+    AppCache.clearUserData(); // borra notificaciones, logros, invitaciones del cache
     notifyListeners();
   }
 
@@ -73,4 +75,9 @@ class AuthContext extends ChangeNotifier {
 
   String? get avatarUrl => _user?['avatar'] as String?;
   String? get email     => _user?['email']  as String?;
+
+  int? get userId {
+    final v = _user?['userId'] ?? _user?['id'];
+    return (v as num?)?.toInt();
+  }
 }

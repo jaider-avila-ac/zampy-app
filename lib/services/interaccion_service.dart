@@ -83,6 +83,106 @@ class InteraccionService {
     }
   }
 
+  // GET /api/v1/interacciones/menu/:slug/resenas (con auth — devuelve esPropia)
+  static Future<List<dynamic>> misResenas(String slug) async {
+    try {
+      final headers = await _authHeaders();
+      final res = await http
+          .get(Uri.parse('$kApiBase/api/v1/interacciones/menu/$slug/resenas'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return [];
+      return jsonDecode(res.body) as List;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // POST /api/v1/interacciones/menu/:slug/resena
+  static Future<Map<String, dynamic>?> crearResena(String slug, String texto) async {
+    try {
+      final headers = await _authHeaders();
+      final res = await http
+          .post(
+            Uri.parse('$kApiBase/api/v1/interacciones/menu/$slug/resena'),
+            headers: headers,
+            body: jsonEncode({'texto': texto}),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 204) return null;
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        final body = res.body;
+        String msg = 'Error ${res.statusCode}';
+        try { msg = (jsonDecode(body) as Map)['message'] as String? ?? msg; } catch (_) {}
+        throw Exception(msg);
+      }
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // DELETE /api/v1/interacciones/menu/:slug/resena
+  static Future<void> eliminarResena(String slug) async {
+    try {
+      final headers = await _authHeaders();
+      await http
+          .delete(Uri.parse('$kApiBase/api/v1/interacciones/menu/$slug/resena'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
+  // GET /api/v1/interacciones/menu/:slug/me-encanta (estado del usuario actual)
+  static Future<Map<String, dynamic>?> estadoEncanta(String slug) async {
+    try {
+      final headers = await _authHeaders();
+      if (!headers.containsKey('Authorization')) return null;
+      final res = await http
+          .get(Uri.parse('$kApiBase/api/v1/interacciones/menu/$slug/me-encanta'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return null;
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // POST /api/v1/interacciones/menu/:slug/productos/:prodId/calificar
+  static Future<Map<String, dynamic>?> calificar(String slug, String prodId, int estrellas) async {
+    try {
+      final headers = await _authHeaders();
+      final res = await http
+          .post(
+            Uri.parse('$kApiBase/api/v1/interacciones/menu/$slug/productos/$prodId/calificar'),
+            headers: headers,
+            body: jsonEncode({'estrellas': estrellas}),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 204) return null;
+      if (res.statusCode < 200 || res.statusCode >= 300) return null;
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // GET /api/v1/interacciones/menu/:slug/productos/:prodId/mi-calificacion
+  static Future<Map<String, dynamic>?> miCalificacion(String slug, String prodId) async {
+    try {
+      final headers = await _authHeaders();
+      if (!headers.containsKey('Authorization')) return null;
+      final res = await http
+          .get(
+            Uri.parse('$kApiBase/api/v1/interacciones/menu/$slug/productos/$prodId/mi-calificacion'),
+            headers: headers,
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode != 200) return null;
+      return jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // GET /api/v1/notificaciones/sin-leer
   static Future<int> getSinLeer() async {
     try {
@@ -99,5 +199,53 @@ class InteraccionService {
     } catch (_) {
       return 0;
     }
+  }
+
+  // GET /api/v1/notificaciones
+  static Future<List<dynamic>> getNotificaciones() async {
+    try {
+      final headers = await _authHeaders();
+      if (!headers.containsKey('Authorization')) return [];
+      final res = await http
+          .get(Uri.parse('$kApiBase/api/v1/notificaciones'), headers: headers)
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) return [];
+      return jsonDecode(res.body) as List;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  // PUT /api/v1/notificaciones/:id/leida
+  static Future<void> marcarLeida(String id) async {
+    try {
+      final headers = await _authHeaders();
+      await http
+          .put(Uri.parse('$kApiBase/api/v1/notificaciones/$id/leida'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
+  // PUT /api/v1/notificaciones/leer-todas
+  static Future<void> marcarTodasLeidas() async {
+    final headers = await _authHeaders();
+    final res = await http
+        .put(Uri.parse('$kApiBase/api/v1/notificaciones/leer-todas'), headers: headers)
+        .timeout(const Duration(seconds: 10));
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      String msg = 'Error ${res.statusCode}';
+      try { msg = (jsonDecode(res.body) as Map)['message'] as String? ?? msg; } catch (_) {}
+      throw Exception(msg);
+    }
+  }
+
+  // DELETE /api/v1/notificaciones/:id
+  static Future<void> eliminarNotificacion(String id) async {
+    try {
+      final headers = await _authHeaders();
+      await http
+          .delete(Uri.parse('$kApiBase/api/v1/notificaciones/$id'), headers: headers)
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {}
   }
 }

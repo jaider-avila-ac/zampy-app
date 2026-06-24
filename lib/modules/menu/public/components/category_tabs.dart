@@ -26,6 +26,7 @@ class _CategoryTabsState extends State<CategoryTabs> {
   final _scrollCtrl = ScrollController();
 
   static const _iconMap = <String, IconData>{
+    'all':    Icons.grid_view_outlined,   // "Todos" — equivale a LayoutGrid de lucide
     'burger': Icons.local_fire_department_outlined,
     'cup':    Icons.coffee_outlined,
     'cake':   Icons.cake_outlined,
@@ -70,8 +71,8 @@ class _CategoryTabsState extends State<CategoryTabs> {
     final visible = widget.categories.where((c) => c.isVisible).toList();
 
     return Container(
-      color: widget.theme.navBg,
       decoration: BoxDecoration(
+        color: widget.theme.navBg,
         border: Border(bottom: BorderSide(color: widget.theme.navBorder)),
       ),
       child: SingleChildScrollView(
@@ -92,7 +93,7 @@ class _CategoryTabsState extends State<CategoryTabs> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: isActive ? widget.theme.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(widget.theme.buttonRadius),
                     border: Border.all(
                       color: isActive ? widget.theme.primary : Colors.transparent,
                       width: 1.5,

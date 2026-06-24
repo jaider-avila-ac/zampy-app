@@ -1,80 +1,172 @@
 import 'dart:convert';
 import 'package:flutter/material.dart' hide MenuTheme;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../../../../services/api.dart';
+import '../../../../services/themes_catalog_service.dart';
 import '../models/public_menu_model.dart';
+
+const _storage = FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+);
 
 // Equivalente a src/modules/menu/public/hooks/usePublicMenu.js en React
 
 class UsePublicMenu extends ChangeNotifier {
+  // Un client por instancia — se cierra en dispose() para cancelar
+  // cualquier request en vuelo cuando el usuario sale del menú.
+  // Esto evita que siga descargando imágenes/datos de un menú que ya no se ve.
+  final _client   = http.Client();
+  bool  _disposed = false;
+
   PublicMenuData? _menuData;
-  bool  _loading  = true;
-  bool  _notFound = false;
+  bool    _loading  = true;
+  bool    _notFound = false;
+  String  _slug     = '';
 
   PublicMenuData? get menuData => _menuData;
   bool            get loading  => _loading;
   bool            get notFound => _notFound;
+  String          get slug     => _slug;
 
-  Future<void> load({String? slug, bool isDemo = false}) async {
+  Future<void> load({String? slug, bool isDemo = false, String? previewId}) async {
     _loading  = true;
     _notFound = false;
     _menuData = null;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     try {
       final data = isDemo
-          ? await _getDemoData()
-          : await _getPublicData(slug!);
+          ? await _getDemoData(_client)
+          : previewId != null
+              ? await _getPreviewData(previewId, _client)
+              : await _getPublicData(slug!, _client);
+
+      if (_disposed) return; // el usuario ya salió — no actualizar estado
       if (data == null) {
         _notFound = true;
       } else {
         _menuData = data;
+        _slug     = slug ?? '';
       }
     } catch (_) {
+      if (_disposed) return;
       _notFound = true;
     }
     _loading = false;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
-  // GET /api/v1/public/menu/:slug
-  // El backend devuelve { id, slug, ownerId, theme, published: { info, categories, products } }
-  // React hace: { ...menu.published, menuId: menu.id, slug, ownerId, theme }
-  static Future<PublicMenuData?> _getPublicData(String slug) async {
-    final res = await http
-        .get(Uri.parse('$kApiBase/api/v1/public/menu/$slug'))
-        .timeout(const Duration(seconds: 15));
+  @override
+  void dispose() {
+    _disposed = true;
+    _client.close(); // cancela el request en vuelo si el usuario salió antes de terminar
+    super.dispose();
+  }
+
+  // ── GET /api/v1/public/menu/:slug ─────────────────────────────────────────
+  static Future<PublicMenuData?> _getPublicData(
+      String slug, http.Client client) async {
+    final results = await Future.wait([
+      client
+          .get(Uri.parse('$kApiBase/api/v1/public/menu/$slug'))
+          .timeout(const Duration(seconds: 15)),
+      ThemesCatalogService.load(),
+    ]);
+
+    final res     = results[0] as http.Response;
+    final catalog = results[1] as List<CatalogSkin>;
+
     if (res.statusCode == 404) return null;
     if (res.statusCode < 200 || res.statusCode >= 300) return null;
+
     final root      = jsonDecode(res.body) as Map<String, dynamic>;
     final published = root['published'] as Map<String, dynamic>?;
     if (published == null) return null;
+
+    final design = published['design'] as Map<String, dynamic>?;
+    final theme  = ThemesCatalogService.resolveTheme(
+      catalog, design?['skinId'], design?['paletteId'],
+    );
+
     return PublicMenuData.fromJson({
       ...published,
       'menuId':  root['id'],
       'slug':    root['slug'],
       'ownerId': root['ownerId'],
-      'theme':   root['theme'],
-    });
+      'theme':   null,
+    }).copyWithTheme(theme);
   }
 
-  // GET /api/v1/public/demo — mismo formato que getPublicData
-  static Future<PublicMenuData?> _getDemoData() async {
+  // ── GET /api/v1/menus/:id/preview  (borrador del dueño) ──────────────────
+  static Future<PublicMenuData?> _getPreviewData(
+      String id, http.Client client) async {
+    final raw  = await _storage.read(key: 'auth');
+    final tok  = raw != null
+        ? (jsonDecode(raw) as Map<String, dynamic>)['token'] as String?
+        : null;
+    final headers = tok != null ? {'Authorization': 'Bearer $tok'} : <String, String>{};
+
+    final results = await Future.wait([
+      client
+          .get(Uri.parse('$kApiBase/api/v1/menus/$id/preview'), headers: headers)
+          .timeout(const Duration(seconds: 15)),
+      ThemesCatalogService.load(),
+    ]);
+
+    final res     = results[0] as http.Response;
+    final catalog = results[1] as List<CatalogSkin>;
+
+    if (res.statusCode == 404) return null;
+    if (res.statusCode < 200 || res.statusCode >= 300) return null;
+
+    final root   = jsonDecode(res.body) as Map<String, dynamic>;
+    // El endpoint preview devuelve el draft directamente (misma forma que published)
+    final draft  = root['draft'] as Map<String, dynamic>? ?? root;
+    final design = draft['design'] as Map<String, dynamic>?;
+    final theme  = ThemesCatalogService.resolveTheme(
+      catalog, design?['skinId'], design?['paletteId'],
+    );
+
+    return PublicMenuData.fromJson({
+      ...draft,
+      'menuId':  root['id'],
+      'slug':    root['slug']    ?? '',
+      'ownerId': root['ownerId'] ?? 0,
+      'theme':   null,
+    }).copyWithTheme(theme);
+  }
+
+  // ── GET /api/v1/public/demo ───────────────────────────────────────────────
+  static Future<PublicMenuData?> _getDemoData(http.Client client) async {
     try {
-      final res = await http
-          .get(Uri.parse('$kApiBase/api/v1/public/demo'))
-          .timeout(const Duration(seconds: 15));
+      final results = await Future.wait([
+        client
+            .get(Uri.parse('$kApiBase/api/v1/public/demo'))
+            .timeout(const Duration(seconds: 15)),
+        ThemesCatalogService.load(),
+      ]);
+
+      final res     = results[0] as http.Response;
+      final catalog = results[1] as List<CatalogSkin>;
+
       if (res.statusCode < 200 || res.statusCode >= 300) return _staticDemoData();
       final root      = jsonDecode(res.body) as Map<String, dynamic>;
       final published = root['published'] as Map<String, dynamic>?;
       if (published == null) return _staticDemoData();
+
+      final design = published['design'] as Map<String, dynamic>?;
+      final theme  = ThemesCatalogService.resolveTheme(
+        catalog, design?['skinId'], design?['paletteId'],
+      );
+
       return PublicMenuData.fromJson({
         ...published,
         'menuId':  root['id'],
         'slug':    root['slug'],
         'ownerId': root['ownerId'],
-        'theme':   root['theme'],
-      });
+        'theme':   null,
+      }).copyWithTheme(theme);
     } catch (_) {
       return _staticDemoData();
     }

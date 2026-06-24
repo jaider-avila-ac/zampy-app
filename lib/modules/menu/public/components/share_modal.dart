@@ -1,13 +1,13 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart' hide MenuTheme;
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import '../../../../services/api.dart';
 import '../models/public_menu_model.dart';
 
 // Equivalente a src/modules/menu/public/components/ShareModal.jsx
-// + el QR modal inline de MenuPage.jsx
+// QR generado en el cliente (React usa react-qrcode-logo, nosotros usamos qr_flutter)
 
 class ShareModal extends StatefulWidget {
   const ShareModal({
@@ -21,9 +21,9 @@ class ShareModal extends StatefulWidget {
 
   static Future<void> show(BuildContext context, String slug, MenuTheme theme) {
     return showModalBottomSheet(
-      context:       context,
+      context:            context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor:    Colors.transparent,
       builder: (_) => ShareModal(slug: slug, theme: theme),
     );
   }
@@ -33,11 +33,13 @@ class ShareModal extends StatefulWidget {
 }
 
 class _ShareModalState extends State<ShareModal> {
-  bool _copied       = false;
-  bool _downloading  = false;
+  bool _copied      = false;
+  bool _downloading = false;
+
+  // La clave para capturar el widget QR como imagen
+  final _qrKey = GlobalKey();
 
   String get _shareUrl => 'https://app.zammpy.com/menu/${widget.slug}';
-  String get _qrUrl    => '$kApiBase/api/public/menu/${widget.slug}/qr';
 
   Future<void> _copyLink() async {
     await Clipboard.setData(ClipboardData(text: _shareUrl));
@@ -51,15 +53,31 @@ class _ShareModalState extends State<ShareModal> {
     await Share.share(_shareUrl, subject: 'Menú digital');
   }
 
+  // Captura el widget QR y lo comparte como PNG — equivalente a downloadQR() en React
   Future<void> _downloadQr() async {
     if (_downloading) return;
     setState(() => _downloading = true);
     try {
-      final res = await http.get(Uri.parse(_qrUrl));
-      if (res.statusCode != 200) throw Exception('Error al descargar QR');
+      // Renderiza el widget QR a imagen usando QrPainter
+      final painter = QrPainter(
+        data:    _shareUrl,
+        version: QrVersions.auto,
+        eyeStyle: const QrEyeStyle(
+          eyeShape:  QrEyeShape.square,
+          color:     Colors.black,
+        ),
+        dataModuleStyle: const QrDataModuleStyle(
+          dataModuleShape: QrDataModuleShape.square,
+          color:           Colors.black,
+        ),
+      );
+      final imageData = await painter.toImageData(600, format: ui.ImageByteFormat.png);
+      if (imageData == null) throw Exception('No se pudo generar el QR');
+
       final tmp  = Directory.systemTemp;
       final file = File('${tmp.path}/qr-${widget.slug}.png');
-      await file.writeAsBytes(res.bodyBytes);
+      await file.writeAsBytes(imageData.buffer.asUint8List());
+
       await Share.shareXFiles(
         [XFile(file.path, mimeType: 'image/png')],
         subject: 'QR Menú digital',
@@ -79,9 +97,7 @@ class _ShareModalState extends State<ShareModal> {
     final t = widget.theme;
 
     return Container(
-      margin: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      margin: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       decoration: BoxDecoration(
         color:        t.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -94,10 +110,11 @@ class _ShareModalState extends State<ShareModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+
               // Drag handle
               Center(
                 child: Container(
-                  width: 36,
+                  width:  36,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
@@ -136,68 +153,55 @@ class _ShareModalState extends State<ShareModal> {
               ),
               const SizedBox(height: 20),
 
-              // Botón compartir (sistema)
+              // Botón compartir (sistema share sheet)
               _ActionButton(
-                icon:    Icons.share_outlined,
-                label:   'Compartir',
-                bg:      t.primary,
-                fg:      Colors.white,
-                onTap:   _shareLink,
+                icon:  Icons.share_outlined,
+                label: 'Compartir',
+                bg:    t.primary,
+                fg:    Colors.white,
+                onTap: _shareLink,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              // QR Code del backend
+              // QR Code generado en el cliente — React: <QRCode value={shareUrl} size={240} />
               Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    _qrUrl,
-                    width:  200,
-                    height: 200,
-                    fit:    BoxFit.cover,
-                    errorBuilder: (errCtx, err, stack) => Container(
-                      width:  200,
-                      height: 200,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color:        t.surfaceAlt,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(Icons.qr_code, size: 48, color: t.textMuted),
+                child: RepaintBoundary(
+                  key: _qrKey,
+                  child: Container(
+                    width:   220,
+                    height:  220,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color:        Colors.white,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    loadingBuilder: (ctx, child, progress) {
-                      if (progress == null) return child;
-                      return Container(
-                        width:  200,
-                        height: 200,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color:        t.surfaceAlt,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: CircularProgressIndicator(
-                          value: progress.expectedTotalBytes == null
-                              ? null
-                              : progress.cumulativeBytesLoaded /
-                                progress.expectedTotalBytes!,
-                          strokeWidth: 2,
-                          color: t.primary,
-                        ),
-                      );
-                    },
+                    child: QrImageView(
+                      data:            _shareUrl,
+                      version:         QrVersions.auto,
+                      backgroundColor: Colors.white,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color:    Colors.black,
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color:           Colors.black,
+                      ),
+                      errorCorrectionLevel: QrErrorCorrectLevel.H,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
               // Descargar QR
               _ActionButton(
-                icon:      _downloading ? null : Icons.download_outlined,
-                label:     _downloading ? 'Descargando...' : 'Descargar QR',
-                bg:        t.surfaceAlt,
-                fg:        t.text,
-                onTap:     _downloading ? null : _downloadQr,
-                loading:   _downloading,
+                icon:        _downloading ? null : Icons.download_outlined,
+                label:       _downloading ? 'Generando...' : 'Descargar QR',
+                bg:          t.surfaceAlt,
+                fg:          t.text,
+                onTap:       _downloading ? null : _downloadQr,
+                loading:     _downloading,
                 borderColor: t.border,
               ),
               const SizedBox(height: 12),
@@ -216,8 +220,8 @@ class _ShareModalState extends State<ShareModal> {
                       child: Text(
                         _shareUrl,
                         style: TextStyle(fontSize: 12, color: t.text),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines:  1,
+                        overflow:  TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -272,19 +276,19 @@ class _ActionButton extends StatelessWidget {
     this.borderColor,
   });
 
-  final String     label;
-  final Color      bg;
-  final Color      fg;
+  final String      label;
+  final Color       bg;
+  final Color       fg;
   final VoidCallback? onTap;
-  final IconData?  icon;
-  final bool       loading;
-  final Color?     borderColor;
+  final IconData?   icon;
+  final bool        loading;
+  final Color?      borderColor;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          height: 44,
+          height:    44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color:        bg,
@@ -298,7 +302,7 @@ class _ActionButton extends StatelessWidget {
                   child:  CircularProgressIndicator(strokeWidth: 2, color: fg),
                 )
               : Row(
-                  mainAxisSize:     MainAxisSize.min,
+                  mainAxisSize:      MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[

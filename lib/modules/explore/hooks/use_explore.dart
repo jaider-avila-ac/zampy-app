@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show SocketException;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../../services/app_cache.dart';
 import '../../../services/explore_service.dart';
 import '../../../services/public_api_service.dart';
 import '../../../services/interaccion_service.dart';
@@ -10,7 +12,21 @@ import '../../menu/public/models/public_menu_model.dart';
 
 // Equivalente a src/modules/explore/hooks/useExplore.js en React
 
-class ExploreController extends ChangeNotifier {
+class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
+  // Constructor: precarga la caché de manera síncrona (sin await).
+  // Así didChangeDependencies() en ExplorePage ya ve el estado correcto
+  // y el splash nunca aparece si hay datos cacheados.
+  ExploreController() {
+    // Usar datos aunque estén stale (caídas de internet) — mejor mostrar
+    // datos viejos que una pantalla vacía
+    final cached = AppCache.get('explore_feed_latest')
+                ?? AppCache.getStale('explore_feed_latest');
+    if (cached != null) {
+      _feed        = ExploreFeed.fromJson(cached as Map<String, dynamic>);
+      _feedLoading = false;
+    }
+  }
+
   // ── Búsqueda ────────────────────────────────────────────────────────────────
   String                _search         = '';
   List<MenuFeedItem>?   _searchResults;
@@ -19,9 +35,10 @@ class ExploreController extends ChangeNotifier {
 
   // ── Feed ────────────────────────────────────────────────────────────────────
   ExploreFeed?  _feed;
-  bool          _feedLoading     = true;
-  int           _feedVersion     = 0;
-  bool          _bannerDismissed = false;
+  bool          _feedLoading             = true;   // constructor lo sobreescribe si hay caché
+  int           _feedVersion             = 0;
+  int           _offlineRecoveredVersion = 0;
+  bool          _bannerDismissed         = false;
 
   // ── Likes ────────────────────────────────────────────────────────────────────
   Set<int>  _likedIds = {};
@@ -29,24 +46,28 @@ class ExploreController extends ChangeNotifier {
   // ── Ubicación ────────────────────────────────────────────────────────────────
   String?   _ciudad;
 
+  // ── Conectividad ─────────────────────────────────────────────────────────────
+  bool _noInternet = false;
+
   // ── Auth (lo recibe desde fuera) ─────────────────────────────────────────────
   bool _isLoggedIn = false;
 
   // ── Getters ──────────────────────────────────────────────────────────────────
-  String              get search        => _search;
-  List<MenuFeedItem>? get searchResults => _searchResults;
-  bool                get searchLoading => _searchLoading;
-  bool                get feedLoading   => _feedLoading;
-  ExploreFeed?        get feed          => _feed;
-  int                 get feedVersion   => _feedVersion;
-  Set<int>            get likedIds      => _likedIds;
-  String?             get ciudad        => _ciudad;
-  bool                get showingSearch => _search.trim().isNotEmpty;
-
-  bool get showLocBanner {
-    // Igual que en useExplore.js: solo si logueado y no hay geo status y no descartado
-    return false; // La lógica completa se activa en init()
-  }
+  String              get search                   => _search;
+  List<MenuFeedItem>? get searchResults            => _searchResults;
+  bool                get searchLoading            => _searchLoading;
+  bool                get feedLoading              => _feedLoading;
+  ExploreFeed?        get feed                     => _feed;
+  int                 get feedVersion              => _feedVersion;
+  int                 get offlineRecoveredVersion  => _offlineRecoveredVersion;
+  Set<int>            get likedIds                 => _likedIds;
+  String?             get ciudad                   => _ciudad;
+  bool                get showingSearch            => _search.trim().isNotEmpty;
+  bool                get noInternet               => _noInternet;
+  // True solo si el feed tiene contenido real (no el fallback vacío)
+  bool get hasFeedData =>
+      _feed != null &&
+      (_feed!.nearby.isNotEmpty || _feed!.trending.isNotEmpty || _feed!.nuevo.isNotEmpty);
 
   bool _showLocBanner = false;
   bool get locBanner  => _showLocBanner;
@@ -77,17 +98,30 @@ class ExploreController extends ChangeNotifier {
   Future<void> init({bool isLoggedIn = false}) async {
     _isLoggedIn = isLoggedIn;
 
+    // Escuchar ciclo de vida para refetch en background al volver a la app
+    WidgetsBinding.instance.addObserver(this);
+
     // Leer ciudad guardada
     final loc = await getStoredLocation();
     _ciudad = loc?['ciudad'] as String?;
 
-    // Verificar si debe mostrarse el banner de ubicación
+    // Stale-while-revalidate: mostrar caché inmediatamente si existe
+    final cacheKey = 'explore_feed_${_ciudad ?? ''}';
+    final cached = AppCache.get(cacheKey);
+    if (cached != null) {
+      _feed        = ExploreFeed.fromJson(cached as Map<String, dynamic>);
+      _feedLoading = false;
+      notifyListeners();
+    }
+
+    // Banner de ubicación
     if (isLoggedIn) {
       final geoStatus = await getStoredGeoStatus();
       _showLocBanner = geoStatus == null && !_bannerDismissed;
+      notifyListeners();
     }
 
-    // Cargar feed
+    // Siempre fetch en background (revalida aunque haya caché)
     await loadFeed(_ciudad);
 
     // Likes del usuario (solo si logueado)
@@ -100,17 +134,52 @@ class ExploreController extends ChangeNotifier {
 
   // ── Cargar feed ───────────────────────────────────────────────────────────────
   Future<void> loadFeed([String? ciudad]) async {
-    _feedLoading = true;
-    notifyListeners();
+    final target     = ciudad ?? _ciudad;
+    final wasOffline = _noInternet;
+    _noInternet = false;
+    // Solo mostrar spinner si no hay datos aún (primera carga sin caché)
+    if (_feed == null) {
+      _feedLoading = true;
+      notifyListeners();
+    }
     try {
-      final data = await ExploreService.getFeed(ciudad: ciudad ?? _ciudad);
+      final data = await ExploreService.getFeed(ciudad: target);
+      // Si recuperamos internet, limpiar imágenes fallidas del caché de Flutter
+      // y subir la versión para forzar recreación de los widgets Image.network
+      if (wasOffline) {
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+        _offlineRecoveredVersion++;
+      }
+      AppCache.set('explore_feed_${target ?? ''}', data);
+      AppCache.set('explore_feed_latest', data); // para precarga síncrona en próxima visita
       _feed        = ExploreFeed.fromJson(data);
       _feedVersion++;
-    } catch (_) {
+    } catch (e) {
+      final msg = e.toString();
+      final isNetErr = e is SocketException
+          || e is http.ClientException
+          || msg.contains('SocketException')
+          || msg.contains('ClientException')
+          || msg.contains('Failed host lookup')
+          || msg.contains('Network is unreachable')
+          || msg.contains('Connection refused')
+          || msg.contains('Connection reset')
+          || msg.contains('TimeoutException');
+      if (isNetErr) _noInternet = true;
+      AppCache.markStale('explore_feed_${target ?? ''}');
       _feed ??= ExploreFeed.empty;
     }
     _feedLoading = false;
     notifyListeners();
+  }
+
+  // ── Refetch en background al volver al primer plano (equiv. window focus) ─────
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      loadFeed(_ciudad); // _feed != null → no muestra spinner
+    }
   }
 
   // ── Búsqueda (debounce 350ms igual que React) ─────────────────────────────────
@@ -197,6 +266,18 @@ class ExploreController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Likes: recargar tras login / limpiar tras logout ─────────────────────────
+  Future<void> reloadLikes() async {
+    final ids = await InteraccionService.misEncantados();
+    _likedIds = ids.toSet();
+    notifyListeners();
+  }
+
+  void clearLikes() {
+    _likedIds = {};
+    notifyListeners();
+  }
+
   // ── Toggle like (optimista igual que React) ───────────────────────────────────
   Future<void> toggleLike(MenuFeedItem item, bool isLoggedIn) async {
     if (!isLoggedIn) return;
@@ -234,6 +315,7 @@ class ExploreController extends ChangeNotifier {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchTimer?.cancel();
     super.dispose();
   }

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#4A37F2</color>
+    <!-- Fondo del splash — slate-950, oscuro pero no negro -->
+    <color name="splash_bg">#0F172A</color>
 </resources>

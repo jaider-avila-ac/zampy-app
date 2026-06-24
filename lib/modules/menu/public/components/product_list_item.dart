@@ -25,7 +25,7 @@ class ProductListItem extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: theme.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(theme.cardRadius),
           border: Border.all(color: theme.border),
         ),
         child: Row(
@@ -33,10 +33,10 @@ class ProductListItem extends StatelessWidget {
             // Imagen — 72x72
             if (product.imageUrl != null && product.imageUrl!.isNotEmpty)
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(theme.badgeRadius.clamp(0, 16)),
                 child: Image.network(
                   product.imageUrl!,
-                  width: 72, height: 72,
+                  width: 76, height: 76,
                   fit: BoxFit.cover,
                   errorBuilder: (_, e, st) => _imgFallback(),
                 ),
@@ -91,7 +91,14 @@ class ProductListItem extends StatelessWidget {
 
             // Botón ver
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right, color: theme.textMuted, size: 20),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.remove_red_eye_outlined, size: 12, color: theme.primary),
+                const SizedBox(width: 2),
+                Icon(Icons.chevron_right, size: 14, color: theme.primary),
+              ],
+            ),
           ],
         ),
       ),
@@ -99,9 +106,10 @@ class ProductListItem extends StatelessWidget {
   }
 
   Widget _imgFallback() => Container(
-        width: 72, height: 72,
+        width: 76, height: 76,
         decoration: BoxDecoration(
-            color: theme.surfaceAlt, borderRadius: BorderRadius.circular(8)),
+            color: theme.surfaceAlt,
+            borderRadius: BorderRadius.circular(theme.badgeRadius.clamp(0, 16))),
       );
 
   String _fmt(double p) {
