@@ -88,9 +88,17 @@ class AboutPage extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: const [
-                      _CreadorInfo(nombre: 'Jaider Ávila',       titulo: 'Ingeniero de Sistemas'),
-                      SizedBox(width: 48),
-                      _CreadorInfo(nombre: 'Juan Pablo Pérez',   titulo: 'Ingeniero de Sistemas'),
+                      _CreadorInfo(
+                        nombre:      'Jaider Luis Avila Correa',
+                        titulo:      'Ingeniero de Sistemas',
+                        universidad: 'Corp. Universitaria Remington',
+                      ),
+                      SizedBox(width: 32),
+                      _CreadorInfo(
+                        nombre:      'Juan Pablo Pérez Díaz',
+                        titulo:      'Ingeniero de Sistemas',
+                        universidad: 'Universidad de Córdoba',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -120,14 +128,14 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 20),
             _ContactRow(
               icon: Icons.mail_outline,
-              label: 'zammpy.software@gmail.com',
-              onTap: () => _launch('mailto:zammpy.software@gmail.com'),
+              label: 'zampy.software@gmail.com',
+              onTap: () => _launch('mailto:zampy.software@gmail.com'),
             ),
             const SizedBox(height: 20),
             _ContactRow(
               icon: Icons.language_outlined,
-              label: 'zammpy.com',
-              onTap: () => _launch('https://zammpy.com'),
+              label: 'www.zammpy.com',
+              onTap: () => _launch('https://www.zammpy.com'),
             ),
 
             const SizedBox(height: 32),
@@ -194,14 +202,16 @@ class _CreadorAvatar extends StatelessWidget {
 }
 
 class _CreadorInfo extends StatelessWidget {
-  const _CreadorInfo({required this.nombre, required this.titulo});
+  const _CreadorInfo({required this.nombre, required this.titulo, required this.universidad});
   final String nombre;
   final String titulo;
+  final String universidad;
 
   @override
   Widget build(BuildContext context) => Column(
         children: [
           Text(nombre,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -209,6 +219,10 @@ class _CreadorInfo extends StatelessWidget {
           const SizedBox(height: 2),
           Text(titulo,
               style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+          const SizedBox(height: 1),
+          Text(universidad,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
         ],
       );
 }
