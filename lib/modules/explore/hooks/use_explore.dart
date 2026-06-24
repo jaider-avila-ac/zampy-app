@@ -50,7 +50,8 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
   bool _noInternet = false;
 
   // ── Auth (lo recibe desde fuera) ─────────────────────────────────────────────
-  bool _isLoggedIn = false;
+  bool _isLoggedIn    = false;
+  bool _initialized   = false;
 
   // ── Getters ──────────────────────────────────────────────────────────────────
   String              get search                   => _search;
@@ -94,12 +95,21 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
-  // ── Init ─────────────────────────────────────────────────────────────────────
+  // ── Init (idempotente: solo corre completo la primera vez) ───────────────────
   Future<void> init({bool isLoggedIn = false}) async {
     _isLoggedIn = isLoggedIn;
-
-    // Escuchar ciclo de vida para refetch en background al volver a la app
     WidgetsBinding.instance.addObserver(this);
+
+    if (_initialized) {
+      // Ya inicializado: actualizar likes si hace falta y salir
+      if (isLoggedIn && _likedIds.isEmpty) {
+        final ids = await InteraccionService.misEncantados();
+        _likedIds = ids.toSet();
+        notifyListeners();
+      }
+      return;
+    }
+    _initialized = true;
 
     // Leer ciudad guardada
     final loc = await getStoredLocation();
@@ -121,7 +131,7 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
       notifyListeners();
     }
 
-    // Siempre fetch en background (revalida aunque haya caché)
+    // Fetch inicial en background (revalida aunque haya caché)
     await loadFeed(_ciudad);
 
     // Likes del usuario (solo si logueado)
@@ -131,6 +141,18 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
       notifyListeners();
     }
   }
+
+  // ── Firma del feed para detectar cambios reales ───────────────────────────────
+  String _sig(ExploreFeed f) {
+    final ids = [...f.nearby, ...f.trending, ...f.nuevo]
+        .map((m) => m.menId)
+        .toList()
+      ..sort();
+    return ids.join(',');
+  }
+
+  bool _feedChanged(ExploreFeed newFeed) =>
+      _feed == null || _sig(_feed!) != _sig(newFeed);
 
   // ── Cargar feed ───────────────────────────────────────────────────────────────
   Future<void> loadFeed([String? ciudad]) async {
@@ -143,18 +165,19 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
       notifyListeners();
     }
     try {
-      final data = await ExploreService.getFeed(ciudad: target);
+      final data    = await ExploreService.getFeed(ciudad: target);
+      final newFeed = ExploreFeed.fromJson(data);
       // Si recuperamos internet, limpiar imágenes fallidas del caché de Flutter
-      // y subir la versión para forzar recreación de los widgets Image.network
       if (wasOffline) {
         PaintingBinding.instance.imageCache.clear();
         PaintingBinding.instance.imageCache.clearLiveImages();
         _offlineRecoveredVersion++;
       }
       AppCache.set('explore_feed_${target ?? ''}', data);
-      AppCache.set('explore_feed_latest', data); // para precarga síncrona en próxima visita
-      _feed        = ExploreFeed.fromJson(data);
-      _feedVersion++;
+      AppCache.set('explore_feed_latest', data);
+      // Solo redibujar InfiniteExplorer si los datos realmente cambiaron
+      if (_feedChanged(newFeed) || wasOffline) _feedVersion++;
+      _feed = newFeed;
     } catch (e) {
       final msg = e.toString();
       final isNetErr = e is SocketException
@@ -174,11 +197,28 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  // ── Refresh silencioso al volver al Explorer (sin spinner, sin rebuild si no hay cambios) ─
+  Future<void> silentRefresh() async {
+    try {
+      final data    = await ExploreService.getFeed(ciudad: _ciudad);
+      final newFeed = ExploreFeed.fromJson(data);
+      AppCache.set('explore_feed_${_ciudad ?? ''}', data);
+      AppCache.set('explore_feed_latest', data);
+      if (_feedChanged(newFeed)) {
+        _feed = newFeed;
+        _feedVersion++;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Silencioso: si falla, no tocamos nada
+    }
+  }
+
   // ── Refetch en background al volver al primer plano (equiv. window focus) ─────
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      loadFeed(_ciudad); // _feed != null → no muestra spinner
+      silentRefresh();
     }
   }
 
@@ -194,6 +234,8 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
+    // Activar spinner de inmediato — evita que aparezca "Sin resultados" durante el debounce
+    _searchLoading = true;
     notifyListeners();
     _searchTimer = Timer(const Duration(milliseconds: 350), () => _doSearch(value.trim()));
   }

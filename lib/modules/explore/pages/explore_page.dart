@@ -25,15 +25,7 @@ class ExplorePage extends StatelessWidget {
   const ExplorePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (ctx) {
-        final auth = ctx.read<AuthContext>();
-        return ExploreController()..init(isLoggedIn: auth.isLoggedIn);
-      },
-      child: const _ExploreView(),
-    );
-  }
+  Widget build(BuildContext context) => const _ExploreView();
 }
 
 class _ExploreView extends StatefulWidget {
@@ -75,8 +67,10 @@ class _ExploreViewState extends State<_ExploreView> with RouteAware {
     if (route != null) routeObserver.subscribe(this, route);
 
     if (!_initialized) {
-      _initialized   = true;
-      final ctrl     = context.read<ExploreController>();
+      _initialized = true;
+      final auth   = context.read<AuthContext>();
+      final ctrl   = context.read<ExploreController>();
+      ctrl.init(isLoggedIn: auth.isLoggedIn);
       _splashVisible = ctrl.feedLoading;
     }
   }
@@ -88,12 +82,9 @@ class _ExploreViewState extends State<_ExploreView> with RouteAware {
     super.dispose();
   }
 
-  // Volvió al explorador desde otra pantalla → refetch en background (sin spinner)
+  // Volvió al explorador desde otra pantalla → refresh silencioso sin spinner
   @override
-  void didPopNext() {
-    final ctrl = context.read<ExploreController>();
-    ctrl.loadFeed(ctrl.ciudad);
-  }
+  void didPopNext() => context.read<ExploreController>().silentRefresh();
 
   void _abrirQrScanner() {
     showModalBottomSheet(
@@ -535,7 +526,10 @@ class _SearchResults extends StatelessWidget {
 
     final results = ctrl.searchResults;
 
-    if (results == null || results.isEmpty) {
+    // null = todavía no hay respuesta del servidor (debounce aún no disparó)
+    if (results == null) return const SizedBox.shrink();
+
+    if (results.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Center(

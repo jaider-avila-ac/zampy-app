@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'context/auth_context.dart';
 import 'context/notificacion_context.dart';
+import 'modules/explore/hooks/use_explore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthContext()..init()),
         ChangeNotifierProvider(create: (_) => NotificacionContext()),
+        ChangeNotifierProvider(create: (_) => ExploreController()),
       ],
       child: const _AuthWatcher(child: ZammpyApp()),
     ),
