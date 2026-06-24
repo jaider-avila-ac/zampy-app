@@ -478,7 +478,7 @@ class _SearchBarState extends State<_SearchBar> {
               onChanged: widget.onChanged,
               style: const TextStyle(fontSize: 13, color: AppColors.kTextPrimary),
               decoration: const InputDecoration(
-                hintText: 'Buscar restaurante o slogan...',
+                hintText: 'Buscar por nombre de restaurante...',
                 hintStyle: TextStyle(fontSize: 13, color: AppColors.kTextMuted),
                 border: InputBorder.none,
                 isDense: true,
@@ -512,15 +512,13 @@ class _SearchResults extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (ctrl.searchLoading) {
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, crossAxisSpacing: 12,
-          mainAxisSpacing: 12, childAspectRatio: 0.75,
+      return Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: List.generate(
+          6,
+          (_) => const SizedBox(width: 160, child: SkeletonCard()),
         ),
-        itemCount: 6,
-        itemBuilder: (_, i) => const SkeletonCard(),
       );
     }
 
@@ -541,23 +539,18 @@ class _SearchResults extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, crossAxisSpacing: 12,
-        mainAxisSpacing: 12, childAspectRatio: 0.75,
-      ),
-      itemCount: results.length,
-      itemBuilder: (_, i) {
-        final item = results[i];
-        return MenuCard(
-          menu:  item,
-          liked: ctrl.likedIds.contains(item.menId),
-          onTap: () => context.push('/menu/${item.slug}'),
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: results.map((item) => SizedBox(
+        width: 160,
+        child: MenuCard(
+          menu:         item,
+          liked:        ctrl.likedIds.contains(item.menId),
+          onTap:        () => context.push('/menu/${item.slug}'),
           onToggleLike: () => ctrl.toggleLike(item, auth.isLoggedIn),
-        );
-      },
+        ),
+      )).toList(),
     );
   }
 }
