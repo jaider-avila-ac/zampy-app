@@ -4,7 +4,7 @@
 > **Proyecto a actualizar:** `C:\Users\jaide\Desktop\juan\zammpy_app`
 > **Documento de seguimiento:** este archivo.
 > **Última actualización:** 2026-10-30
-> **Estado del proceso:** FASES 1–7, 9 y 10 COMPLETADAS; Fase 8 es reservada. Fases 11–17 pendientes.
+> **Estado del proceso:** FASES 1–7 y 9–13 COMPLETADAS; Fase 8 es reservada. Fases 14–17 pendientes.
 > **API base confirmada por el usuario:** `https://manzana.zammpy.com`.
 
 ---
@@ -1083,7 +1083,7 @@ Igualar perfil y ajustes: datos, ubicación, contacto de pedidos, contraseña, d
 
 ### Fase 11 — Logros e invitaciones
 
-**Estado:** PENDIENTE
+**Estado:** COMPLETADA
 **Depende de:** Fase 1, Fase 4, Fase 5, Fase 7.
 **Bloquea a:** nada crítico.
 
@@ -1109,12 +1109,25 @@ Permitir usar recompensas de logros en menús y completar el programa de invitac
 - `lib/modules/menu/editor/tabs/publish_tab.dart`
 
 **Tareas verificables**
-- [ ] Corregir `codigo` en logros.
-- [ ] Implementar selección de menú y aplicar logros.
-- [ ] Mostrar logros aplicados en publicar.
-- [ ] Implementar detalle/reglas de invitaciones y share.
-- [ ] Manejar programa pausado y errores.
-- [ ] Ejecutar analyze/test y documentar.
+- [x] Corregir `codigo` en logros.
+- [x] Implementar selección de menú y aplicar logros.
+- [x] Mostrar logros aplicados en publicar.
+- [x] Implementar detalle/reglas de invitaciones y share.
+- [x] Manejar programa pausado y errores.
+- [x] Ejecutar analyze/test y documentar.
+
+**Resultado real de Fase 11**
+- `LogroService` sobre `ApiClient`: `miProgreso` (lanza error en vez de devolver `[]`, para poder ofrecer reintento), `aplicar(menuCodigo, logros, requestId)` y `aplicadosDelMenu`. `LogroModel` lee `codigo` (antes `id`, que el backend no envía, así que quedaba vacío), `estadoRecompensa` y `menuCodigoAplicado`.
+- Logros: sección "Aplicar días a un menú" con los menús propios (`/menus/tarjetas`), recompensas marcables y `requestId` reutilizado mientras no cambie la operación (un reintento no duplica días). Muestra éxito o error, "Disponible"/"Aplicado · menú" y un error con reintento. Se corrigió el texto del banner ("se aplican la próxima vez que publiques" ya no es así).
+- Publicar: `LogrosAplicadosSection`, solo lectura (dueño o editor).
+- Invitaciones: `InvitacionService` sobre `ApiClient`, aviso de programa pausado (copiar y compartir deshabilitados), seguimiento por invitación con progreso y estado, reglas con los valores reales (`antiguedadHoras`, `reaccionesRequeridas`, `expiraDias`; antes "3 menús" fijo) y compartir con `share_plus`.
+- Verificación: analyze sin errores; 40 tests OK (nuevo `test/logros_test.dart`); `/logros`, `/logros/aplicar`, `/logros/menu/{codigo}`, `/invitaciones/estado`, `/invitaciones/toggle` y `/menus/tarjetas` responden 401 sin sesión (ninguna 404).
+
+**Errores de React corregidos (autorizado por el usuario)**
+- `LogroCard.jsx` leía `logro.menIdAplicado`, pero el backend envía `menuCodigoAplicado`: el menú donde se aplicó nunca se mostraba. Ahora recibe `menuNombre` desde la página.
+- `LogrosPage.jsx` armaba la lista de menús con `getAll()` (`MenuResponse` sin `nombre`: el selector mostraba el slug). Ahora usa `getTarjetas()`, que trae solo los propios y con nombre.
+- `InvitacionesPage.jsx` usaba `item.id`, que las filas de `detalle` no traen: mostraba "Invitación #undefined" y todas las filas compartían `key`. Ahora se numeran por orden.
+- Verificación: `eslint` sin errores; `vite build` correcto.
 
 **Criterios de aceptación**
 1. Se aplican días de un logro desbloqueado a un menú propio y se reflejan.
@@ -1126,7 +1139,7 @@ Permitir usar recompensas de logros en menús y completar el programa de invitac
 
 ### Fase 12 — Estadísticas
 
-**Estado:** PENDIENTE
+**Estado:** COMPLETADA
 **Depende de:** Fase 3 (tracking), Fase 5, Fase 7.
 **Bloquea a:** nada crítico.
 
@@ -1146,12 +1159,21 @@ Igualar la pantalla de estadísticas: rango de fechas, métricas y listas de pro
 - `lib/modules/menu/editor/pages/menu_editor_page.dart`
 
 **Tareas verificables**
-- [ ] Implementar servicio con `desde/hasta` y ambos endpoints.
-- [ ] Migrar a `codigo`.
-- [ ] Renderizar todas las métricas/listas.
-- [ ] Añadir filtros de fecha y estados.
-- [ ] Verificar que las vistas móviles se registran.
-- [ ] Ejecutar analyze/test y documentar.
+- [x] Implementar servicio con `desde/hasta` y ambos endpoints.
+- [x] Migrar a `codigo`.
+- [x] Renderizar todas las métricas/listas.
+- [x] Añadir filtros de fecha y estados.
+- [x] Verificar que las vistas móviles se registran.
+- [x] Ejecutar analyze/test y documentar.
+
+**Resultado real de Fase 12**
+- `EstadisticasService.getEstadisticas` y `getEstadisticasProductos` sobre `ApiClient`, con `desde`/`hasta` opcionales (YYYY-MM-DD). Se quitó `getResumen`, que pedía `/estadisticas` sin rango y devolvía `null` ante cualquier error.
+- Página reescrita según React: selector de fechas (desde no posterior a hasta), Buscar, "Ver histórico completo", periodo aplicado, 4 métricas y 3 listas (más vistos, que más encantan, más pedidos con operaciones, unidades e ingresos). Error con reintento y vacíos con su texto. El nombre del menú sale de `/menus/{codigo}/resumen`. Se corrigió texto con caracteres dañados ("MenÃº", "aparecerÃ¡n").
+- Vistas desde el móvil: el menú público registra la vista a los 5 s (igual que React, sin contar al personal en modo mesero) y el detalle de producto registra su vista; ambas con `X-Viewer-Token` persistente (`_vt`).
+- Verificación: analyze sin errores; 40 tests OK; `/estadisticas?desde&hasta` y `/estadisticas/productos` responden 401 sin sesión.
+
+**Error de React corregido**
+- `EstadisticasPage.jsx` usaba como `key` el código del producto, que es `null` para los eliminados: varias filas compartían `key` en las tres listas. Ahora se cae a la posición. `vite build` correcto; el error de `eslint` (`setState` dentro de efecto, línea 26) ya existía.
 
 **Criterios de aceptación**
 1. Las métricas coinciden con el backend para el rango.
@@ -1163,7 +1185,20 @@ Igualar la pantalla de estadísticas: rango de fechas, métricas y listas de pro
 
 ### Fase 13 — Carrito y pedidos de cliente
 
-**Estado:** PENDIENTE
+**Estado:** COMPLETADA
+
+**Resultado real de Fase 13**
+- `CartContext` (equivalente a `CartContext.jsx`, registrado en `main.dart` y vaciado al cerrar sesión): un carrito por menú, cargado de `GET /carrito/{codigo}` al entrar y guardado con `PUT` 1 s después de cada cambio; `clearCart` también hace `DELETE`. Los ítems usan exactamente las claves de React (`productId`, `sizeId`, `ingredientIds`, `grupos`, `priceBreakdown`…), porque la web y la app comparten ese contenido del servidor.
+- `order_items.dart` (equivalente a `utils/orderItems.js`): clave de deduplicación, suma de cantidad, total y payload de cada ítem para `POST /pedidos`.
+- Detalle del producto: con `pedidosActivos` el botón es "Agregar al carrito" (pide sesión con su propio mensaje) y arma el ítem como `handleAddToCart` de React. Sin pedidos activos se conserva "Pedir por WhatsApp", que ya existía en la app.
+- `MenuPage`: botón flotante "Carrito · N" que abre `CartSheet`. `CartSheet` muestra los ítems con cantidad y quitar, teléfono, dirección y referencia (prellenados desde el perfil y obligatorios los dos primeros), total estimado y aviso legal. Envía con un `requestId` que se conserva mientras no cambie el pedido (un reintento no lo duplica). Tras el éxito muestra "¡Solicitud registrada!", el botón recomendado de WhatsApp (`waUrl`) y el contacto del negocio.
+- `/pedidos` (nuevo en rutas y menú lateral): historial paginado por cursor ("Cargar más"), detalle de ítems, soporte del negocio, cancelar (pendiente, con confirmación) y marcar recibido (pendiente o en preparación), con mensajes de error. Las notificaciones de pedido del cliente ya llevaban a `/pedidos`.
+- Verificación: analyze sin errores; 43 tests OK (nuevo `test/order_items_test.dart`: deduplicación, clave idéntica a la de React y payload); `/carrito/{codigo}` GET y PUT, `/pedidos`, `/pedidos/mis-pedidos`, `/pedidos/{codigo}/recibido` y `/cancelar` responden 401 sin sesión.
+
+**Errores de React corregidos**
+- `pedidoService.js` lanzaba el cuerpo crudo de la respuesta: los errores se veían como `{"message":"…"}`. Ahora muestra `message`.
+- `PedidosPage.jsx`: marcar recibido o cancelar no tenían `catch`, así que si fallaban el usuario no veía nada. Ahora muestra el error.
+- Verificación: `eslint` sin errores en los archivos tocados; `vite build` correcto.
 **Depende de:** Fase 3.
 **Bloquea a:** Fase 14/15.
 
@@ -1582,25 +1617,25 @@ Estados permitidos: **PENDIENTE**, **EN PROCESO**, **BLOQUEADA**, **COMPLETADA**
 - Problemas/limitaciones: sin prueba E2E con cuenta real (no se elimina ninguna cuenta); `permission_handler` queda sin uso (limpieza en Fase 17).
 
 ### Fase 11 — Logros/Invitaciones
-- Estado: PENDIENTE.
-- Archivos modificados: —
-- Funcionalidades implementadas: —
-- Pruebas: —
-- Problemas/limitaciones: —
+- Estado: COMPLETADA (2026-10-30).
+- Archivos modificados: `lib/services/logro_service.dart`, `lib/services/invitacion_service.dart`, `lib/modules/growth/achievements/{models/logro_model.dart,hooks/use_logros.dart,components/logro_card.dart,pages/logros_page.dart}`, `lib/modules/growth/invitations/pages/invitaciones_page.dart`, `lib/modules/menu/editor/live/tabs/publish_live_tab.dart`; nuevos `components/logros_aplicados_section.dart` y `test/logros_test.dart`.
+- Funcionalidades implementadas: aplicar recompensas a un menú propio con `requestId` idempotente, estado Disponible/Aplicado y menú destino, errores con reintento, logros aplicados en Publicar, invitaciones con programa pausado, seguimiento, reglas del backend y compartir.
+- Pruebas: analyze sin errores; 40 tests OK; 6 rutas verificadas (401 sin sesión).
+- Problemas/limitaciones: sin prueba E2E con una cuenta que tenga logros desbloqueados.
 
 ### Fase 12 — Estadísticas
-- Estado: PENDIENTE.
-- Archivos modificados: —
-- Funcionalidades implementadas: —
-- Pruebas: —
-- Problemas/limitaciones: —
+- Estado: COMPLETADA (2026-10-30).
+- Archivos modificados: `lib/services/estadisticas_service.dart`, `lib/modules/menu/editor/stats/pages/estadisticas_page.dart` (reescrita).
+- Funcionalidades implementadas: rango desde/hasta e histórico completo; vistas, me encanta, operaciones entregadas (domicilio/rondas) y conversión; productos más vistos, más encantados y más pedidos con unidades e ingresos; estados de carga, error y vacío.
+- Pruebas: analyze sin errores; 40 tests OK; ambas rutas verificadas (401 sin sesión).
+- Problemas/limitaciones: sin prueba con datos reales de un menú con tráfico.
 
 ### Fase 13 — Pedidos cliente
-- Estado: PENDIENTE.
-- Archivos modificados: —
-- Funcionalidades implementadas: —
-- Pruebas: —
-- Problemas/limitaciones: —
+- Estado: COMPLETADA (2026-10-30).
+- Archivos nuevos: `lib/context/cart_context.dart`, `lib/services/carrito_service.dart`, `lib/services/pedido_service.dart`, `lib/modules/orders/utils/order_items.dart`, `lib/modules/menu/public/components/cart_sheet.dart`, `lib/modules/orders/pages/pedidos_page.dart`, `test/order_items_test.dart`. Modificados: `lib/main.dart`, `lib/app.dart`, `lib/components/menu_page.dart`, `lib/modules/menu/public/components/product_modal.dart`, `lib/components/ui/auth_required_modal.dart`, `lib/components/layout/sidebar.dart`.
+- Funcionalidades implementadas: carrito por menú guardado en el servidor (compartido con la web), deduplicación por configuración, envío idempotente de la solicitud con aviso de WhatsApp, historial con cancelar y recibir.
+- Pruebas: analyze sin errores; 43 tests OK; 6 rutas verificadas (401 sin sesión).
+- Problemas/limitaciones: sin prueba E2E de un pedido real; la nota de cocina sigue siendo solo del modo mesero (Fase 15).
 
 ### Fase 14 — Pedidos negocio/mesas
 - Estado: PENDIENTE.

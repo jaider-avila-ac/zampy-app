@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../hooks/use_invitaciones.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
@@ -77,6 +78,22 @@ class _InvitacionesView extends StatelessWidget {
 
               // Contenido
               else if (ctrl.estado != null) ...[
+                if (ctrl.estado!['programaHabilitado'] == false) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBEB),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'El programa de nuevas invitaciones está pausado. '
+                      'Las invitaciones existentes conservan su historial.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFB45309)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 // Stats grid — Completadas / Pendientes
                 Row(
                   children: [
@@ -103,8 +120,14 @@ class _InvitacionesView extends StatelessWidget {
                 _EnlaceCard(ctrl: ctrl),
                 const SizedBox(height: 16),
 
-                // Cómo funciona
-                _ComoFunciona(),
+                // Seguimiento de cada invitación
+                if ((ctrl.estado!['detalle'] as List?)?.isNotEmpty ?? false) ...[
+                  _Seguimiento(estado: ctrl.estado!),
+                  const SizedBox(height: 16),
+                ],
+
+                // Cómo funciona (reglas reales del programa)
+                _ComoFunciona(estado: ctrl.estado!),
               ],
             ],
           ),
@@ -168,6 +191,7 @@ class _EnlaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activo = ctrl.estado!['invActivo'] as bool? ?? false;
+    final programaActivo = ctrl.estado!['programaHabilitado'] != false;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -235,17 +259,27 @@ class _EnlaceCard extends StatelessWidget {
                     overflow:  TextOverflow.ellipsis,
                   ),
                 ),
-                GestureDetector(
-                  onTap: ctrl.copyEnlace,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Icon(
-                      ctrl.copied ? Icons.check : Icons.copy_outlined,
-                      size:  16,
-                      color: ctrl.copied
-                          ? AppColors.kBlue : AppColors.kTextMuted,
-                    ),
+                // Con el programa pausado no se copia ni comparte (igual que React).
+                IconButton(
+                  tooltip: 'Copiar enlace',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: programaActivo ? ctrl.copyEnlace : null,
+                  icon: Icon(
+                    ctrl.copied ? Icons.check : Icons.copy_outlined,
+                    size:  16,
+                    color: ctrl.copied ? AppColors.kBlue : AppColors.kTextMuted,
                   ),
+                ),
+                IconButton(
+                  tooltip: 'Compartir enlace',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: programaActivo && ctrl.enlace.isNotEmpty
+                      ? () => Share.share(
+                            'Únete a Zammpy con mi enlace: ${ctrl.enlace}',
+                            subject: 'Invitación a Zammpy',
+                          )
+                      : null,
+                  icon: const Icon(Icons.share_outlined, size: 16, color: AppColors.kTextMuted),
                 ),
               ],
             ),
@@ -315,14 +349,104 @@ class _EnlaceCard extends StatelessWidget {
 
 // ── Cómo funciona ─────────────────────────────────────────────────────────────
 
-class _ComoFunciona extends StatelessWidget {
-  const _ComoFunciona();
+// ── Seguimiento ───────────────────────────────────────────────────────────────
 
-  static const _pasos = [
-    'Comparte tu enlace con quien quieras.',
-    'Cuando se registren, quedan vinculados a tu código.',
-    'Una invitación se completa cuando el invitado reacciona a 3 menús distintos.',
-    'Cada invitación completada cuenta para desbloquear logros y ganar días gratis.',
+String _fecha(dynamic iso) {
+  final d = iso == null ? null : DateTime.tryParse(iso.toString())?.toLocal();
+  if (d == null) return '—';
+  return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
+const _estadosInvitacion = {
+  'PENDIENTE': 'Pendiente',
+  'COMPLETADA': 'Completada',
+  'INVALIDADA': 'Invalidada',
+  'EXPIRADA': 'Vencida',
+};
+
+class _Seguimiento extends StatelessWidget {
+  const _Seguimiento({required this.estado});
+  final Map<String, dynamic> estado;
+
+  @override
+  Widget build(BuildContext context) {
+    final detalle = (estado['detalle'] as List).whereType<Map>().toList();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.kCardBorder),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('SEGUIMIENTO',
+              style: TextStyle(
+                  fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: AppColors.kTextMuted)),
+          const SizedBox(height: 12),
+          // El backend no envía un identificador por invitación: se numeran por orden.
+          for (var i = 0; i < detalle.length; i++) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Invitación ${detalle.length - i}',
+                            style: const TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.kTextPrimary)),
+                        Text(
+                          'Creada ${_fecha(detalle[i]['creadoEn'])} · vence ${_fecha(detalle[i]['expiraEn'])}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.kTextMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${detalle[i]['progreso'] ?? 0}/'
+                        '${detalle[i]['reaccionesRequeridas'] ?? estado['reaccionesRequeridas'] ?? 3}',
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF4338CA)),
+                      ),
+                      Text(
+                        _estadosInvitacion[detalle[i]['estado']] ?? '${detalle[i]['estado'] ?? ''}',
+                        style: const TextStyle(fontSize: 11, color: AppColors.kTextSecondary),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (i < detalle.length - 1) const SizedBox(height: 8),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Cómo funciona ─────────────────────────────────────────────────────────────
+
+class _ComoFunciona extends StatelessWidget {
+  const _ComoFunciona({required this.estado});
+  final Map<String, dynamic> estado;
+
+  List<String> get _pasos => [
+    'Comparte tu enlace; el invitado debe registrar y verificar una cuenta nueva.',
+    'La cuenta debe tener al menos ${estado['antiguedadHoras'] ?? 24} horas para generar progreso válido.',
+    'Debe reaccionar a ${estado['reaccionesRequeridas'] ?? 3} menús ajenos distintos, en días diferentes.',
+    'El progreso vence a los ${estado['expiraDias'] ?? 90} días y se revierte al retirar una reacción pendiente.',
+    'Las invitaciones válidas permiten desbloquear logros y días.',
   ];
 
   @override

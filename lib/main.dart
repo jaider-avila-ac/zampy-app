@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
 import 'context/auth_context.dart';
+import 'context/cart_context.dart';
 import 'context/likes_context.dart';
 import 'context/notificacion_context.dart';
 import 'modules/explore/hooks/use_explore.dart';
@@ -23,6 +24,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => LikesContext()),
         ChangeNotifierProvider(create: (_) => NotificacionContext()),
         ChangeNotifierProvider(create: (_) => ExploreController()),
+        ChangeNotifierProvider(create: (_) => CartContext()),
       ],
       child: _AuthWatcher(child: ZammpyApp(auth: auth)),
     ),
@@ -65,6 +67,7 @@ class _AuthWatcherState extends State<_AuthWatcher> {
         _lastToken = null;
         notif.onLogout();
         context.read<ExploreController>().onAuthChanged(isLoggedIn: false);
+        context.read<CartContext>().reset();
       }
     });
 

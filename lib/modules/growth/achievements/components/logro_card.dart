@@ -39,9 +39,22 @@ String? _fmtDate(String? iso) {
 }
 
 class LogroCard extends StatelessWidget {
-  const LogroCard({super.key, required this.logro});
+  const LogroCard({
+    super.key,
+    required this.logro,
+    this.selectable = false,
+    this.selected = false,
+    this.onSelect,
+    this.menuNombre,
+  });
 
   final LogroModel logro;
+  // Recompensa DISPONIBLE: se puede marcar para aplicarla a un menú.
+  final bool selectable;
+  final bool selected;
+  final VoidCallback? onSelect;
+  // Nombre del menú donde se aplicó (si es uno propio).
+  final String? menuNombre;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +63,9 @@ class LogroCard extends StatelessWidget {
     final pct    = logro.cantidad > 0
         ? (logro.progreso / logro.cantidad).clamp(0.0, 1.0)
         : 0.0;
-    final borderColor = logro.desbloqueado
+    final borderColor = selected
+        ? const Color(0xFFA5B4FC)   // indigo-300
+        : logro.desbloqueado
         ? const Color(0xFF6EE7B7)   // emerald-200
         : AppColors.kCardBorder;    // slate-200
 
@@ -58,7 +73,7 @@ class LogroCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color:        Colors.white,
-        border:       Border.all(color: borderColor),
+        border:       Border.all(color: borderColor, width: selected ? 2 : 1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -68,6 +83,18 @@ class LogroCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (selectable)
+                SizedBox(
+                  width: 28,
+                  height: 24,
+                  child: Checkbox(
+                    value: selected,
+                    onChanged: (_) => onSelect?.call(),
+                    activeColor: AppColors.kBlue,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Icon(meta.icon, size: 18, color: AppColors.kBlueLight),
@@ -121,14 +148,15 @@ class LogroCard extends StatelessWidget {
 
           // Estado: desbloqueado o barra de progreso
           if (logro.desbloqueado)
-            Row(
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Icon(Icons.check_circle_outline,
                     size: 13, color: Color(0xFF059669)), // emerald-600
                 const SizedBox(width: 4),
-                const Text(
-                  'Desbloqueado',
-                  style: TextStyle(
+                Text(
+                  logro.aplicado ? 'Aplicado' : 'Disponible',
+                  style: const TextStyle(
                     fontSize:   12,
                     fontWeight: FontWeight.w600,
                     color:      Color(0xFF059669),
@@ -138,6 +166,14 @@ class LogroCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     '· ${_fmtDate(logro.desbloqueadoEn)}',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppColors.kTextMuted),
+                  ),
+                ],
+                if (logro.aplicado && menuNombre != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '· $menuNombre',
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.kTextMuted),
                   ),

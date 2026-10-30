@@ -7,6 +7,7 @@ import '../../shared/app_colors.dart';
 Future<void> showAuthRequiredDialog(
   BuildContext context, {
   String returnTo = '/',
+  String message = 'Necesitas una cuenta para guardar lo que te encanta.',
 }) async {
   final goLogin = await showDialog<bool>(
     context: context,
@@ -16,9 +17,9 @@ Future<void> showAuthRequiredDialog(
         'Inicia sesión',
         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
       ),
-      content: const Text(
-        'Necesitas una cuenta para guardar lo que te encanta.',
-        style: TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
+      content: Text(
+        message,
+        style: const TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
       ),
       actions: [
         TextButton(

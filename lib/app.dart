@@ -24,6 +24,7 @@ import 'modules/menu/public/pages/demo_preview_page.dart';
 import 'modules/menu/public/pages/preview_page.dart';
 import 'modules/menu/public/pages/public_menu_page.dart';
 import 'modules/notifications/pages/notifications_page.dart';
+import 'modules/orders/pages/pedidos_page.dart';
 import 'modules/profile/pages/profile_page.dart';
 import 'modules/profile/pages/settings_page.dart';
 import 'modules/subscription/pages/checkout_page.dart';
@@ -161,6 +162,7 @@ GoRouter _buildRouter(AuthContext auth) {
         ),
       ),
       GoRoute(path: '/logros', builder: (context, state) => const LogrosPage()),
+      GoRoute(path: '/pedidos', builder: (context, state) => const PedidosPage()),
       GoRoute(
         path: '/invitaciones',
         builder: (context, state) => const InvitacionesPage(),

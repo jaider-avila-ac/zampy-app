@@ -1,7 +1,6 @@
-// Equivalente al shape de logro en React (LogroCard.jsx + useLogros.js)
-
+// Equivalente al shape de logro en React (LogroCard.jsx + useLogros.js), según LogroProgressDto.
 class LogroModel {
-  final String  id;
+  final String  codigo;
   final String  nombre;
   final String? descripcion;
   final String  condicion;    // 'ME_ENCANTAS' | 'VISITAS' | 'RESENAS' | 'INVITACIONES'
@@ -10,9 +9,12 @@ class LogroModel {
   final int     diasRecompensa;
   final bool    desbloqueado;
   final String? desbloqueadoEn; // ISO date
+  final String? estadoRecompensa; // 'DISPONIBLE' | 'APLICADO'
+  final String? aplicadoEn;
+  final String? menuCodigoAplicado;
 
   const LogroModel({
-    required this.id,
+    required this.codigo,
     required this.nombre,
     required this.condicion,
     required this.cantidad,
@@ -21,17 +23,26 @@ class LogroModel {
     required this.desbloqueado,
     this.descripcion,
     this.desbloqueadoEn,
+    this.estadoRecompensa,
+    this.aplicadoEn,
+    this.menuCodigoAplicado,
   });
 
+  bool get disponible => estadoRecompensa == 'DISPONIBLE';
+  bool get aplicado => estadoRecompensa == 'APLICADO';
+
   factory LogroModel.fromJson(Map<String, dynamic> json) => LogroModel(
-        id:             json['id']?.toString()          ?? '',
-        nombre:         json['nombre']   as String?     ?? '',
-        descripcion:    json['descripcion'] as String?,
-        condicion:      json['condicion'] as String?    ?? '',
-        cantidad:       (json['cantidad']   as num?)?.toInt() ?? 0,
-        progreso:       (json['progreso']   as num?)?.toInt() ?? 0,
-        diasRecompensa: (json['diasRecompensa'] as num?)?.toInt() ?? 0,
-        desbloqueado:   json['desbloqueado'] as bool?   ?? false,
-        desbloqueadoEn: json['desbloqueadoEn'] as String?,
+        codigo:             (json['codigo'] ?? json['id'])?.toString() ?? '',
+        nombre:             json['nombre']   as String?     ?? '',
+        descripcion:        json['descripcion'] as String?,
+        condicion:          json['condicion'] as String?    ?? '',
+        cantidad:           (json['cantidad']   as num?)?.toInt() ?? 0,
+        progreso:           (json['progreso']   as num?)?.toInt() ?? 0,
+        diasRecompensa:     (json['diasRecompensa'] as num?)?.toInt() ?? 0,
+        desbloqueado:       json['desbloqueado'] as bool?   ?? false,
+        desbloqueadoEn:     json['desbloqueadoEn']?.toString(),
+        estadoRecompensa:   json['estadoRecompensa'] as String?,
+        aplicadoEn:         json['aplicadoEn']?.toString(),
+        menuCodigoAplicado: json['menuCodigoAplicado'] as String?,
       );
 }

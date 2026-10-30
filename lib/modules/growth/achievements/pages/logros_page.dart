@@ -79,13 +79,23 @@ class _LogrosView extends StatelessWidget {
 
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
+            // Mensajes y aplicar días a un menú
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverToBoxAdapter(child: _Avisos(ctrl: ctrl)),
+            ),
+
             // Cargando
-            if (ctrl.loading)
+            if (ctrl.loading && ctrl.logros.isEmpty)
               const SliverFillRemaining(
                 child: Center(
                   child: CircularProgressIndicator(color: AppColors.kBlue),
                 ),
               )
+
+            // Error sin datos: se muestra en _Avisos con reintento
+            else if (ctrl.error)
+              const SliverToBoxAdapter(child: SizedBox.shrink())
 
             // Sin logros
             else if (ctrl.logros.isEmpty)
@@ -130,7 +140,13 @@ class _LogrosView extends StatelessWidget {
                       const SizedBox(height: 8),
                       ...ctrl.desbloqueados.map((l) => Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: LogroCard(logro: l),
+                            child: LogroCard(
+                              logro: l,
+                              selectable: l.disponible,
+                              selected: ctrl.selected.contains(l.codigo),
+                              onSelect: () => ctrl.toggleSelected(l.codigo),
+                              menuNombre: ctrl.nombreMenu(l.menuCodigoAplicado),
+                            ),
                           )),
                     ],
                   ]),
@@ -141,6 +157,152 @@ class _LogrosView extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Avisos y aplicar recompensas ──────────────────────────────────────────────
+
+class _Avisos extends StatelessWidget {
+  const _Avisos({required this.ctrl});
+  final UseLogros ctrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = ctrl.selected.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (ctrl.error)
+          _Mensaje(
+            color: const Color(0xFFB91C1C),
+            bg: const Color(0xFFFEF2F2),
+            border: const Color(0xFFFECACA),
+            texto: 'No se pudieron cargar los logros.',
+            accion: 'Reintentar',
+            onAccion: ctrl.refetch,
+          ),
+        if (ctrl.actionError.isNotEmpty)
+          _Mensaje(
+            color: const Color(0xFFB91C1C),
+            bg: const Color(0xFFFEF2F2),
+            border: const Color(0xFFFECACA),
+            texto: ctrl.actionError,
+          ),
+        if (ctrl.success.isNotEmpty)
+          _Mensaje(
+            color: const Color(0xFF047857),
+            bg: const Color(0xFFECFDF5),
+            border: const Color(0xFFA7F3D0),
+            texto: ctrl.success,
+          ),
+        if (ctrl.disponibles.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEEF2FF),
+              border: Border.all(color: const Color(0xFFC7D2FE)),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text('Aplicar días a un menú',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1E1B4B))),
+                const SizedBox(height: 2),
+                const Text('Selecciona recompensas completas. Después no se pueden trasladar.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF4338CA))),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  // initialValue solo se lee al crear el campo: se recrea al llegar los menús
+                  key: ValueKey('${ctrl.menus.length}-${ctrl.menuCodigo}'),
+                  initialValue: ctrl.menuCodigo,
+                  isExpanded: true,
+                  hint: const Text('Selecciona un menú', style: TextStyle(fontSize: 13)),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFC7D2FE)),
+                    ),
+                  ),
+                  items: [
+                    for (final m in ctrl.menus)
+                      DropdownMenuItem(
+                        value: m.codigo,
+                        child: Text(m.nombre.isNotEmpty ? m.nombre : m.slug,
+                            overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                      ),
+                  ],
+                  onChanged: ctrl.applying ? null : ctrl.setMenu,
+                ),
+                const SizedBox(height: 10),
+                FilledButton(
+                  onPressed: ctrl.puedeAplicar ? ctrl.aplicar : null,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.kBlue,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(ctrl.applying
+                      ? 'Aplicando…'
+                      : n == 0
+                          ? 'Marca las recompensas que quieres aplicar'
+                          : 'Aplicar $n recompensa${n == 1 ? '' : 's'}'),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _Mensaje extends StatelessWidget {
+  const _Mensaje({
+    required this.color,
+    required this.bg,
+    required this.border,
+    required this.texto,
+    this.accion,
+    this.onAccion,
+  });
+  final Color color;
+  final Color bg;
+  final Color border;
+  final String texto;
+  final String? accion;
+  final VoidCallback? onAccion;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: bg,
+          border: Border.all(color: border),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(child: Text(texto, style: TextStyle(fontSize: 12, color: color))),
+            if (accion != null)
+              TextButton(
+                onPressed: onAccion,
+                style: TextButton.styleFrom(
+                  foregroundColor: color,
+                  minimumSize: const Size(0, 28),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+                child: Text(accion!,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+                        decoration: TextDecoration.underline)),
+              ),
+          ],
+        ),
+      );
 }
 
 // ── Widgets auxiliares ────────────────────────────────────────────────────────
@@ -157,7 +319,7 @@ class _InfoBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
         ),
         child: const Text(
-          'Los días que ganas se aplican la próxima vez que publiques tu menú.',
+          'Los días ganados quedan disponibles hasta que elijas el menú donde quieres aplicarlos.',
           style: TextStyle(fontSize: 12, color: Color(0xFF4338CA), height: 1.5),
         ),
       );

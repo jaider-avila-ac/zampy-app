@@ -20,6 +20,7 @@ const _navPrivate = [
   _NavItem(path: '/',              icon: Icons.home_outlined,            label: 'Inicio'),
   _NavItem(path: '/menus',         icon: Icons.restaurant_menu_outlined, label: 'Mis Menús'),
   _NavItem(path: '/notifications', icon: Icons.notifications_outlined,   label: 'Notificaciones'),
+  _NavItem(path: '/pedidos',       icon: Icons.receipt_long_outlined,    label: 'Pedidos'),
   _NavItem(path: '/logros',        icon: Icons.emoji_events_outlined,    label: 'Logros'),
   _NavItem(path: '/invitaciones',  icon: Icons.people_outlined,          label: 'Invitaciones'),
   _NavItem(path: '/settings',      icon: Icons.settings_outlined,        label: 'Ajustes'),

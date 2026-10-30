@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../components/ui/auth_required_modal.dart';
 import '../../../../context/auth_context.dart';
+import '../../../../context/cart_context.dart';
 import '../../../../context/likes_context.dart';
 import '../../../../services/estadisticas_service.dart';
 import '../models/public_menu_model.dart';
@@ -192,6 +193,85 @@ class _ProductModalState extends State<ProductModal> {
       widget.menuSlug!,
       widget.product.id,
     );
+  }
+
+  // ── Carrito (pedidos activos) ─────────────────────────────────────────────
+
+  bool get _pedidosActivos =>
+      !widget.staffMode && widget.menuCodigo != null && (widget.info?.pedidosActivos ?? false);
+
+  // Ítem configurado con la misma forma que handleAddToCart de React: el carrito se
+  // guarda en el servidor y lo comparten la web y la app.
+  Map<String, dynamic> _configuredItem() {
+    final p = widget.product;
+    final sizeObj = _sizeObj;
+    ProductModifier? mod(List<ProductModifier> l, String id) => l.where((m) => m.id == id).firstOrNull;
+    final ingredientDetails = [
+      for (final id in _selIngredients)
+        {'id': id, 'label': mod(p.ingredients, id)?.label ?? '', 'price': mod(p.ingredients, id)?.price ?? 0},
+    ];
+    final extraDetails = [
+      for (final id in _selExtras)
+        {'id': id, 'label': mod(p.extras, id)?.label ?? '', 'price': mod(p.extras, id)?.price ?? 0},
+    ];
+    final grupoDetails = <Map<String, dynamic>>[];
+    final gruposResumen = <String, List<String>>{};
+    var gruposTotal = 0.0;
+    for (final g in _visibleGrupos) {
+      final sel = (_selGrupos[g.id] ?? const <String>{}).toList();
+      if (sel.isEmpty) continue;
+      final precio = g.items.where((it) => sel.contains(it.name)).fold<double>(0, (s, it) => s + it.price);
+      gruposTotal += precio;
+      gruposResumen[g.name] = sel;
+      grupoDetails.add({'id': g.id, 'name': g.name, 'selectedItems': sel, 'price': precio});
+    }
+    final basePrice = sizeObj != null ? sizeObj.price : (p.hasPromo ? p.promoPrice! : p.price);
+    final ingredientsTotal = ingredientDetails.fold<double>(0, (s, i) => s + (i['price'] as double));
+    final extrasTotal = extraDetails.fold<double>(0, (s, e) => s + (e['price'] as double));
+    return {
+      'productId': p.id,
+      'productName': p.name,
+      'productImage': p.imageUrl,
+      'sizeId': _selectedSizeId,
+      'sizeLabel': sizeObj?.label,
+      'ingredientIds': [..._selIngredients],
+      'ingredientLabels': [for (final i in ingredientDetails) i['label']],
+      'extraIds': [..._selExtras],
+      'extraLabels': [for (final e in extraDetails) e['label']],
+      'grupos': {for (final e in _selGrupos.entries) e.key: e.value.toList()},
+      'gruposResumen': gruposResumen,
+      'unitPrice': _displayPrice,
+      'ingredientDetails': ingredientDetails,
+      'extraDetails': extraDetails,
+      'grupoDetails': grupoDetails,
+      'promo': (p.hasPromo && sizeObj == null)
+          ? {'active': true, 'originalPrice': p.price, 'promoPrice': p.promoPrice}
+          : null,
+      'priceBreakdown': {
+        'basePrice': basePrice,
+        'ingredientsTotal': ingredientsTotal,
+        'extrasTotal': extrasTotal,
+        'gruposTotal': gruposTotal,
+      },
+      'note': null,
+    };
+  }
+
+  void _agregarAlCarrito() {
+    if (!context.read<AuthContext>().isLoggedIn) {
+      showAuthRequiredDialog(
+        context,
+        returnTo: '/menu/${widget.menuSlug}',
+        message: 'Necesitas una cuenta para hacer pedidos.',
+      );
+      return;
+    }
+    context.read<CartContext>().addItem(_configuredItem());
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('¡Agregado al carrito!'),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 2),
+    ));
   }
 
   // Construye el mensaje de WhatsApp incluyendo selecciones — igual que React
@@ -872,11 +952,32 @@ class _ProductModalState extends State<ProductModal> {
                     // ── Botón WhatsApp ─────────────────────────────────
                     const SizedBox(height: 24),
                     Opacity(
-                      opacity: (hasWa || hasPhone) ? 1.0 : 0.5,
+                      opacity: (_pedidosActivos || hasWa || hasPhone) ? 1.0 : 0.5,
                       child: SizedBox(
                         width: double.infinity,
                         height: 48,
-                        child: ElevatedButton.icon(
+                        // Con pedidos activos el cliente arma su carrito (como React);
+                        // si no, se mantiene el pedido directo por WhatsApp.
+                        child: _pedidosActivos
+                            ? ElevatedButton.icon(
+                                onPressed: _agregarAlCarrito,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: t.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      t.badgeRadius.clamp(0, 16),
+                                    ),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.shopping_cart_outlined, size: 17),
+                                label: const Text(
+                                  'Agregar al carrito',
+                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                ),
+                              )
+                            : ElevatedButton.icon(
                           onPressed: (hasWa || hasPhone) ? _openWhatsapp : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF25D366),

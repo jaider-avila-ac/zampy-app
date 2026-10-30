@@ -3,6 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart' hide MenuTheme, Banner, CarouselView;
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../context/cart_context.dart';
+import '../modules/menu/public/components/cart_sheet.dart';
 
 import '../modules/menu/public/models/public_menu_model.dart';
 import '../modules/menu/public/components/banner.dart';
@@ -131,6 +135,12 @@ class _MenuPageState extends State<MenuPage> {
       });
     }
 
+    // Carrito del menú (guardado en el servidor), como initMenu de CartContext en React.
+    if (_pedidosActivos) {
+      final info = widget.menuData.info;
+      context.read<CartContext>().initMenu(widget.menuCodigo!, widget.menuSlug, info.whatsapp, info.name);
+    }
+
     final initialId = widget.initialProductId;
     if (initialId != null && initialId.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -206,6 +216,44 @@ class _MenuPageState extends State<MenuPage> {
     final theme = widget.menuData.theme;
     final info = widget.menuData.info;
 
+    return Stack(
+      children: [
+        _contenido(theme, info),
+        if (_pedidosActivos) _botonCarrito(theme),
+      ],
+    );
+  }
+
+  bool get _pedidosActivos =>
+      widget.isPublished &&
+      !widget.staffMode &&
+      widget.menuCodigo != null &&
+      widget.menuData.info.pedidosActivos;
+
+  // Botón flotante con la cantidad de productos del carrito.
+  Widget _botonCarrito(MenuTheme theme) {
+    final count = context.watch<CartContext>().count;
+    if (count == 0) return const SizedBox.shrink();
+    return Positioned(
+      right: 16,
+      bottom: 16 + MediaQuery.of(context).padding.bottom,
+      child: FloatingActionButton.extended(
+        heroTag: 'carrito',
+        backgroundColor: theme.primary,
+        foregroundColor: Colors.white,
+        onPressed: () => CartSheet.show(
+          context,
+          menuCodigo: widget.menuCodigo!,
+          theme: theme,
+          info: widget.menuData.info,
+        ),
+        icon: const Icon(Icons.shopping_cart_outlined),
+        label: Text('Carrito · $count'),
+      ),
+    );
+  }
+
+  Widget _contenido(MenuTheme theme, MenuInfo info) {
     return Container(
       color: theme.bg,
       child: CustomScrollView(

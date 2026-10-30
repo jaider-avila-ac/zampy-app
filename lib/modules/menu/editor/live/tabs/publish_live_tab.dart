@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../services/live_editor_service.dart';
 import '../../../../../shared/app_colors.dart';
+import '../../../../growth/achievements/components/logros_aplicados_section.dart';
 import '../../../../subscription/components/subscription_banners.dart';
 import '../editor_models.dart';
 
@@ -310,6 +311,7 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
             style: TextStyle(fontSize: 11, color: Colors.orange),
           ),
         ],
+        LogrosAplicadosSection(menuCodigo: widget.menu.codigo),
       ],
     );
   }
