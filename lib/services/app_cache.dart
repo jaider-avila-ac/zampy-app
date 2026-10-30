@@ -4,7 +4,7 @@
 
 class _CacheEntry {
   final dynamic data;
-  final bool    stale;
+  final bool stale;
   const _CacheEntry(this.data, {this.stale = false});
 }
 
@@ -43,13 +43,22 @@ class AppCache {
   }
 
   // True si existe CUALQUIER clave con ese prefijo sin estar stale
-  static bool hasAnyData(String prefix) =>
-      _store.keys.any((k) => k.startsWith(prefix) && !(_store[k]?.stale ?? true));
+  static bool hasAnyData(String prefix) => _store.keys.any(
+    (k) => k.startsWith(prefix) && !(_store[k]?.stale ?? true),
+  );
 
   // Borra SOLO datos del usuario autenticado — llamar en logout().
   // NO borra el feed del explorador (es data pública).
   static void clearUserData() {
-    const userKeys = ['notifications', 'logros', 'invitaciones'];
+    const userKeys = [
+      'notifications',
+      'logros',
+      'invitaciones',
+      'mis_menus',
+      'mis_colaboraciones',
+      'dispositivos',
+      'perfil',
+    ];
     for (final k in userKeys) {
       _store.remove(k);
     }

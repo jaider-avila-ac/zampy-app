@@ -10,7 +10,9 @@ import '../hooks/use_reset_password_form.dart';
 // Fondo indigo, tarjeta translúcida
 
 class ResetPasswordPage extends StatefulWidget {
-  const ResetPasswordPage({super.key});
+  final String? email;
+
+  const ResetPasswordPage({super.key, this.email});
 
   @override
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -35,13 +37,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: _ctrl,
-      child: const _ResetView(),
+      child: _ResetView(email: widget.email),
     );
   }
 }
 
 class _ResetView extends StatelessWidget {
-  const _ResetView();
+  const _ResetView({this.email});
+
+  final String? email;
 
   @override
   Widget build(BuildContext context) {
@@ -60,15 +64,16 @@ class _ResetView extends StatelessWidget {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Column(
               children: [
                 SvgPicture.asset(
                   'assets/logos/imagotipo-blanco-zammpy.svg',
                   height: 32,
                   colorFilter: const ColorFilter.mode(
-                      Colors.white, BlendMode.srcIn),
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 const SizedBox(height: 32),
 
@@ -79,12 +84,13 @@ class _ResetView extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 1),
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: ctrl.done
-                      ? _DoneState()
-                      : _FormState(ctrl: ctrl),
+                      ? const _DoneState()
+                      : _FormState(ctrl: ctrl, email: email),
                 ),
               ],
             ),
@@ -96,68 +102,81 @@ class _ResetView extends StatelessWidget {
 }
 
 class _FormState extends StatelessWidget {
-  const _FormState({required this.ctrl});
+  const _FormState({required this.ctrl, this.email});
   final UseResetPasswordForm ctrl;
+  final String? email;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Nueva contraseña',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white)),
+        const Text(
+          'Nueva contraseña',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
-          'Ingresa el código que recibiste y tu nueva contraseña.',
+          email != null && email!.isNotEmpty
+              ? 'Ingresa el código enviado a $email y elige una contraseña nueva.'
+              : 'Ingresa el código de tu correo y elige una nueva contraseña.',
           style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.85)),
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
         ),
         const SizedBox(height: 24),
 
         if (ctrl.error.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 16),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.red.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(ctrl.error,
-                style: const TextStyle(
-                    fontSize: 13, color: Colors.white)),
+            child: Text(
+              ctrl.error,
+              style: const TextStyle(fontSize: 13, color: Colors.white),
+            ),
           ),
 
         // Código 6 dígitos
-        Text('Código de verificación',
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.85),
-                letterSpacing: 0.3)),
+        Text(
+          'Código de verificación',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withValues(alpha: 0.85),
+            letterSpacing: 0.3,
+          ),
+        ),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(6, (i) => _DigitBox(
-            controller: ctrl.codeControllers[i],
-            focusNode:  ctrl.codeFocusNodes[i],
-            nextFocus:  i < 5 ? ctrl.codeFocusNodes[i + 1] : null,
-            prevFocus:  i > 0 ? ctrl.codeFocusNodes[i - 1] : null,
-          )),
+          children: List.generate(
+            6,
+            (i) => _DigitBox(
+              controller: ctrl.codeControllers[i],
+              focusNode: ctrl.codeFocusNodes[i],
+              nextFocus: i < 5 ? ctrl.codeFocusNodes[i + 1] : null,
+              prevFocus: i > 0 ? ctrl.codeFocusNodes[i - 1] : null,
+            ),
+          ),
         ),
         const SizedBox(height: 20),
 
         // Nueva contraseña
         _WhiteField(
-          controller:  ctrl.passwordCtrl,
-          label:       'Nueva contraseña',
-          hint:        '••••••••',
-          obscure:     !ctrl.showPass,
-          onToggle:    ctrl.toggleShowPass,
+          controller: ctrl.passwordCtrl,
+          label: 'Nueva contraseña',
+          hint: '••••••••',
+          obscure: !ctrl.showPass,
+          onToggle: ctrl.toggleShowPass,
           showingPass: ctrl.showPass,
           textInputAction: TextInputAction.next,
         ),
@@ -165,11 +184,11 @@ class _FormState extends StatelessWidget {
 
         // Confirmar contraseña
         _WhiteField(
-          controller:  ctrl.confirmCtrl,
-          label:       'Confirmar contraseña',
-          hint:        '••••••••',
-          obscure:     !ctrl.showConfirm,
-          onToggle:    ctrl.toggleShowConfirm,
+          controller: ctrl.confirmCtrl,
+          label: 'Confirmar contraseña',
+          hint: '••••••••',
+          obscure: !ctrl.showConfirm,
+          onToggle: ctrl.toggleShowConfirm,
           showingPass: ctrl.showConfirm,
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _submit(context, ctrl),
@@ -183,19 +202,24 @@ class _FormState extends StatelessWidget {
               backgroundColor: Colors.white,
               foregroundColor: AppColors.kBlue,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            onPressed:
-                ctrl.loading ? null : () => _submit(context, ctrl),
+            onPressed: ctrl.loading ? null : () => _submit(context, ctrl),
             child: ctrl.loading
                 ? SizedBox(
-                    width: 18, height: 18,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
-                        color: AppColors.kBlue, strokeWidth: 2))
-                : const Text('Cambiar contraseña',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+                      color: AppColors.kBlue,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Cambiar contraseña',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
           ),
         ),
         const SizedBox(height: 16),
@@ -203,18 +227,20 @@ class _FormState extends StatelessWidget {
         Center(
           child: TextButton(
             onPressed: () => context.go('/login'),
-            child: Text('Volver al inicio de sesión',
-                style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.85))),
+            child: Text(
+              'Volver al inicio de sesión',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white.withValues(alpha: 0.85),
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _submit(
-      BuildContext context, UseResetPasswordForm ctrl) async {
+  Future<void> _submit(BuildContext context, UseResetPasswordForm ctrl) async {
     await ctrl.submit();
     // La vista reacciona a ctrl.done
   }
@@ -229,18 +255,22 @@ class _DoneState extends StatelessWidget {
       children: [
         const Icon(Icons.lock_open_outlined, size: 56, color: Colors.white),
         const SizedBox(height: 16),
-        const Text('¡Contraseña cambiada!',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white)),
+        const Text(
+          '¡Contraseña cambiada!',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Tu contraseña fue actualizada exitosamente.',
           textAlign: TextAlign.center,
           style: TextStyle(
-              fontSize: 14,
-              color: Colors.white.withValues(alpha: 0.85)),
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
         ),
         const SizedBox(height: 28),
         SizedBox(
@@ -250,13 +280,15 @@ class _DoneState extends StatelessWidget {
               backgroundColor: Colors.white,
               foregroundColor: AppColors.kBlue,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            onPressed: () => context.go('/login?verified=true'),
-            child: const Text('Iniciar sesión',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            onPressed: () => context.go('/login?resetSuccess=true'),
+            child: const Text(
+              'Iniciar sesión',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
           ),
         ),
       ],
@@ -278,36 +310,41 @@ class _WhiteField extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final String                label;
-  final String                hint;
-  final bool                  obscure;
-  final VoidCallback          onToggle;
-  final bool                  showingPass;
-  final TextInputAction        textInputAction;
-  final ValueChanged<String>?  onSubmitted;
+  final String label;
+  final String hint;
+  final bool obscure;
+  final VoidCallback onToggle;
+  final bool showingPass;
+  final TextInputAction textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.85),
-                letterSpacing: 0.3)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withValues(alpha: 0.85),
+            letterSpacing: 0.3,
+          ),
+        ),
         const SizedBox(height: 6),
         TextField(
-          controller:      controller,
-          obscureText:     obscure,
+          controller: controller,
+          obscureText: obscure,
           textInputAction: textInputAction,
-          onSubmitted:     onSubmitted,
+          onSubmitted: onSubmitted,
           style: const TextStyle(fontSize: 15, color: Colors.white),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-                color: Colors.white.withValues(alpha: 0.45), fontSize: 14),
+              color: Colors.white.withValues(alpha: 0.45),
+              fontSize: 14,
+            ),
             suffixIcon: GestureDetector(
               onTap: onToggle,
               child: Icon(
@@ -319,15 +356,22 @@ class _WhiteField extends StatelessWidget {
               ),
             ),
             border: UnderlineInputBorder(
-                borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.4))),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.4),
+              ),
+            ),
             enabledBorder: UnderlineInputBorder(
-                borderSide: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.4))),
+              borderSide: BorderSide(
+                color: Colors.white.withValues(alpha: 0.4),
+              ),
+            ),
             focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Colors.white, width: 1.5)),
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+              borderSide: BorderSide(color: Colors.white, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 8,
+              horizontal: 0,
+            ),
             isDense: true,
           ),
         ),
@@ -346,9 +390,9 @@ class _DigitBox extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final FocusNode             focusNode;
-  final FocusNode?            nextFocus;
-  final FocusNode?            prevFocus;
+  final FocusNode focusNode;
+  final FocusNode? nextFocus;
+  final FocusNode? prevFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -356,33 +400,37 @@ class _DigitBox extends StatelessWidget {
       width: 44,
       height: 56,
       child: TextField(
-        controller:    controller,
-        focusNode:     focusNode,
-        textAlign:     TextAlign.center,
-        maxLength:     1,
-        keyboardType:  TextInputType.number,
+        controller: controller,
+        focusNode: focusNode,
+        textAlign: TextAlign.center,
+        maxLength: 1,
+        keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Colors.white),
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
         decoration: InputDecoration(
           counterText: '',
           contentPadding: EdgeInsets.zero,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+              color: Colors.white.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+              color: Colors.white.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide:
-                const BorderSide(color: Colors.white, width: 2),
+            borderSide: const BorderSide(color: Colors.white, width: 2),
           ),
           fillColor: Colors.white.withValues(alpha: 0.15),
           filled: true,

@@ -16,11 +16,11 @@ class ThemeSelector extends StatefulWidget {
     required this.onPaletteChange,
   });
 
-  final MenuTheme            theme;
-  final List<CatalogSkin>    catalog;
-  final dynamic              initialSkinId;
-  final dynamic              initialPaletteId;
-  final ValueChanged<CatalogSkin>    onSkinChange;
+  final MenuTheme theme;
+  final List<CatalogSkin> catalog;
+  final dynamic initialSkinId;
+  final dynamic initialPaletteId;
+  final ValueChanged<CatalogSkin> onSkinChange;
   final ValueChanged<CatalogPalette> onPaletteChange;
 
   static Future<void> show(
@@ -33,16 +33,16 @@ class ThemeSelector extends StatefulWidget {
     required ValueChanged<CatalogPalette> onPaletteChange,
   }) {
     return showModalBottomSheet(
-      context:            context,
+      context: context,
       isScrollControlled: true,
-      backgroundColor:    Colors.transparent,
+      backgroundColor: Colors.transparent,
       builder: (_) => ThemeSelector(
-        theme:            theme,
-        catalog:          catalog,
-        initialSkinId:    currentSkinId,
+        theme: theme,
+        catalog: catalog,
+        initialSkinId: currentSkinId,
         initialPaletteId: currentPaletteId,
-        onSkinChange:     onSkinChange,
-        onPaletteChange:  onPaletteChange,
+        onSkinChange: onSkinChange,
+        onPaletteChange: onPaletteChange,
       ),
     );
   }
@@ -58,7 +58,7 @@ class _ThemeSelectorState extends State<ThemeSelector> {
   @override
   void initState() {
     super.initState();
-    _skinId    = widget.initialSkinId;
+    _skinId = widget.initialSkinId;
     _paletteId = widget.initialPaletteId;
   }
 
@@ -73,7 +73,7 @@ class _ThemeSelectorState extends State<ThemeSelector> {
   void _selectSkin(CatalogSkin sk) {
     final firstPalette = sk.palettes.isNotEmpty ? sk.palettes.first : null;
     setState(() {
-      _skinId    = sk.id;
+      _skinId = sk.id;
       _paletteId = firstPalette?.id;
     });
     widget.onSkinChange(sk);
@@ -87,13 +87,13 @@ class _ThemeSelectorState extends State<ThemeSelector> {
 
   @override
   Widget build(BuildContext context) {
-    final t    = widget.theme;
+    final t = widget.theme;
     final skin = _currentSkin;
 
     return Container(
       margin: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       decoration: BoxDecoration(
-        color:        t.surface,
+        color: t.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
@@ -104,15 +104,14 @@ class _ThemeSelectorState extends State<ThemeSelector> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-
               // Drag handle
               Center(
                 child: Container(
-                  width:  36,
+                  width: 36,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color:        t.border,
+                    color: t.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -126,20 +125,20 @@ class _ThemeSelectorState extends State<ThemeSelector> {
                   Text(
                     'Preview de Diseño',
                     style: TextStyle(
-                      fontSize:   17,
+                      fontSize: 17,
                       fontWeight: FontWeight.w900,
-                      color:      t.text,
+                      color: t.text,
                     ),
                   ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
-                      width:  32,
+                      width: 32,
                       height: 32,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color:        t.surfaceAlt,
+                        color: t.surfaceAlt,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(Icons.close, size: 16, color: t.textMuted),
@@ -153,9 +152,9 @@ class _ThemeSelectorState extends State<ThemeSelector> {
               Text(
                 'Estilo',
                 style: TextStyle(
-                  fontSize:   12,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color:      t.textMuted,
+                  color: t.textMuted,
                 ),
               ),
               const SizedBox(height: 8),
@@ -170,9 +169,12 @@ class _ThemeSelectorState extends State<ThemeSelector> {
                         onTap: () => _selectSkin(sk),
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 150),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 9,
+                          ),
                           decoration: BoxDecoration(
-                            color:        isActive
+                            color: isActive
                                 ? t.primary.withValues(alpha: 0.12)
                                 : Colors.transparent,
                             border: Border.all(
@@ -184,9 +186,9 @@ class _ThemeSelectorState extends State<ThemeSelector> {
                           child: Text(
                             sk.label,
                             style: TextStyle(
-                              fontSize:   12,
+                              fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color:      isActive ? t.primary : t.textMuted,
+                              color: isActive ? t.primary : t.textMuted,
                             ),
                           ),
                         ),
@@ -201,34 +203,38 @@ class _ThemeSelectorState extends State<ThemeSelector> {
               Text(
                 'Paleta de colores',
                 style: TextStyle(
-                  fontSize:   12,
+                  fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color:      t.textMuted,
+                  color: t.textMuted,
                 ),
               ),
               const SizedBox(height: 10),
 
               if (skin != null)
                 GridView.builder(
-                  shrinkWrap:      true,
-                  physics:         const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount:   2,
+                    crossAxisCount: 2,
                     crossAxisSpacing: 10,
-                    mainAxisSpacing:  10,
+                    mainAxisSpacing: 10,
                     childAspectRatio: 2.4,
                   ),
                   itemCount: skin.palettes.length,
                   itemBuilder: (_, i) {
-                    final pal      = skin.palettes[i];
-                    final isActive = pal.id.toString() == _paletteId?.toString();
+                    final pal = skin.palettes[i];
+                    final isActive =
+                        pal.id.toString() == _paletteId?.toString();
                     return GestureDetector(
                       onTap: () => _selectPalette(pal),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color:        isActive
+                          color: isActive
                               ? t.primary.withValues(alpha: 0.08)
                               : t.surfaceAlt,
                           border: Border.all(
@@ -243,18 +249,23 @@ class _ThemeSelectorState extends State<ThemeSelector> {
                             ...pal.preview.take(3).map((hex) {
                               Color c;
                               try {
-                                c = Color(int.parse(hex.replaceAll('#', '0xFF')));
+                                c = Color(
+                                  int.parse(hex.replaceAll('#', '0xFF')),
+                                );
                               } catch (_) {
                                 c = t.primary;
                               }
                               return Container(
-                                width:  16,
+                                width: 16,
                                 height: 16,
                                 margin: const EdgeInsets.only(right: 3),
                                 decoration: BoxDecoration(
-                                  color:  c,
-                                  shape:  BoxShape.circle,
-                                  border: Border.all(color: Colors.white24, width: 0.5),
+                                  color: c,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white24,
+                                    width: 0.5,
+                                  ),
                                 ),
                               );
                             }),
@@ -263,16 +274,20 @@ class _ThemeSelectorState extends State<ThemeSelector> {
                               child: Text(
                                 pal.name,
                                 style: TextStyle(
-                                  fontSize:   11,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color:      t.text,
+                                  color: t.text,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             if (isActive)
-                              Icon(Icons.check_circle, size: 14, color: t.primary),
+                              Icon(
+                                Icons.check_circle,
+                                size: 14,
+                                color: t.primary,
+                              ),
                           ],
                         ),
                       ),
@@ -286,16 +301,16 @@ class _ThemeSelectorState extends State<ThemeSelector> {
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color:        t.primary.withValues(alpha: 0.07),
+                  color: t.primary.withValues(alpha: 0.07),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   'Vista previa del administrador',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize:   12,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color:      t.textMuted,
+                    color: t.textMuted,
                   ),
                 ),
               ),

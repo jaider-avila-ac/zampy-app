@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
+import '../../../components/layout/sidebar.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
-import '../../../components/layout/sidebar.dart';
+import '../../explore/components/menu_card.dart';
+import '../components/colaborador_row.dart';
 import '../hooks/use_mis_menus.dart';
 
-// Equivalente a src/modules/dashboard/pages/MisMenusPage.jsx en React
-// Fase actual: solo listado + estadísticas + preview. Edición/delete se implementa después.
+// Equivalente a src/modules/dashboard/pages/MisMenusPage.jsx en React.
 
 class MisMenusPage extends StatelessWidget {
   const MisMenusPage({super.key});
@@ -37,10 +39,6 @@ class _MisMenusView extends StatelessWidget {
           context.go('/');
         }
       },
-      child: GestureDetector(
-      // Cerrar dropdown al tocar fuera (equiv. document.addEventListener('click', close))
-      onTap: ctrl.closeDropdown,
-      behavior: HitTestBehavior.translucent,
       child: Scaffold(
         backgroundColor: AppColors.kBgPage,
         drawer: const AppSidebar(),
@@ -49,26 +47,36 @@ class _MisMenusView extends StatelessWidget {
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: GestureDetector(
-                onTap: ctrl.atLimit ? null : () => context.push('/menus/new'),
-                child: AnimatedOpacity(
-                  duration: const Duration(milliseconds: 200),
-                  opacity: ctrl.atLimit ? 0.5 : 1.0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color:        AppColors.kBlue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.add, size: 15, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text('Nuevo',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                                color: Colors.white)),
-                      ],
+              child: Opacity(
+                opacity: ctrl.atLimit ? 0.5 : 1,
+                child: IgnorePointer(
+                  ignoring: ctrl.atLimit,
+                  child: GestureDetector(
+                    onTap: () => context.push('/menus/new'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.kBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, size: 15, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'Nuevo',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -80,86 +88,77 @@ class _MisMenusView extends StatelessWidget {
           color: AppColors.kBlue,
           onRefresh: ctrl.reload,
           child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
             children: [
-
-              // ── Contador de menús ──────────────────────────────────────────
               if (!ctrl.loading && ctrl.limiteMenus != null) ...[
                 _LimitBadge(
-                    count: ctrl.menus.length,
-                    limit: ctrl.limiteMenus!,
-                    atLimit: ctrl.atLimit),
+                  count: ctrl.menus.length,
+                  limit: ctrl.limiteMenus!,
+                  atLimit: ctrl.atLimit,
+                ),
                 const SizedBox(height: 12),
               ],
 
-              // ── Skeletons ──────────────────────────────────────────────────
-              if (ctrl.loading)
-                ...[1, 2, 3].map((_) => const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: _MenuSkeleton(),
-                )),
-
-              // ── Empty state ────────────────────────────────────────────────
-              if (!ctrl.loading && ctrl.menus.isEmpty)
-                _EmptyMenus(onNew: () => context.push('/menus/new')),
-
-              // ── Lista de menús propios ──────────────────────────────────────
-              if (!ctrl.loading && ctrl.menus.isNotEmpty)
-                ...ctrl.menus.map((menu) {
-                  final m = menu as Map<String, dynamic>;
-                  final id = m['id'] as int;
-                  return Padding(
+              if (ctrl.loading && ctrl.menus.isEmpty)
+                ...[1, 2, 3].map(
+                  (_) => const Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: _MenuSkeleton(),
+                  ),
+                )
+              else if (ctrl.errorMenus != null && ctrl.menus.isEmpty)
+                _ErrorCard(message: ctrl.errorMenus!, onRetry: ctrl.retryMenus)
+              else if (ctrl.menus.isEmpty)
+                _EmptyMenus(onNew: () => context.push('/menus/new'))
+              else ...[
+                if (ctrl.errorMenus != null) ...[
+                  _InlineError(
+                    message: ctrl.errorMenus!,
+                    onRetry: ctrl.retryMenus,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                ...ctrl.menus.map(
+                  (menu) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: _MenuRow(
-                      menu:         m,
-                      expanded:     ctrl.openMenuId == id,
-                      onTap:        () { ctrl.toggleDropdown(id); },
-                      onEdit:       () => context.push('/menus/$id/edit'),
-                      onPreview:    () => context.push('/preview/$id'),
-                      onStats:      () => context.push('/menus/$id/estadisticas'),
+                    child: MenuCard(
+                      menu: menu,
+                      showActions: false,
+                      onTap: () => context.push('/menus/${menu.codigo}'),
                     ),
-                  );
-                }),
-
-              // ── Colaboraciones ─────────────────────────────────────────────
-              if (!ctrl.loadingColab && ctrl.colaborados.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                const Row(
-                  children: [
-                    Icon(Icons.people_outlined, size: 15, color: AppColors.kBlue),
-                    SizedBox(width: 6),
-                    Text('Colaborando en',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                            color: AppColors.kTextPrimary)),
-                  ],
+                  ),
                 ),
+              ],
+
+              if (ctrl.colaborados.isNotEmpty || ctrl.errorColab != null) ...[
+                const SizedBox(height: 24),
+                const _SectionTitle(),
                 const SizedBox(height: 10),
-                ...ctrl.colaborados.map((menu) {
-                  final m  = menu as Map<String, dynamic>;
-                  final id = m['id'] as int;
-                  return Padding(
+                if (ctrl.errorColab != null) ...[
+                  _InlineError(
+                    message: ctrl.errorColab!,
+                    onRetry: ctrl.retryColaboraciones,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                ...ctrl.colaborados.map(
+                  (menu) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: _ColaboradorRow(
-                      menu:      m,
-                      expanded:  ctrl.openMenuId == id,
-                      onTap:     () => ctrl.toggleDropdown(id),
-                      onEdit:    () => context.push('/menus/$id/edit'),
-                      onPreview: () => context.push('/preview/$id'),
-                      onStats:   () => context.push('/menus/$id/estadisticas'),
+                    child: ColaboradorRow(
+                      menu: menu,
+                      onOpen: () => context.push('/menus/${menu.codigo}'),
                     ),
-                  );
-                }),
+                  ),
+                ),
               ],
             ],
           ),
         ),
       ),
-      ),
     );
   }
 }
-
-// ── Contador / límite ─────────────────────────────────────────────────────────
 
 class _LimitBadge extends StatelessWidget {
   const _LimitBadge({
@@ -167,8 +166,9 @@ class _LimitBadge extends StatelessWidget {
     required this.limit,
     required this.atLimit,
   });
-  final int  count;
-  final int  limit;
+
+  final int count;
+  final int limit;
   final bool atLimit;
 
   @override
@@ -178,25 +178,50 @@ class _LimitBadge extends StatelessWidget {
         Text(
           '$count/$limit menús',
           style: TextStyle(
-            fontSize:   12,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
-            color:      atLimit ? const Color(0xFFEF4444) : AppColors.kTextMuted,
+            color: atLimit ? const Color(0xFFEF4444) : AppColors.kTextMuted,
           ),
         ),
         if (atLimit) ...[
           const SizedBox(width: 6),
           const Icon(Icons.lock_outline, size: 11, color: Color(0xFFEF4444)),
           const SizedBox(width: 3),
-          const Text('Límite alcanzado',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                  color: Color(0xFFEF4444))),
+          const Text(
+            'Límite alcanzado',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFEF4444),
+            ),
+          ),
         ],
       ],
     );
   }
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Icon(Icons.people_outline, size: 16, color: AppColors.kBlueLight),
+        SizedBox(width: 6),
+        Text(
+          'Colaborando en',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppColors.kTextPrimary,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class _MenuSkeleton extends StatelessWidget {
   const _MenuSkeleton();
@@ -206,33 +231,51 @@ class _MenuSkeleton extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color:        Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: AppColors.kCardBorder),
+        border: Border.all(color: AppColors.kCardBorder),
       ),
       child: Row(
         children: [
           Container(
-            width: 48, height: 48,
+            width: 48,
+            height: 48,
             decoration: const BoxDecoration(
-              color: AppColors.kSkeleton, shape: BoxShape.circle),
+              color: AppColors.kSkeleton,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(height: 13, width: 120,
-                    decoration: BoxDecoration(color: AppColors.kSkeleton,
-                        borderRadius: BorderRadius.circular(6))),
+                Container(
+                  height: 13,
+                  width: 120,
+                  decoration: BoxDecoration(
+                    color: AppColors.kSkeleton,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Container(height: 11, width: 200,
-                    decoration: BoxDecoration(color: AppColors.kSkeleton,
-                        borderRadius: BorderRadius.circular(6))),
+                Container(
+                  height: 11,
+                  width: 200,
+                  decoration: BoxDecoration(
+                    color: AppColors.kSkeleton,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Container(height: 11, width: 80,
-                    decoration: BoxDecoration(color: AppColors.kSkeleton,
-                        borderRadius: BorderRadius.circular(6))),
+                Container(
+                  height: 11,
+                  width: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.kSkeleton,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
               ],
             ),
           ),
@@ -242,10 +285,9 @@ class _MenuSkeleton extends StatelessWidget {
   }
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
-
 class _EmptyMenus extends StatelessWidget {
   const _EmptyMenus({required this.onNew});
+
   final VoidCallback onNew;
 
   @override
@@ -254,43 +296,41 @@ class _EmptyMenus extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color:        Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border:       Border.all(color: AppColors.kCardBorder),
+        border: Border.all(color: AppColors.kCardBorder),
       ),
       child: Column(
         children: [
-          const Icon(Icons.no_food_outlined, size: 36, color: AppColors.kTextMuted),
+          const Icon(
+            Icons.no_food_outlined,
+            size: 36,
+            color: AppColors.kTextMuted,
+          ),
           const SizedBox(height: 12),
-          const Text('No tienes menús aún',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
-                  color: AppColors.kTextPrimary)),
+          const Text(
+            'No tienes menús aún',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.kTextPrimary,
+            ),
+          ),
           const SizedBox(height: 6),
           const Text(
             'Crea tu primer menú digital y compártelo con tus clientes.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: AppColors.kTextMuted, height: 1.5),
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.kTextMuted,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 20),
-          GestureDetector(
-            onTap: onNew,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color:        AppColors.kBlue,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.add, size: 14, color: Colors.white),
-                  SizedBox(width: 6),
-                  Text('Crear mi primer menú',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                ],
-              ),
-            ),
+          FilledButton.icon(
+            onPressed: onNew,
+            icon: const Icon(Icons.add, size: 15),
+            label: const Text('Crear mi primer menú'),
           ),
         ],
       ),
@@ -298,371 +338,94 @@ class _EmptyMenus extends StatelessWidget {
   }
 }
 
-// ── MenuRow (menús propios) ───────────────────────────────────────────────────
+class _ErrorCard extends StatelessWidget {
+  const _ErrorCard({required this.message, required this.onRetry});
 
-class _MenuRow extends StatelessWidget {
-  const _MenuRow({
-    required this.menu,
-    required this.expanded,
-    required this.onTap,
-    required this.onEdit,
-    required this.onPreview,
-    required this.onStats,
-  });
-
-  final Map<String, dynamic> menu;
-  final bool                 expanded;
-  final VoidCallback         onTap;
-  final VoidCallback         onEdit;
-  final VoidCallback         onPreview;
-  final VoidCallback         onStats;
-
-  @override
-  Widget build(BuildContext context) {
-    final info        = (menu['draft'] as Map<String, dynamic>)['info'] as Map<String, dynamic>;
-    final isPublished = menu['status'] == 'published';
-    final hasDraft    = menu['hasDraftChanges'] as bool? ?? false;
-    final vistas      = menu['totalVistas']  as int? ?? 0;
-    final encantas    = menu['meEncantas']   as int? ?? 0;
-    final resenas     = menu['totalResenas'] as int? ?? 0;
-    final logoUrl     = info['logoUrl'] as String?;
-    final name        = info['name']   as String? ?? '';
-    final slogan      = info['slogan'] as String? ?? '';
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-        decoration: BoxDecoration(
-          color:        Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border:       Border.all(color: AppColors.kCardBorder),
-        ),
-        child: Column(
-          children: [
-            // ── Fila principal ──────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Thumbnail
-                  _Thumb(logoUrl: logoUrl, name: name),
-                  const SizedBox(width: 12),
-                  // Info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.kTextPrimary,
-                                height: 1.3)),
-                        const SizedBox(height: 3),
-                        Text(slogan.isNotEmpty ? slogan : 'Sin slogan',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11,
-                                color: AppColors.kTextMuted, height: 1.35)),
-                        // Estadísticas inline
-                        if (vistas > 0 || encantas > 0 || resenas > 0) ...[
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 10, runSpacing: 4,
-                            children: [
-                              if (vistas > 0)
-                                _StatChip(icon: Icons.visibility_outlined,
-                                    label: '$vistas vista${vistas != 1 ? 's' : ''}'),
-                              if (encantas > 0)
-                                _StatChip(icon: Icons.favorite,
-                                    label: '$encantas', filled: true),
-                              if (resenas > 0)
-                                _StatChip(icon: Icons.chat_bubble_outline,
-                                    label: '$resenas reseña${resenas != 1 ? 's' : ''}',
-                                    muted: true),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Badges
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _StatusBadge(published: isPublished),
-                      if (hasDraft && isPublished) ...[
-                        const SizedBox(height: 4),
-                        const _DraftBadge(),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Acciones expandidas ─────────────────────────────────────
-            if (expanded)
-              GestureDetector(
-                onTap: () {}, // stopPropagation
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
-                  ),
-                  child: Row(
-                    children: [
-                      _ActionBtn(icon: Icons.edit_outlined,
-                          label: 'Editar', onTap: onEdit),
-                      _ActionBtn(icon: Icons.open_in_new_outlined,
-                          label: 'Preview', onTap: onPreview),
-                      _ActionBtn(icon: Icons.bar_chart_outlined,
-                          label: 'Estadísticas', onTap: onStats),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── ColaboradorRow ────────────────────────────────────────────────────────────
-
-class _ColaboradorRow extends StatelessWidget {
-  const _ColaboradorRow({
-    required this.menu,
-    required this.expanded,
-    required this.onTap,
-    required this.onEdit,
-    required this.onPreview,
-    required this.onStats,
-  });
-
-  final Map<String, dynamic> menu;
-  final bool                 expanded;
-  final VoidCallback         onTap;
-  final VoidCallback         onEdit;
-  final VoidCallback         onPreview;
-  final VoidCallback         onStats;
-
-  @override
-  Widget build(BuildContext context) {
-    final info        = (menu['draft'] as Map<String, dynamic>)['info'] as Map<String, dynamic>;
-    final isPublished = menu['status'] == 'published';
-    final logoUrl     = info['logoUrl'] as String?;
-    final name        = info['name']   as String? ?? '';
-    final slogan      = info['slogan'] as String? ?? '';
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-        decoration: BoxDecoration(
-          color:        Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border:       Border.all(color: AppColors.kCardBorder),
-        ),
-        child: Column(
-          children: [
-            // ── Fila principal ──────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Thumb(logoUrl: logoUrl, name: name),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.kTextPrimary, height: 1.3)),
-                        const SizedBox(height: 3),
-                        Text(slogan.isNotEmpty ? slogan : 'Sin slogan',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11,
-                                color: AppColors.kTextMuted, height: 1.35)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatusBadge(published: isPublished),
-                ],
-              ),
-            ),
-
-            // ── Acciones expandidas ─────────────────────────────────────
-            if (expanded)
-              GestureDetector(
-                onTap: () {},
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
-                  ),
-                  child: Row(
-                    children: [
-                      _ActionBtn(icon: Icons.edit_outlined,
-                          label: 'Editar', onTap: onEdit),
-                      _ActionBtn(icon: Icons.open_in_new_outlined,
-                          label: 'Preview', onTap: onPreview),
-                      _ActionBtn(icon: Icons.bar_chart_outlined,
-                          label: 'Estadísticas', onTap: onStats),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Widgets reutilizables ─────────────────────────────────────────────────────
-
-class _Thumb extends StatelessWidget {
-  const _Thumb({required this.logoUrl, required this.name});
-  final String? logoUrl;
-  final String  name;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 48, height: 48,
-      child: ClipOval(
-        child: logoUrl != null && logoUrl!.isNotEmpty
-            ? Image.network(logoUrl!, fit: BoxFit.cover,
-                errorBuilder: (ctx, err, stack) => _GradientThumb())
-            : _GradientThumb(),
-      ),
-    );
-  }
-}
-
-class _GradientThumb extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end:   Alignment.bottomRight,
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.published});
-  final bool published;
+  final String message;
+  final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
       decoration: BoxDecoration(
-        color:        published ? AppColors.kBlue : const Color(0xFF64748B),
-        borderRadius: BorderRadius.circular(99),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.kCardBorder),
       ),
-      child: Text(
-        published ? 'Publicado' : 'Borrador',
-        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
-            color: Colors.white),
-      ),
-    );
-  }
-}
-
-class _DraftBadge extends StatelessWidget {
-  const _DraftBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color:        const Color(0xFF818CF8),
-        borderRadius: BorderRadius.circular(99),
-      ),
-      child: const Text('Cambios',
-          style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
-              color: Colors.white)),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    this.filled = false,
-    this.muted  = false,
-  });
-  final IconData icon;
-  final String   label;
-  final bool     filled;
-  final bool     muted;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = muted ? AppColors.kTextMuted : AppColors.kBlue;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 11, color: color,
-            fill: filled ? 1.0 : 0.0),
-        const SizedBox(width: 3),
-        Text(label,
-            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                color: color)),
-      ],
-    );
-  }
-}
-
-class _ActionBtn extends StatelessWidget {
-  const _ActionBtn({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-  final IconData     icon;
-  final String       label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: label,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          margin:  const EdgeInsets.only(right: 4),
-          decoration: BoxDecoration(
-            color:        const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.cloud_off_outlined,
+            size: 34,
+            color: AppColors.kTextMuted,
           ),
-          child: Icon(icon, size: 18, color: AppColors.kTextMuted),
-        ),
+          const SizedBox(height: 10),
+          const Text(
+            'No se pudieron cargar tus menús',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.kTextPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: AppColors.kTextMuted),
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh, size: 15),
+            label: const Text('Reintentar'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InlineError extends StatelessWidget {
+  const _InlineError({required this.message, required this.onRetry});
+
+  final String message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFFDE68A)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_outlined,
+            size: 15,
+            color: Color(0xFFB45309),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(fontSize: 11, color: Color(0xFF92400E)),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            style: TextButton.styleFrom(
+              minimumSize: const Size(0, 28),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: const Text('Reintentar', style: TextStyle(fontSize: 11)),
+          ),
+        ],
       ),
     );
   }

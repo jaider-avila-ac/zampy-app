@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart' hide MenuTheme;
+
 import '../models/public_menu_model.dart';
+import 'product_image.dart';
 
 // Equivalente a src/components/ProductCard.jsx en React
 // Altura fija 280px: imagen 140px arriba + cuerpo 140px abajo
@@ -12,8 +14,8 @@ class ProductCard extends StatelessWidget {
     required this.onTap,
   });
 
-  final MenuProduct  product;
-  final MenuTheme    theme;
+  final MenuProduct product;
+  final MenuTheme theme;
   final VoidCallback onTap;
 
   // Mismo formato colombiano que React: 18000 → "18.000"
@@ -39,39 +41,38 @@ class ProductCard extends StatelessWidget {
         // altura fija 280px igual que React
         height: 280,
         decoration: BoxDecoration(
-          color:        t.surface,
+          color: t.surface,
           borderRadius: BorderRadius.circular(t.cardRadius),
-          border:       Border.all(color: t.border),
+          border: Border.all(color: t.border),
         ),
         clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // ── Bloque superior: imagen 140px ────────────────────────────
             SizedBox(
               height: 140,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Imagen o fondo fallback
-                  (product.imageUrl != null && product.imageUrl!.isNotEmpty)
-                      ? Image.network(
-                          product.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (ctx, e, st) => Container(color: t.surfaceAlt),
-                        )
-                      : Container(color: t.surfaceAlt),
+                  ProductImage(
+                    url: product.imageUrl,
+                    fit: BoxFit.cover,
+                    backgroundColor: t.surfaceAlt,
+                    foregroundColor: t.textMuted,
+                  ),
 
                   // Gradiente sutil inferior — React: c.surface con 80% opacidad → transparent
                   Positioned(
-                    bottom: 0, left: 0, right: 0,
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
                     child: Container(
                       height: 40,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           begin: Alignment.bottomCenter,
-                          end:   Alignment.topCenter,
+                          end: Alignment.topCenter,
                           colors: [
                             t.surface.withValues(alpha: 0.80),
                             Colors.transparent,
@@ -84,22 +85,32 @@ class ProductCard extends StatelessWidget {
                   // Rating badge — top-right — solo si rating > 0
                   if (product.rating != null && product.rating! > 0)
                     Positioned(
-                      top: 8, right: 8,
+                      top: 8,
+                      right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color:        Colors.black.withValues(alpha: 0.55),
+                          color: Colors.black.withValues(alpha: 0.55),
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star, size: 10, color: Color(0xFFFFD700)),
+                            const Icon(
+                              Icons.star,
+                              size: 10,
+                              color: Color(0xFFFFD700),
+                            ),
                             const SizedBox(width: 3),
                             Text(
                               product.rating!.toStringAsFixed(1),
                               style: const TextStyle(
-                                color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -110,17 +121,23 @@ class ProductCard extends StatelessWidget {
                   // Tag badge — top-left — solo si hay al menos un tag
                   if (product.tags.isNotEmpty)
                     Positioned(
-                      top: 8, left: 8,
+                      top: 8,
+                      left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
-                          color:        t.primary,
+                          color: t.primary,
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(
                           product.tags.first,
                           style: const TextStyle(
-                            color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -137,7 +154,6 @@ class ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     // Nombre — font-bold 14px, máx 2 líneas, minHeight 2.6em (~36px)
                     SizedBox(
                       height: 36,
@@ -147,9 +163,9 @@ class ProductCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          fontSize:   14,
-                          color:      t.text,
-                          height:     1.3,
+                          fontSize: 14,
+                          color: t.text,
+                          height: 1.3,
                         ),
                       ),
                     ),
@@ -165,8 +181,8 @@ class ProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 12,
-                            color:    t.textMuted,
-                            height:   1.5,
+                            color: t.textMuted,
+                            height: 1.5,
                           ),
                         ),
                       ),
@@ -182,7 +198,6 @@ class ProductCard extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-
                           // Precio: promo tachado + verde, o precio normal en primary
                           if (product.hasPromo) ...[
                             Column(
@@ -192,8 +207,8 @@ class ProductCard extends StatelessWidget {
                                 Text(
                                   '\$${_fmt(product.price)}',
                                   style: TextStyle(
-                                    fontSize:   11,
-                                    color:      t.textMuted,
+                                    fontSize: 11,
+                                    color: t.textMuted,
                                     decoration: TextDecoration.lineThrough,
                                   ),
                                 ),
@@ -201,8 +216,8 @@ class ProductCard extends StatelessWidget {
                                   '\$${_fmt(product.promoPrice!)}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w900,
-                                    fontSize:   16,
-                                    color:      Color(0xFF22C55E),
+                                    fontSize: 16,
+                                    color: Color(0xFF22C55E),
                                   ),
                                 ),
                               ],
@@ -212,8 +227,8 @@ class ProductCard extends StatelessWidget {
                               '\$${_fmt(product.price)}',
                               style: TextStyle(
                                 fontWeight: FontWeight.w900,
-                                fontSize:   16,
-                                color:      t.primary,
+                                fontSize: 16,
+                                color: t.primary,
                               ),
                             ),
 
@@ -223,23 +238,35 @@ class ProductCard extends StatelessWidget {
                           GestureDetector(
                             onTap: onTap,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color:        Colors.transparent,
-                                border:       Border.all(color: t.primary, width: 1.5),
-                                borderRadius: BorderRadius.circular(t.buttonRadius),
+                                color: Colors.transparent,
+                                border: Border.all(
+                                  color: t.primary,
+                                  width: 1.5,
+                                ),
+                                borderRadius: BorderRadius.circular(
+                                  t.buttonRadius,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.visibility_outlined, size: 10, color: t.primary),
+                                  Icon(
+                                    Icons.visibility_outlined,
+                                    size: 10,
+                                    color: t.primary,
+                                  ),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Ver más',
                                     style: TextStyle(
-                                      fontSize:   10,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w700,
-                                      color:      t.primary,
+                                      color: t.primary,
                                     ),
                                   ),
                                 ],
@@ -253,7 +280,6 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
             ),
-
           ],
         ),
       ),

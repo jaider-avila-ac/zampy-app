@@ -4,12 +4,14 @@ import '../../../services/suscripcion_service.dart';
 
 // Equivalente a src/modules/subscription/pages/SuscripcionPage.jsx en React
 // Página de redirección: carga la suscripción del menú y decide a dónde ir.
-// - Tiene suscripción → /billing/sus/{id}
-// - No tiene (o error) → /menus/{menuId}/planes
+// - Tiene suscripción → /billing/sus/{codigo} (conserva ?id= de Wompi)
+// - No tiene (o error) → /menus/{codigo}/planes. React se queda cargando
+//   indefinidamente en ese caso; aquí se manda a elegir plan.
 
 class SuscripcionPage extends StatefulWidget {
-  const SuscripcionPage({super.key, required this.menuId});
-  final int menuId;
+  const SuscripcionPage({super.key, required this.menuId, this.wompiTxId});
+  final String menuId;
+  final String? wompiTxId;
 
   @override
   State<SuscripcionPage> createState() => _SuscripcionPageState();
@@ -28,7 +30,10 @@ class _SuscripcionPageState extends State<SuscripcionPage> {
       if (!mounted) return;
       final id = sub?['id'];
       if (id != null) {
-        context.replace('/billing/sus/$id');
+        final tx = widget.wompiTxId;
+        context.replace(
+          '/billing/sus/$id${tx != null ? '?id=${Uri.encodeQueryComponent(tx)}' : ''}',
+        );
       } else {
         context.replace('/menus/${widget.menuId}/planes');
       }

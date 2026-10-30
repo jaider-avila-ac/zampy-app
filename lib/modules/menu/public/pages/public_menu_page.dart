@@ -1,28 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../hooks/use_public_menu.dart';
+
 import '../../../../components/menu_page.dart';
 import '../../../../shared/app_colors.dart';
+import '../hooks/use_public_menu.dart';
 
 // Equivalente a src/pages/PublicMenuPage.jsx en React
-// Carga el menú y delega el render completo (Navbar incluido) a MenuPage
 
 class PublicMenuPage extends StatelessWidget {
-  const PublicMenuPage({super.key, required this.slug});
+  const PublicMenuPage({
+    super.key,
+    required this.slug,
+    this.staffMode = false,
+    this.initialProductId,
+  });
+
   final String slug;
+  final bool staffMode;
+  final String? initialProductId;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => UsePublicMenu()..load(slug: slug),
-      child: _PublicMenuView(slug: slug),
+      create: (_) => UsePublicMenu()..load(slug: slug, staffMode: staffMode),
+      child: _PublicMenuView(
+        slug: slug,
+        staffMode: staffMode,
+        initialProductId: initialProductId,
+      ),
     );
   }
 }
 
 class _PublicMenuView extends StatelessWidget {
-  const _PublicMenuView({required this.slug});
+  const _PublicMenuView({
+    required this.slug,
+    required this.staffMode,
+    this.initialProductId,
+  });
+
   final String slug;
+  final bool staffMode;
+  final String? initialProductId;
 
   @override
   Widget build(BuildContext context) {
@@ -42,16 +61,23 @@ class _PublicMenuView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48, color: AppColors.kTextMuted),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: AppColors.kTextMuted,
+              ),
               const SizedBox(height: 12),
-              Text(
-                'No se encontró el menú',
+              const Text(
+                'Este menú no está disponible o no ha sido publicado.',
                 style: TextStyle(fontSize: 14, color: AppColors.kTextMuted),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () => context.read<UsePublicMenu>().load(slug: slug),
+                onPressed: () => context.read<UsePublicMenu>().load(
+                  slug: slug,
+                  staffMode: staffMode,
+                ),
                 child: const Text('Reintentar'),
               ),
             ],
@@ -60,13 +86,18 @@ class _PublicMenuView extends StatelessWidget {
       );
     }
 
+    final menu = ctrl.menuData!;
     return Scaffold(
-      backgroundColor: ctrl.menuData!.theme.bg,
+      backgroundColor: menu.theme.bg,
       body: SafeArea(
         child: MenuPage(
-          menuData:    ctrl.menuData!,
-          menuSlug:    slug,
-          isPublished: true,
+          menuData: menu,
+          menuSlug: slug,
+          menuCodigo: menu.menuId,
+          isPublished: menu.publicado,
+          staffMode: staffMode,
+          esPropio: menu.esPropio || ctrl.esEditor,
+          initialProductId: initialProductId,
         ),
       ),
     );

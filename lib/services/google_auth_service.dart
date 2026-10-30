@@ -1,6 +1,8 @@
 import 'package:google_sign_in/google_sign_in.dart';
+
 import '../context/auth_context.dart';
 import 'auth_service.dart';
+import 'invite_store.dart';
 
 // Selector nativo de cuentas Google → idToken → backend /api/v1/auth/google/token
 
@@ -26,11 +28,13 @@ class GoogleAuthService {
     final idToken = googleAuth.idToken;
     if (idToken == null) {
       throw AuthServiceException(
-          'No se pudo obtener el token de Google. Intenta de nuevo.');
+        'No se pudo obtener el token de Google. Intenta de nuevo.',
+      );
     }
 
     final data = await AuthService.loginWithGoogleToken(idToken);
     await auth.login(data);
+    await InviteStore.clear();
     return true;
   }
 

@@ -1,99 +1,69 @@
-import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
-import 'api.dart';
+import 'api_client.dart';
+import '../modules/explore/models/explore_models.dart';
 
 // Equivalente a src/services/exploreService.js en React
-
-const _storage = FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
-);
-
-Future<String?> _getToken() async {
-  try {
-    final raw = await _storage.read(key: 'auth');
-    if (raw == null) return null;
-    return (jsonDecode(raw) as Map<String, dynamic>)['token'] as String?;
-  } catch (_) {
-    return null;
-  }
-}
 
 class ExploreService {
   ExploreService._();
 
-  // GET /api/v1/explore/feed?ciudad=...
-  // Deja que las excepciones de red suban al llamador (loadFeed detecta noInternet).
-  static Future<Map<String, dynamic>> getFeed({String? ciudad}) async {
-    final qs = ciudad != null ? '?ciudad=${Uri.encodeComponent(ciudad)}' : '';
-    final res = await http
-        .get(Uri.parse('$kApiBase/api/v1/explore/feed$qs'))
-        .timeout(const Duration(seconds: 15));
-    if (res.statusCode < 200 || res.statusCode >= 300) return _emptyFeed;
-    return (jsonDecode(res.body) as Map<String, dynamic>);
+  static Future<ExploreFiltros> getFiltros() async {
+    final data = await ApiClient.instance.get(
+      '/api/v1/explore/filtros',
+      auth: false,
+    );
+    if (data is Map<String, dynamic>) return ExploreFiltros.fromJson(data);
+    if (data is Map) {
+      return ExploreFiltros.fromJson(Map<String, dynamic>.from(data));
+    }
+    return ExploreFiltros.empty;
   }
 
-  // GET /api/v1/explore/scroll?cursor=...&ciudad=...&exclude=...
-  static Future<Map<String, dynamic>?> getScroll({
+  static Future<MenuScrollPage> getScroll({
     String? cursor,
-    String? ciudad,
+    String? municipio,
+    String? categoria,
     String? exclude,
   }) async {
-    try {
-      final token = await _getToken();
-      final params = <String, String>{};
-      if (cursor  != null) params['cursor']  = cursor;
-      if (ciudad  != null) params['ciudad']  = ciudad;
-      if (exclude != null) params['exclude'] = exclude;
-      final uri = Uri.parse('$kApiBase/api/v1/explore/scroll').replace(queryParameters: params.isEmpty ? null : params);
-      final res = await http
-          .get(uri, headers: token != null ? {'Authorization': 'Bearer $token'} : {})
-          .timeout(const Duration(seconds: 15));
-      if (res.statusCode < 200 || res.statusCode >= 300) return null;
-      return jsonDecode(res.body) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
+    final data = await ApiClient.instance.get(
+      '/api/v1/explore/scroll',
+      query: {
+        if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+        if (municipio != null && municipio.isNotEmpty) 'municipio': municipio,
+        if (categoria != null && categoria.isNotEmpty) 'categoria': categoria,
+        if (exclude != null && exclude.isNotEmpty) 'exclude': exclude,
+      },
+    );
+    if (data is Map<String, dynamic>) return MenuScrollPage.fromJson(data);
+    if (data is Map) {
+      return MenuScrollPage.fromJson(Map<String, dynamic>.from(data));
     }
+    return const MenuScrollPage(items: [], hasMore: false);
   }
 
-  // GET /api/v1/interacciones/mis-encantados — requiere auth
-  static Future<Set<int>> misEncantados() async {
-    try {
-      final token = await _getToken();
-      if (token == null) return {};
-      final res = await http
-          .get(
-            Uri.parse('$kApiBase/api/v1/interacciones/mis-encantados'),
-            headers: {'Authorization': 'Bearer $token'},
-          )
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode != 200) return {};
-      final list = jsonDecode(res.body) as List;
-      return list.map((e) => (e as num).toInt()).toSet();
-    } catch (_) {
-      return {};
+  static Future<ProductosPage> getProductos({
+    String? municipio,
+    String? categoria,
+    String? q,
+    required String semilla,
+    String? despues,
+    int limite = 30,
+  }) async {
+    final data = await ApiClient.instance.get(
+      '/api/v1/explore/productos',
+      auth: false,
+      query: {
+        if (municipio != null && municipio.isNotEmpty) 'municipio': municipio,
+        if (categoria != null && categoria.isNotEmpty) 'categoria': categoria,
+        if (q != null && q.isNotEmpty) 'q': q,
+        'semilla': semilla,
+        if (despues != null && despues.isNotEmpty) 'despues': despues,
+        'limite': '$limite',
+      },
+    );
+    if (data is Map<String, dynamic>) return ProductosPage.fromJson(data);
+    if (data is Map) {
+      return ProductosPage.fromJson(Map<String, dynamic>.from(data));
     }
+    return const ProductosPage(items: []);
   }
-
-  // PUT /api/v1/user/me/location — requiere auth
-  static Future<void> saveLocation(double lat, double lon, String? ciudad) async {
-    try {
-      final token = await _getToken();
-      if (token == null) return;
-      await http
-          .put(
-            Uri.parse('$kApiBase/api/v1/user/me/location'),
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-            body: jsonEncode({'lat': lat, 'lon': lon, 'ciudad': ciudad}),
-          )
-          .timeout(const Duration(seconds: 10));
-    } catch (_) {}
-  }
-
-  static const _emptyFeed = {
-    'nearby': [],
-    'trending': [],
-    'nuevo': [],
-    'todos': [],
-  };
 }

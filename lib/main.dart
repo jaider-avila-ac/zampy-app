@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
 import 'context/auth_context.dart';
+import 'context/likes_context.dart';
 import 'context/notificacion_context.dart';
 import 'modules/explore/hooks/use_explore.dart';
 
@@ -12,14 +13,18 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  final auth = AuthContext();
+  auth.init();
+
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthContext()..init()),
+        ChangeNotifierProvider<AuthContext>.value(value: auth),
+        ChangeNotifierProvider(create: (_) => LikesContext()),
         ChangeNotifierProvider(create: (_) => NotificacionContext()),
         ChangeNotifierProvider(create: (_) => ExploreController()),
       ],
-      child: const _AuthWatcher(child: ZammpyApp()),
+      child: _AuthWatcher(child: ZammpyApp(auth: auth)),
     ),
   );
 }
@@ -36,21 +41,30 @@ class _AuthWatcher extends StatefulWidget {
 
 class _AuthWatcherState extends State<_AuthWatcher> {
   String? _lastToken;
+  int _lastAuthExpiredSeq = 0;
 
   @override
   Widget build(BuildContext context) {
-    final auth  = context.watch<AuthContext>();
-    final notif = context.read<NotificacionContext>();
+    final auth = context.watch<AuthContext>();
+    final notif = context.watch<NotificacionContext>();
+    final likes = context.read<LikesContext>();
 
     // Post-frame para no hacer side-effects durante el build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      likes.updateFromAuth(auth);
+      if (notif.authExpiredSeq != _lastAuthExpiredSeq) {
+        _lastAuthExpiredSeq = notif.authExpiredSeq;
+        if (auth.isLoggedIn) auth.forceLogout();
+        return;
+      }
       if (auth.isLoggedIn && auth.token != null && auth.token != _lastToken) {
         _lastToken = auth.token;
         notif.onLogin(auth.token!);
       } else if (!auth.isLoggedIn && _lastToken != null) {
         _lastToken = null;
         notif.onLogout();
+        context.read<ExploreController>().onAuthChanged(isLoggedIn: false);
       }
     });
 

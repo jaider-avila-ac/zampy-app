@@ -1,364 +1,446 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io' show SocketException;
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../../../services/app_cache.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+import '../../../services/api_client.dart';
+import '../../../services/colaboracion_service.dart';
 import '../../../services/explore_service.dart';
 import '../../../services/public_api_service.dart';
-import '../../../services/interaccion_service.dart';
-import '../../../hooks/use_geo_location.dart';
-import '../../menu/public/models/public_menu_model.dart';
+import '../models/explore_models.dart';
 
 // Equivalente a src/modules/explore/hooks/useExplore.js en React
 
 class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
-  // Constructor: precarga la caché de manera síncrona (sin await).
-  // Así didChangeDependencies() en ExplorePage ya ve el estado correcto
-  // y el splash nunca aparece si hay datos cacheados.
-  ExploreController() {
-    // Usar datos aunque estén stale (caídas de internet) — mejor mostrar
-    // datos viejos que una pantalla vacía
-    final cached = AppCache.get('explore_feed_latest')
-                ?? AppCache.getStale('explore_feed_latest');
-    if (cached != null) {
-      _feed        = ExploreFeed.fromJson(cached as Map<String, dynamic>);
-      _feedLoading = false;
-    }
-  }
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  static const _municipioKey = 'explore:municipio';
 
-  // ── Búsqueda ────────────────────────────────────────────────────────────────
-  String                _search         = '';
-  List<MenuFeedItem>?   _searchResults;
-  bool                  _searchLoading  = false;
-  Timer?                _searchTimer;
+  String _vista = 'menus';
+  ExploreFiltros? _filtros;
+  bool _filtrosLoading = true;
+  String? _filtrosError;
 
-  // ── Feed ────────────────────────────────────────────────────────────────────
-  ExploreFeed?  _feed;
-  bool          _feedLoading             = true;   // constructor lo sobreescribe si hay caché
-  int           _feedVersion             = 0;
-  int           _offlineRecoveredVersion = 0;
-  bool          _bannerDismissed         = false;
+  String? _municipioMenus;
+  String? _categoriaMenus;
+  String? _municipioPlatos;
+  String? _categoriaPlatos;
 
-  // ── Likes ────────────────────────────────────────────────────────────────────
-  Set<int>  _likedIds = {};
+  String _search = '';
+  List<TarjetaMenu>? _searchResults;
+  bool _searchLoading = false;
+  Timer? _searchTimer;
+  int _searchSeq = 0;
 
-  // ── Ubicación ────────────────────────────────────────────────────────────────
-  String?   _ciudad;
+  String _busquedaPlatos = '';
+  String _qPlatos = '';
+  Timer? _platosTimer;
 
-  // ── Conectividad ─────────────────────────────────────────────────────────────
+  final List<TarjetaMenu> _menus = [];
+  String? _menuCursor;
+  bool _menuHasMore = true;
+  bool _menuLoading = false;
+  String? _menusError;
+  int _menuSeq = 0;
+
+  final List<TarjetaProducto> _productos = [];
+  String? _productoCursor;
+  bool _productoHasMore = true;
+  bool _productoLoading = false;
+  String? _productosError;
+  bool _productosIniciados = false;
+  int _productoSeq = 0;
+
+  bool _initialized = false;
   bool _noInternet = false;
+  bool _platosAbierto = false;
 
-  // ── Auth (lo recibe desde fuera) ─────────────────────────────────────────────
-  bool _isLoggedIn    = false;
-  bool _initialized   = false;
+  final String _semilla = _generarSemilla();
 
-  // ── Getters ──────────────────────────────────────────────────────────────────
-  String              get search                   => _search;
-  List<MenuFeedItem>? get searchResults            => _searchResults;
-  bool                get searchLoading            => _searchLoading;
-  bool                get feedLoading              => _feedLoading;
-  ExploreFeed?        get feed                     => _feed;
-  int                 get feedVersion              => _feedVersion;
-  int                 get offlineRecoveredVersion  => _offlineRecoveredVersion;
-  Set<int>            get likedIds                 => _likedIds;
-  String?             get ciudad                   => _ciudad;
-  bool                get showingSearch            => _search.trim().isNotEmpty;
-  bool                get noInternet               => _noInternet;
-  // True solo si el feed tiene contenido real (no el fallback vacío)
-  bool get hasFeedData =>
-      _feed != null &&
-      (_feed!.nearby.isNotEmpty || _feed!.trending.isNotEmpty || _feed!.nuevo.isNotEmpty);
+  String get vista => _vista;
+  ExploreFiltros? get filtros => _filtros;
+  bool get filtrosLoading => _filtrosLoading;
+  String? get filtrosError => _filtrosError;
 
-  bool _showLocBanner = false;
-  bool get locBanner  => _showLocBanner;
+  String? get municipioMenus => _municipioMenus;
+  String? get categoriaMenus => _categoriaMenus;
+  String? get municipioPlatos => _municipioPlatos;
+  String? get categoriaPlatos => _categoriaPlatos;
 
-  // ── Dedup (igual que useExplore.js) ─────────────────────────────────────────
-  ({ExploreFeed dedupedFeed, Set<int> excludeIds}) get deduped {
-    if (_feed == null) {
-      return (dedupedFeed: ExploreFeed.empty, excludeIds: const {});
-    }
-    final seen = <int>{};
-    List<MenuFeedItem> filter(List<MenuFeedItem> list) => list.where((m) {
-      if (m.menId == 0 || seen.contains(m.menId)) return false;
-      seen.add(m.menId);
-      return true;
-    }).toList();
+  String get search => _search;
+  List<TarjetaMenu>? get searchResults => _searchResults;
+  bool get searchLoading => _searchLoading;
+  bool get showingSearch => _search.trim().isNotEmpty;
 
-    return (
-      dedupedFeed: ExploreFeed(
-        nearby:   filter(_feed!.nearby),
-        trending: filter(_feed!.trending),
-        nuevo:    filter(_feed!.nuevo),
-      ),
-      excludeIds: Set.of(seen),
-    );
-  }
+  String get busquedaPlatos => _busquedaPlatos;
+  String get qPlatos => _qPlatos;
 
-  // ── Init (idempotente: solo corre completo la primera vez) ───────────────────
+  List<TarjetaMenu> get menus => List.unmodifiable(_menus);
+  bool get menuLoading => _menuLoading;
+  bool get menuHasMore => _menuHasMore;
+  String? get menusError => _menusError;
+
+  List<TarjetaProducto> get productos => List.unmodifiable(_productos);
+  bool get productoLoading => _productoLoading;
+  bool get productoHasMore => _productoHasMore;
+  String? get productosError => _productosError;
+
+  bool get platosAbierto => _platosAbierto;
+  bool get noInternet => _noInternet;
+  bool get initialLoading =>
+      _filtrosLoading || (_menuLoading && _menus.isEmpty);
+  bool get hasAnyData =>
+      _menus.isNotEmpty ||
+      _productos.isNotEmpty ||
+      (_searchResults?.isNotEmpty ?? false);
+
   Future<void> init({bool isLoggedIn = false}) async {
-    _isLoggedIn = isLoggedIn;
+    if (_initialized) return;
+    _initialized = true;
     WidgetsBinding.instance.addObserver(this);
 
-    if (_initialized) {
-      // Ya inicializado: actualizar likes si hace falta y salir
-      if (isLoggedIn && _likedIds.isEmpty) {
-        final ids = await InteraccionService.misEncantados();
-        _likedIds = ids.toSet();
-        notifyListeners();
+    final saved = await _readMunicipio();
+    _municipioMenus = saved;
+    _municipioPlatos = saved;
+
+    await cargarFiltros();
+    await _aplicarMunicipioPerfil(isLoggedIn);
+    await loadMenus(reset: true);
+  }
+
+  Future<void> onAuthChanged({required bool isLoggedIn}) async {
+    if (!isLoggedIn) {
+      // Al cerrar sesión se olvida el lugar (React limpia localStorage en logout).
+      if (_municipioMenus == null && _municipioPlatos == null) return;
+      _municipioMenus = null;
+      _municipioPlatos = null;
+      await _guardarMunicipio(null);
+      if (_initialized) {
+        await loadMenus(reset: true);
+        if (_vista == 'platos') await loadProductos(reset: true);
       }
       return;
     }
-    _initialized = true;
-
-    // Leer ciudad guardada
-    final loc = await getStoredLocation();
-    _ciudad = loc?['ciudad'] as String?;
-
-    // Stale-while-revalidate: mostrar caché inmediatamente si existe
-    final cacheKey = 'explore_feed_${_ciudad ?? ''}';
-    final cached = AppCache.get(cacheKey);
-    if (cached != null) {
-      _feed        = ExploreFeed.fromJson(cached as Map<String, dynamic>);
-      _feedLoading = false;
-      notifyListeners();
-    }
-
-    // Banner de ubicación
-    if (isLoggedIn) {
-      final geoStatus = await getStoredGeoStatus();
-      _showLocBanner = geoStatus == null && !_bannerDismissed;
-      notifyListeners();
-    }
-
-    // Fetch inicial en background (revalida aunque haya caché)
-    await loadFeed(_ciudad);
-
-    // Likes del usuario (solo si logueado)
-    if (isLoggedIn) {
-      final ids = await InteraccionService.misEncantados();
-      _likedIds = ids.toSet();
-      notifyListeners();
-    }
+    if (_municipioMenus != null || _filtros == null) return;
+    await _aplicarMunicipioPerfil(true);
+    await loadMenus(reset: true);
   }
 
-  // ── Firma del feed para detectar cambios reales ───────────────────────────────
-  String _sig(ExploreFeed f) {
-    final ids = [...f.nearby, ...f.trending, ...f.nuevo]
-        .map((m) => m.menId)
-        .toList()
-      ..sort();
-    return ids.join(',');
-  }
-
-  bool _feedChanged(ExploreFeed newFeed) =>
-      _feed == null || _sig(_feed!) != _sig(newFeed);
-
-  // ── Cargar feed ───────────────────────────────────────────────────────────────
-  Future<void> loadFeed([String? ciudad]) async {
-    final target     = ciudad ?? _ciudad;
-    final wasOffline = _noInternet;
-    _noInternet = false;
-    // Solo mostrar spinner si no hay datos aún (primera carga sin caché)
-    if (_feed == null) {
-      _feedLoading = true;
-      notifyListeners();
-    }
+  Future<void> cargarFiltros() async {
+    _filtrosLoading = true;
+    _filtrosError = null;
+    notifyListeners();
     try {
-      final data    = await ExploreService.getFeed(ciudad: target);
-      final newFeed = ExploreFeed.fromJson(data);
-      // Si recuperamos internet, limpiar imágenes fallidas del caché de Flutter
-      if (wasOffline) {
-        PaintingBinding.instance.imageCache.clear();
-        PaintingBinding.instance.imageCache.clearLiveImages();
-        _offlineRecoveredVersion++;
-      }
-      AppCache.set('explore_feed_${target ?? ''}', data);
-      AppCache.set('explore_feed_latest', data);
-      // Solo redibujar InfiniteExplorer si los datos realmente cambiaron
-      if (_feedChanged(newFeed) || wasOffline) _feedVersion++;
-      _feed = newFeed;
-    } catch (e) {
-      final msg = e.toString();
-      final isNetErr = e is SocketException
-          || e is http.ClientException
-          || msg.contains('SocketException')
-          || msg.contains('ClientException')
-          || msg.contains('Failed host lookup')
-          || msg.contains('Network is unreachable')
-          || msg.contains('Connection refused')
-          || msg.contains('Connection reset')
-          || msg.contains('TimeoutException');
-      if (isNetErr) _noInternet = true;
-      AppCache.markStale('explore_feed_${target ?? ''}');
-      _feed ??= ExploreFeed.empty;
+      final filtros = await ExploreService.getFiltros();
+      _filtros = filtros;
+      _municipioMenus = _validarMunicipio(_municipioMenus, filtros);
+      _municipioPlatos = _validarMunicipio(_municipioPlatos, filtros);
+    } catch (_) {
+      _filtros = ExploreFiltros.empty;
+      _filtrosError = 'No se pudieron cargar los filtros.';
+      _noInternet = true;
+    } finally {
+      _filtrosLoading = false;
+      notifyListeners();
     }
-    _feedLoading = false;
+  }
+
+  String? _validarMunicipio(String? codigo, ExploreFiltros filtros) {
+    if (codigo == null || codigo.isEmpty) return null;
+    return filtros.lugares.any((l) => l.codigo == codigo) ? codigo : null;
+  }
+
+  Future<void> _aplicarMunicipioPerfil(bool isLoggedIn) async {
+    if (!isLoggedIn || _municipioMenus != null || _filtros == null) return;
+    try {
+      final me = await ColaboracionService.getMe();
+      final ubicacion = me?['ubicacion'];
+      if (ubicacion is! Map) return;
+      final codigo = ubicacion['municipioCodigo']?.toString();
+      if (codigo == null || codigo.isEmpty) return;
+      if (!_filtros!.lugares.any((l) => l.codigo == codigo)) return;
+      _municipioMenus = codigo;
+      _municipioPlatos = codigo;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> loadMenus({bool reset = false}) async {
+    if (!reset && (_menuLoading || !_menuHasMore)) return;
+    if (reset) {
+      _menuSeq++;
+      _menus.clear();
+      _menuCursor = null;
+      _menuHasMore = true;
+      _menusError = null;
+    }
+    final seq = _menuSeq;
+    _menuLoading = true;
+    notifyListeners();
+
+    try {
+      final page = await ExploreService.getScroll(
+        cursor: reset ? null : _menuCursor,
+        municipio: _municipioMenus,
+        categoria: _categoriaMenus,
+      );
+      if (seq != _menuSeq) return;
+      final vistos = _menus.map((m) => m.codigo).toSet();
+      final nuevos = page.items
+          .where((m) => m.codigo.isNotEmpty && !vistos.contains(m.codigo))
+          .toList();
+      _menus.addAll(nuevos);
+      _menuCursor = page.nextCursor;
+      _menuHasMore = page.hasMore && page.nextCursor != null;
+      _menusError = null;
+      _noInternet = false;
+    } catch (e) {
+      if (seq != _menuSeq) return;
+      _menusError = _errorMessage(e, 'No se pudieron cargar los menús.');
+      _noInternet = _isNetworkError(e);
+      if (reset) _menus.clear();
+      _menuHasMore = false;
+    } finally {
+      if (seq == _menuSeq) {
+        _menuLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> loadMoreMenus() => loadMenus();
+
+  Future<void> loadProductos({bool reset = false}) async {
+    if (!reset && (_productoLoading || !_productoHasMore)) return;
+    _productosIniciados = true;
+    _platosAbierto = true;
+    if (reset) {
+      _productoSeq++;
+      _productos.clear();
+      _productoCursor = null;
+      _productoHasMore = true;
+      _productosError = null;
+    }
+    final seq = _productoSeq;
+    _productoLoading = true;
+    notifyListeners();
+
+    try {
+      final page = await ExploreService.getProductos(
+        municipio: _municipioPlatos,
+        categoria: _categoriaPlatos,
+        q: _qPlatos,
+        semilla: _semilla,
+        despues: reset ? null : _productoCursor,
+      );
+      if (seq != _productoSeq) return;
+      final vistos = _productos.map((p) => '${p.menuSlug}-${p.codigo}').toSet();
+      final nuevos = page.items
+          .where(
+            (p) =>
+                p.codigo.isNotEmpty &&
+                !vistos.contains('${p.menuSlug}-${p.codigo}'),
+          )
+          .toList();
+      _productos.addAll(nuevos);
+      _productoCursor = page.siguiente;
+      _productoHasMore = page.siguiente != null;
+      _productosError = null;
+      _noInternet = false;
+    } catch (e) {
+      if (seq != _productoSeq) return;
+      _productosError = _errorMessage(e, 'No se pudieron cargar los platos.');
+      _noInternet = _isNetworkError(e);
+      if (reset) _productos.clear();
+      _productoHasMore = false;
+    } finally {
+      if (seq == _productoSeq) {
+        _productoLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  Future<void> loadMoreProductos() => loadProductos();
+
+  void loadMoreActive() {
+    if (_vista == 'menus') {
+      if (showingSearch) return;
+      loadMoreMenus();
+    } else {
+      loadMoreProductos();
+    }
+  }
+
+  void setVista(String vista) {
+    if (vista == _vista) return;
+    _vista = vista;
+    if (vista == 'platos') {
+      _platosAbierto = true;
+      if (!_productosIniciados) {
+        loadProductos(reset: true);
+      }
+    }
     notifyListeners();
   }
 
-  // ── Refresh silencioso al volver al Explorer (sin spinner, sin rebuild si no hay cambios) ─
-  Future<void> silentRefresh() async {
-    try {
-      final data    = await ExploreService.getFeed(ciudad: _ciudad);
-      final newFeed = ExploreFeed.fromJson(data);
-      AppCache.set('explore_feed_${_ciudad ?? ''}', data);
-      AppCache.set('explore_feed_latest', data);
-      if (_feedChanged(newFeed)) {
-        _feed = newFeed;
-        _feedVersion++;
-        notifyListeners();
-      }
-    } catch (_) {
-      // Silencioso: si falla, no tocamos nada
-    }
+  void cambiarMunicipioMenus(String? codigo) {
+    _municipioMenus = codigo;
+    _guardarMunicipio(codigo);
+    _searchTimer?.cancel();
+    loadMenus(reset: true);
+    if (showingSearch) _doSearch();
   }
 
-  // ── Refetch en background al volver al primer plano (equiv. window focus) ─────
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      silentRefresh();
-    }
+  void cambiarCategoriaMenus(String? codigo) {
+    _categoriaMenus = codigo;
+    _searchTimer?.cancel();
+    loadMenus(reset: true);
+    if (showingSearch) _doSearch();
   }
 
-  // ── Búsqueda (debounce 350ms igual que React) ─────────────────────────────────
+  void cambiarMunicipioPlatos(String? codigo) {
+    _municipioPlatos = codigo;
+    _guardarMunicipio(codigo);
+    loadProductos(reset: true);
+  }
+
+  void cambiarCategoriaPlatos(String? codigo) {
+    _categoriaPlatos = codigo;
+    loadProductos(reset: true);
+  }
+
   void setSearch(String value) {
-    _search        = value;
+    _search = value;
     _searchTimer?.cancel();
 
     if (value.trim().isEmpty) {
+      _searchSeq++;
       _searchResults = null;
       _searchLoading = false;
       notifyListeners();
       return;
     }
 
-    // Activar spinner de inmediato — evita que aparezca "Sin resultados" durante el debounce
+    _searchSeq++;
     _searchLoading = true;
     notifyListeners();
-    _searchTimer = Timer(const Duration(milliseconds: 350), () => _doSearch(value.trim()));
+    _searchTimer = Timer(const Duration(milliseconds: 350), _doSearch);
   }
 
-  Future<void> _doSearch(String q) async {
+  Future<void> _doSearch() async {
+    final q = _search.trim();
+    if (q.isEmpty) return;
+    final seq = ++_searchSeq;
     _searchLoading = true;
     notifyListeners();
-    final results = await PublicApiService.buscarMenus(q);
-    _searchResults = results
-        .whereType<Map<String, dynamic>>()
-        .map(MenuFeedItem.fromJson)
-        .toList();
-    _searchLoading = false;
-    notifyListeners();
+    try {
+      final results = await PublicApiService.buscarMenus(
+        search: q,
+        categoria: _categoriaMenus ?? '',
+        municipio: _municipioMenus ?? '',
+      );
+      if (seq != _searchSeq) return;
+      _searchResults = results;
+      _searchLoading = false;
+      notifyListeners();
+    } catch (_) {
+      if (seq != _searchSeq) return;
+      _searchResults = [];
+      _searchLoading = false;
+      notifyListeners();
+    }
   }
 
   void clearSearch() => setSearch('');
 
-  // ── Ubicación ─────────────────────────────────────────────────────────────────
-  Future<void> handleLocationGranted(double lat, double lon) async {
-    _showLocBanner  = false;
-    _bannerDismissed = true;
-
-    // Reverse geocode con Nominatim (igual que useExplore.js)
-    try {
-      final uri = Uri.parse(
-        'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json&accept-language=es',
-      );
-      final res = await _nominatimGet(uri);
-      if (res != null) {
-        final addr = res['address'] as Map<String, dynamic>? ?? {};
-        final c = addr['city'] as String?
-            ?? addr['town'] as String?
-            ?? addr['municipality'] as String?
-            ?? addr['county'] as String?;
-        await storeLocation(lat, lon, c);
-        if (c != null && c != _ciudad) {
-          _ciudad = c;
-          _feedLoading = true;
-          notifyListeners();
-          await loadFeed(c);
-        }
-        if (_isLoggedIn) ExploreService.saveLocation(lat, lon, c);
+  void setBusquedaPlatos(String value) {
+    _busquedaPlatos = value;
+    _platosTimer?.cancel();
+    _platosTimer = Timer(const Duration(milliseconds: 350), () {
+      _qPlatos = _busquedaPlatos.trim();
+      if (_platosAbierto || _vista == 'platos') {
+        loadProductos(reset: true);
       } else {
-        await storeLocation(lat, lon, null);
-        if (_isLoggedIn) ExploreService.saveLocation(lat, lon, null);
+        notifyListeners();
       }
-    } catch (_) {
-      await storeLocation(lat, lon, null);
-    }
+    });
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>?> _nominatimGet(Uri uri) async {
+  Future<void> refresh() async {
+    await cargarFiltros();
+    if (_vista == 'menus') {
+      await loadMenus(reset: true);
+      if (showingSearch) await _doSearch();
+    } else {
+      await loadProductos(reset: true);
+    }
+  }
+
+  Future<void> silentRefresh() async {
     try {
-      final res = await http.get(uri, headers: {
-        'User-Agent': 'Zammpy/1.0',
-      }).timeout(const Duration(seconds: 10));
-      if (res.statusCode != 200) return null;
-      return jsonDecode(res.body) as Map<String, dynamic>;
+      if (_vista == 'menus') {
+        await loadMenus(reset: true);
+      } else {
+        await loadProductos(reset: true);
+      }
+    } catch (_) {}
+  }
+
+  Future<String?> _readMunicipio() async {
+    try {
+      final value = await _storage.read(key: _municipioKey);
+      return value == null || value.isEmpty ? null : value;
     } catch (_) {
       return null;
     }
   }
 
-  void handleDismissLocation() {
-    _showLocBanner  = false;
-    _bannerDismissed = true;
-    setGeoStatus('denied');
-    notifyListeners();
-  }
-
-  // ── Likes: recargar tras login / limpiar tras logout ─────────────────────────
-  Future<void> reloadLikes() async {
-    final ids = await InteraccionService.misEncantados();
-    _likedIds = ids.toSet();
-    notifyListeners();
-  }
-
-  void clearLikes() {
-    _likedIds = {};
-    notifyListeners();
-  }
-
-  // ── Toggle like (optimista igual que React) ───────────────────────────────────
-  Future<void> toggleLike(MenuFeedItem item, bool isLoggedIn) async {
-    if (!isLoggedIn) return;
-
-    final wasLiked = _likedIds.contains(item.menId);
-    // Optimistic update
-    if (wasLiked) {
-      _likedIds = Set.from(_likedIds)..remove(item.menId);
-    } else {
-      _likedIds = Set.from(_likedIds)..add(item.menId);
-    }
-    notifyListeners();
-
+  Future<void> _guardarMunicipio(String? codigo) async {
     try {
-      final data = await InteraccionService.toggleEncanta(item.slug);
-      if (data != null) {
-        final serverLiked = data['meEncanta'] as bool? ?? !wasLiked;
-        if (serverLiked) {
-          _likedIds = Set.from(_likedIds)..add(item.menId);
-        } else {
-          _likedIds = Set.from(_likedIds)..remove(item.menId);
-        }
-        notifyListeners();
-      }
-    } catch (_) {
-      // Revertir
-      if (wasLiked) {
-        _likedIds = Set.from(_likedIds)..add(item.menId);
+      if (codigo == null || codigo.isEmpty) {
+        await _storage.delete(key: _municipioKey);
       } else {
-        _likedIds = Set.from(_likedIds)..remove(item.menId);
+        await _storage.write(key: _municipioKey, value: codigo);
       }
-      notifyListeners();
+    } catch (_) {}
+  }
+
+  bool _isNetworkError(Object error) {
+    if (error is ApiException) {
+      return error.message.toLowerCase().contains('conectar') ||
+          error.message.toLowerCase().contains('conexión');
     }
+    return false;
+  }
+
+  String _errorMessage(Object error, String fallback) {
+    if (error is ApiException && error.message.isNotEmpty) {
+      return error.message;
+    }
+    return fallback;
+  }
+
+  static String _generarSemilla() {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_';
+    final random = Random.secure();
+    return List.generate(12, (_) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) silentRefresh();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _searchTimer?.cancel();
+    _platosTimer?.cancel();
     super.dispose();
   }
 }

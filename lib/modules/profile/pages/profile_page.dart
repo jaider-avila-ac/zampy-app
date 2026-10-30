@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../../context/auth_context.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
+import '../../../shared/location_cascade_input.dart';
+import '../../../shared/telefono_input.dart';
 import '../../../components/layout/sidebar.dart';
 import '../hooks/use_profile.dart';
 
@@ -39,6 +41,14 @@ class _ProfileView extends StatelessWidget {
 
           // ── Datos personales ─────────────────────────────────────────────
           _PersonalDataCard(ctrl: ctrl),
+          const SizedBox(height: 20),
+
+          // ── Ubicación (municipio del catálogo) ───────────────────────────
+          _UbicacionCard(ctrl: ctrl),
+          const SizedBox(height: 20),
+
+          // ── Datos para pedidos ───────────────────────────────────────────
+          _ContactoCard(ctrl: ctrl),
 
           // ── Cambiar contraseña (solo LOCAL) ──────────────────────────────
           if (ctrl.isLocal) ...[
@@ -247,6 +257,7 @@ class _PasswordCard extends StatelessWidget {
 
           // Contraseña actual
           _PasswordField(
+            key:         ValueKey('pwd-actual-${ctrl.pwdVersion}'),
             label:       'Contraseña actual',
             value:       ctrl.currentPwd,
             show:        ctrl.showCurrent,
@@ -257,6 +268,7 @@ class _PasswordCard extends StatelessWidget {
 
           // Nueva contraseña
           _PasswordField(
+            key:       ValueKey('pwd-nueva-${ctrl.pwdVersion}'),
             label:     'Nueva contraseña',
             value:     ctrl.newPwd,
             show:      ctrl.showNew,
@@ -287,17 +299,165 @@ class _PasswordCard extends StatelessWidget {
   }
 }
 
+// ── Ubicación ─────────────────────────────────────────────────────────────────
+
+class _UbicacionCard extends StatelessWidget {
+  const _UbicacionCard({required this.ctrl});
+  final UseProfile ctrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      icon:     Icons.location_on_outlined,
+      title:    'Tu ubicación',
+      subtitle: 'Se usa para mostrarte lugares y promociones cerca de ti en Explorar.',
+      children: [
+        LocationCascadeInput(
+          key:              ValueKey('ubicacion-${ctrl.ubicacionVersion}'),
+          value:            ctrl.ubicacion,
+          onChange:         ctrl.setUbicacion,
+          mostrarDireccion: false,
+        ),
+        if (ctrl.errorUbicacion.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _ErrorBox(message: ctrl.errorUbicacion),
+        ],
+        const SizedBox(height: 16),
+        _SaveButton(
+          saving: ctrl.savingUbicacion,
+          saved:  ctrl.savedUbicacion,
+          label:  ctrl.savedUbicacion
+              ? 'Ubicación guardada'
+              : ctrl.savingUbicacion ? 'Guardando...' : 'Guardar ubicación',
+          onTap:  ctrl.ubicacion.hasMunicipio ? ctrl.handleSaveUbicacion : null,
+          color:  AppColors.kBlue,
+        ),
+      ],
+    );
+  }
+}
+
+// ── Información para pedidos ──────────────────────────────────────────────────
+
+class _ContactoCard extends StatelessWidget {
+  const _ContactoCard({required this.ctrl});
+  final UseProfile ctrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = ctrl.contactoVersion;
+    return _Card(
+      icon:     Icons.shopping_cart_outlined,
+      title:    'Información para pedidos',
+      subtitle: 'Opcional — se usa para agilizar tus pedidos por WhatsApp en los '
+          'restaurantes que lo tengan habilitado.',
+      children: [
+        TelefonoInput(
+          key:         ValueKey('tel-$v'),
+          label:       'Número de WhatsApp',
+          value:       ctrl.telefono,
+          onChanged:   ctrl.setTelefono,
+          paisDefecto: ctrl.ubicacion.paisCodigo ?? 'CO',
+        ),
+        const SizedBox(height: 12),
+        _LabeledField(
+          key:       ValueKey('dir-$v'),
+          label:     'Dirección de entrega',
+          value:     ctrl.direccion,
+          onChanged: ctrl.setDireccion,
+          hint:      'Ej: Calle 45 #12-30, Apto 201',
+          maxLength: 255,
+        ),
+        const SizedBox(height: 12),
+        _LabeledField(
+          key:       ValueKey('ref-$v'),
+          label:     'Referencia de dirección (opcional)',
+          value:     ctrl.direccionReferencia,
+          onChanged: ctrl.setDireccionReferencia,
+          hint:      'Ej: Al lado de la casa roja, donde reparan carros',
+          maxLength: 255,
+        ),
+        if (ctrl.errorContact.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _ErrorBox(message: ctrl.errorContact),
+        ],
+        const SizedBox(height: 16),
+        _SaveButton(
+          saving: ctrl.savingContact,
+          saved:  ctrl.savedContact,
+          label:  ctrl.savedContact
+              ? 'Guardado'
+              : ctrl.savingContact ? 'Guardando...' : 'Guardar información de contacto',
+          onTap:  ctrl.handleSaveContacto,
+          color:  AppColors.kBlue,
+        ),
+      ],
+    );
+  }
+}
+
+class _Card extends StatelessWidget {
+  const _Card({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+  final IconData     icon;
+  final String       title;
+  final String       subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color:        Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border:       Border.all(color: AppColors.kCardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: AppColors.kBlue),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(title,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                        color: AppColors.kTextPrimary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(subtitle,
+              style: const TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
 // ── Widgets reutilizables ─────────────────────────────────────────────────────
 
 class _LabeledField extends StatelessWidget {
   const _LabeledField({
+    super.key,
     required this.label,
     required this.value,
     required this.onChanged,
+    this.hint,
+    this.maxLength,
   });
   final String          label;
   final String          value;
   final ValueChanged<String> onChanged;
+  final String?         hint;
+  final int?            maxLength;
 
   @override
   Widget build(BuildContext context) {
@@ -311,9 +471,13 @@ class _LabeledField extends StatelessWidget {
         TextFormField(
           initialValue: value,
           onChanged:    onChanged,
+          maxLength:    maxLength,
           style: const TextStyle(fontSize: 14, color: AppColors.kTextPrimary),
           decoration: InputDecoration(
             isDense:      true,
+            hintText:     hint,
+            hintStyle:    const TextStyle(fontSize: 13, color: AppColors.kTextMuted),
+            counterText:  '',
             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             filled:       true,
             fillColor:    Colors.white,
@@ -385,6 +549,7 @@ class _EmailField extends StatelessWidget {
 
 class _PasswordField extends StatelessWidget {
   const _PasswordField({
+    super.key,
     required this.label,
     required this.value,
     required this.show,
@@ -455,7 +620,7 @@ class _SaveButton extends StatelessWidget {
   final bool         saving;
   final bool         saved;
   final String       label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Color        color;
 
   @override
@@ -464,7 +629,7 @@ class _SaveButton extends StatelessWidget {
       onTap: (saving || saved) ? null : onTap,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 200),
-        opacity: (saving || saved) ? 0.6 : 1.0,
+        opacity: (saving || saved || onTap == null) ? 0.6 : 1.0,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 12),

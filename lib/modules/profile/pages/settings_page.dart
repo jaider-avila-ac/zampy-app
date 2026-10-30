@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart'; // context.push('/perfil')
 import 'package:provider/provider.dart';
+import '../../../context/auth_context.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
 import '../../../components/layout/sidebar.dart';
 import '../hooks/use_settings.dart';
 
 // Equivalente a src/modules/profile/pages/SettingsPage.jsx en React
-// + toggle de notificaciones push (funcionalidad exclusiva móvil)
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -15,7 +15,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => UseSettings()..load(),
+      create: (_) => UseSettings(auth: context.read<AuthContext>())..load(),
       child: const _SettingsView(),
     );
   }
@@ -52,19 +52,239 @@ class _SettingsView extends StatelessWidget {
             _ProfileButton(onTap: () => context.push('/perfil')),
             const SizedBox(height: 20),
 
-            // ── Notificaciones push (nueva — exclusivo móvil) ───────────────
-            _NotifToggle(ctrl: ctrl),
-            const SizedBox(height: 20),
-
             // ── Código de invitación ────────────────────────────────────────
             _InvCodeSection(ctrl: ctrl),
             const SizedBox(height: 20),
 
             // ── Sesiones activas ────────────────────────────────────────────
             _SessionsSection(ctrl: ctrl),
+            const SizedBox(height: 24),
+
+            // ── Zona de peligro ─────────────────────────────────────────────
+            _DangerZone(onTap: () => _abrirEliminarCuenta(context, ctrl)),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Eliminar cuenta ───────────────────────────────────────────────────────────
+
+Future<void> _abrirEliminarCuenta(BuildContext context, UseSettings ctrl) async {
+  final messenger = ScaffoldMessenger.of(context);
+  void error(String m) => messenger.showSnackBar(SnackBar(
+        content: Text(m),
+        backgroundColor: AppColors.kRed,
+        behavior: SnackBarBehavior.floating,
+      ));
+
+  // El código se pide al abrir; si falla no tiene sentido mostrar el diálogo.
+  final pedido = ctrl.prepararEliminacion();
+  final abierto = showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => ChangeNotifierProvider.value(
+      value: ctrl,
+      child: const _DeleteAccountDialog(),
+    ),
+  );
+  try {
+    await pedido;
+  } catch (_) {
+    if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+    error('No se pudo obtener el código de confirmación.');
+  }
+  await abierto;
+  ctrl.cancelarEliminacion();
+}
+
+class _DangerZone extends StatelessWidget {
+  const _DangerZone({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Zona de peligro',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
+                color: Color(0xFFDC2626))),
+        const SizedBox(height: 2),
+        const Text('Elimina tu cuenta y todos tus datos de forma permanente.',
+            style: TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
+        const SizedBox(height: 10),
+        Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 20, color: Color(0xFFEF4444)),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Eliminar mi cuenta',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                                color: Color(0xFFB91C1C))),
+                        Text('Borra tus menús, datos y actividad. No se puede deshacer.',
+                            style: TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, size: 16, color: Color(0xFFFCA5A5)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DeleteAccountDialog extends StatelessWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = context.watch<UseSettings>();
+    const textStyle = TextStyle(fontSize: 13, color: AppColors.kTextSecondary, height: 1.4);
+
+    return AlertDialog(
+      title: const Text('Eliminar cuenta'),
+      scrollable: true,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text.rich(
+            TextSpan(
+              style: textStyle,
+              children: [
+                TextSpan(text: 'Vas a eliminar '),
+                TextSpan(text: 'tu cuenta',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.kTextPrimary)),
+                TextSpan(
+                  text: ' por completo: todos tus menús (con sus imágenes, productos, reseñas y '
+                      'suscripciones), tu actividad en menús ajenos (colaboraciones, "me encanta" '
+                      'de menús y productos, reseñas) y tus datos personales (nombre, foto, '
+                      'teléfono, contraseña). ',
+                ),
+                TextSpan(text: 'Esta acción no se puede deshacer.',
+                    style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFFDC2626))),
+                TextSpan(text: ' Si vuelves a registrarte con el mismo correo, será una cuenta '
+                    'completamente nueva.'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              border: Border.all(color: AppColors.kCardBorder),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                const Text('Escribe exactamente esta palabra para confirmar:',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                        color: AppColors.kTextSecondary)),
+                const SizedBox(height: 10),
+                if (ctrl.loadingDeleteCode)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(width: 8),
+                        Text('Generando código…',
+                            style: TextStyle(fontSize: 13, color: AppColors.kTextMuted)),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SelectableText(
+                      ctrl.deleteConfirmWord,
+                      style: const TextStyle(
+                        fontFamily: 'monospace', fontSize: 22, fontWeight: FontWeight.w900,
+                        letterSpacing: 6, color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                TextField(
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  maxLength: 5,
+                  textAlign: TextAlign.center,
+                  textCapitalization: TextCapitalization.characters,
+                  onChanged: (v) => ctrl.setDeleteTypedWord(v.toUpperCase()),
+                  style: const TextStyle(fontFamily: 'monospace', letterSpacing: 3),
+                  decoration: InputDecoration(
+                    hintText: 'Escribe la palabra aquí',
+                    counterText: '',
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: ctrl.deletingAccount ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+          onPressed: !ctrl.puedeEliminar || ctrl.deletingAccount
+              ? null
+              : () async {
+                  final nav = Navigator.of(context);
+                  final messenger = ScaffoldMessenger.of(context);
+                  final err = await ctrl.confirmarEliminacion();
+                  if (err == null) {
+                    nav.pop();
+                    await ctrl.cerrarSesion();
+                  } else {
+                    messenger.showSnackBar(SnackBar(
+                      content: Text(err),
+                      backgroundColor: AppColors.kRed,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                  }
+                },
+          child: ctrl.deletingAccount
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Eliminar cuenta definitivamente'),
+        ),
+      ],
     );
   }
 }
@@ -106,99 +326,6 @@ class _ProfileButton extends StatelessWidget {
             const Icon(Icons.chevron_right, size: 16, color: AppColors.kTextMuted),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Toggle de notificaciones push ─────────────────────────────────────────────
-
-class _NotifToggle extends StatelessWidget {
-  const _NotifToggle({required this.ctrl});
-  final UseSettings ctrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: BoxDecoration(
-        color:        Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border:       Border.all(color: AppColors.kCardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36, height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color:        ctrl.notifEnabled
-                      ? AppColors.kBlue.withValues(alpha: 0.12)
-                      : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  ctrl.notifEnabled
-                      ? Icons.notifications_active_outlined
-                      : Icons.notifications_off_outlined,
-                  size: 18,
-                  color: ctrl.notifEnabled ? AppColors.kBlue : AppColors.kTextMuted,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Notificaciones push',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                            color: AppColors.kTextPrimary)),
-                    Text('Recibe alertas aunque la app esté cerrada',
-                        style: TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
-                  ],
-                ),
-              ),
-              Switch(
-                value:          ctrl.notifEnabled,
-                activeThumbColor: AppColors.kBlue,
-                onChanged: (_) async {
-                  final granted = await ctrl.toggleNotificaciones(context);
-                  if (!granted && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Permiso denegado. Actívalo desde los ajustes del sistema.'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                },
-              ),
-            ],
-          ),
-          if (ctrl.notifEnabled) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color:        const Color(0xFFEEF2FF),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_outline, size: 12, color: AppColors.kBlue),
-                  SizedBox(width: 5),
-                  Text('Notificaciones activas',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                          color: AppColors.kBlue)),
-                ],
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -374,7 +501,7 @@ class _SessionsSection extends StatelessWidget {
               revoking: ctrl.revoking,
               onRevoke: () async {
                 try {
-                  await ctrl.revocar(d['id'].toString());
+                  await ctrl.revocar(d['codigo'].toString());
                 } catch (_) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -455,7 +582,7 @@ class _SessionCard extends StatelessWidget {
     final browser  = _parseBrowser(ua);
     final os       = _parseOS(ua);
     final label    = os.isNotEmpty ? '$browser · $os' : browser;
-    final isRevoking = revoking == d['id'].toString();
+    final isRevoking = revoking == d['codigo']?.toString();
 
     return Container(
       padding: const EdgeInsets.all(14),

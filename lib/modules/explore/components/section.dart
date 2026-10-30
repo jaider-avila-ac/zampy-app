@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../../shared/app_colors.dart';
-import '../../menu/public/models/public_menu_model.dart';
-import 'menu_card.dart';
-import 'skeleton_card.dart';
 
-// Equivalente a src/modules/explore/components/Section.jsx en React
-// Sección con scroll horizontal de tarjetas de menú
+import '../../../shared/app_colors.dart';
+import '../models/explore_models.dart';
+import 'menu_card.dart';
+import 'skeleton_menu_card.dart';
+
+// Componente de sección horizontal reutilizable (equivalente a Section.jsx).
+// Explore actual usa pestañas Menús/Platos; se conserva para otros listados.
 
 class Section extends StatelessWidget {
   const Section({
@@ -13,31 +14,33 @@ class Section extends StatelessWidget {
     required this.icon,
     required this.title,
     this.items,
-    this.loading   = false,
-    this.emptyMsg,
-    this.likedIds  = const {},
+    this.loading = false,
+    this.likedIds = const {},
+    this.conSesion = false,
     this.onCardTap,
     this.onToggleLike,
+    this.onRequireLogin,
   });
 
-  final IconData            icon;
-  final String              title;
-  final List<MenuFeedItem>? items;
-  final bool                loading;
-  final String?             emptyMsg;
-  final Set<int>            likedIds;
-  final void Function(MenuFeedItem)? onCardTap;
-  final void Function(MenuFeedItem)? onToggleLike;
+  final IconData icon;
+  final String title;
+  final List<TarjetaMenu>? items;
+  final bool loading;
+  final Set<String> likedIds;
+  final bool conSesion;
+  final void Function(TarjetaMenu)? onCardTap;
+  final void Function(TarjetaMenu)? onToggleLike;
+  final VoidCallback? onRequireLogin;
 
   @override
   Widget build(BuildContext context) {
-    // Si no hay contenido y no está cargando, no renderizar nada (igual que React)
-    if (!loading && (items == null || items!.isEmpty)) return const SizedBox.shrink();
+    if (!loading && (items == null || items!.isEmpty)) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Encabezado con ícono — igual que Section.jsx ─────────────────
         Row(
           children: [
             Icon(icon, size: 15, color: AppColors.kBlueLight),
@@ -53,42 +56,33 @@ class Section extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-
-        // ── Lista horizontal con scroll — equivalente al div overflow-x-auto ──
         SizedBox(
-          height: 220, // altura total de MenuCard (112 banner + 108 contenido)
+          height: 88,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.zero,
-            itemCount: loading ? 6 : items!.length,
-            separatorBuilder: (_, i) => const SizedBox(width: 12),
-            itemBuilder: (_, i) {
+            itemCount: loading ? 3 : items!.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, index) {
               if (loading) {
-                return const SizedBox(width: 160, child: SkeletonCard());
+                return const SizedBox(width: 260, child: SkeletonMenuCard());
               }
-              final item = items![i];
+              final item = items![index];
               return SizedBox(
-                width: 160, // w-40 = 160px igual que React
+                width: 290,
                 child: MenuCard(
-                  menu:          item,
-                  liked:         likedIds.contains(item.menId),
-                  onTap:         onCardTap != null ? () => onCardTap!(item)       : null,
-                  onToggleLike:  onToggleLike != null ? () => onToggleLike!(item) : null,
+                  menu: item,
+                  liked: likedIds.contains(item.codigo),
+                  conSesion: conSesion,
+                  onTap: onCardTap != null ? () => onCardTap!(item) : null,
+                  onToggleLike: onToggleLike != null
+                      ? () => onToggleLike!(item)
+                      : null,
+                  onRequireLogin: onRequireLogin,
                 ),
               );
             },
           ),
         ),
-
-        // Mensaje vacío
-        if (!loading && (items?.isEmpty ?? true) && emptyMsg != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              emptyMsg!,
-              style: const TextStyle(fontSize: 12, color: AppColors.kTextMuted),
-            ),
-          ),
       ],
     );
   }

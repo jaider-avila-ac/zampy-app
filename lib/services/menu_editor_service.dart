@@ -48,17 +48,36 @@ Future<dynamic> _req(
 
   switch (method) {
     case 'GET':
-      res = await http.get(uri, headers: headers).timeout(const Duration(seconds: 30));
+      res = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 30));
     case 'POST':
-      res = await http.post(uri, headers: headers,
-          body: body != null ? jsonEncode(body) : null)
+      res = await http
+          .post(
+            uri,
+            headers: headers,
+            body: body != null ? jsonEncode(body) : null,
+          )
           .timeout(const Duration(seconds: 30));
     case 'PUT':
-      res = await http.put(uri, headers: headers,
-          body: body != null ? jsonEncode(body) : null)
+      res = await http
+          .put(
+            uri,
+            headers: headers,
+            body: body != null ? jsonEncode(body) : null,
+          )
+          .timeout(const Duration(seconds: 30));
+    case 'PATCH':
+      res = await http
+          .patch(
+            uri,
+            headers: headers,
+            body: body != null ? jsonEncode(body) : null,
+          )
           .timeout(const Duration(seconds: 30));
     case 'DELETE':
-      res = await http.delete(uri, headers: headers)
+      res = await http
+          .delete(uri, headers: headers)
           .timeout(const Duration(seconds: 30));
     default:
       throw UnsupportedError('Method not supported: $method');
@@ -89,13 +108,20 @@ class MenuEditorService {
   // PUT /api/v1/menus/:id/draft con patch parcial
   // patch puede tener: info, categories, products, grupos, design, restaurantCategoryId
   static Future<Map<String, dynamic>> updateDraft(
-      int id, Map<String, dynamic> patch) async {
+    int id,
+    Map<String, dynamic> patch,
+  ) async {
     final data = await _req('PUT', '/api/v1/menus/$id/draft', patch);
     return data as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> publish(int id, {bool trial = false}) async {
-    final path = trial ? '/api/v1/menus/$id/publish?trial=true' : '/api/v1/menus/$id/publish';
+  static Future<Map<String, dynamic>> publish(
+    int id, {
+    bool trial = false,
+  }) async {
+    final path = trial
+        ? '/api/v1/menus/$id/publish?trial=true'
+        : '/api/v1/menus/$id/publish';
     final data = await _req('POST', path);
     return data as Map<String, dynamic>;
   }
@@ -105,7 +131,9 @@ class MenuEditorService {
   }
 
   static Future<String> getDeleteCode(int id) async {
-    final data = await _req('GET', '/api/v1/menus/$id/delete-code') as Map<String, dynamic>;
+    final data =
+        await _req('GET', '/api/v1/menus/$id/delete-code')
+            as Map<String, dynamic>;
     return data['code'] as String? ?? data['deleteCode'] as String? ?? '';
   }
 
@@ -113,7 +141,8 @@ class MenuEditorService {
     final headers = await _authHeaders();
     headers['X-Delete-Code'] = code;
     final uri = Uri.parse('$kApiBase/api/v1/menus/$id');
-    final res = await http.delete(uri, headers: headers)
+    final res = await http
+        .delete(uri, headers: headers)
         .timeout(const Duration(seconds: 30));
     if (res.statusCode == 401) throw Exception('Sesión expirada');
     if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -125,9 +154,23 @@ class MenuEditorService {
     }
   }
 
-  // POST /api/v1/menus — crea un nuevo menú y devuelve el menú creado con su ID
+  // POST /api/v1/menus — crea un nuevo menú y devuelve el menú creado con su código
   static Future<Map<String, dynamic>> create(Map<String, dynamic> data) async {
     final result = await _req('POST', '/api/v1/menus', data);
+    return result as Map<String, dynamic>;
+  }
+
+  // PATCH /api/v1/menus/:codigo/secciones/:seccion (logo, portada, etc.)
+  static Future<Map<String, dynamic>> seccion(
+    String codigo,
+    String seccion,
+    Map<String, dynamic> data,
+  ) async {
+    final result = await _req(
+      'PATCH',
+      '/api/v1/menus/$codigo/secciones/$seccion',
+      data,
+    );
     return result as Map<String, dynamic>;
   }
 
@@ -149,6 +192,28 @@ class MenuEditorService {
     }
   }
 
+  // Check de slug con el contrato actual (excludeCodigo para edición).
+  static Future<bool> checkSlugCode(
+    String slug, {
+    String? excludeCodigo,
+  }) async {
+    try {
+      final query = <String, String>{'slug': slug};
+      if (excludeCodigo != null && excludeCodigo.isNotEmpty) {
+        query['excludeCodigo'] = excludeCodigo;
+      }
+      final uri = Uri.parse(
+        '$kApiBase/api/v1/public/slugs/check',
+      ).replace(queryParameters: query);
+      final res = await http.get(uri).timeout(const Duration(seconds: 15));
+      if (!res.ok) return true;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      return data['available'] as bool? ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
   // ── Colaboradores ─────────────────────────────────────────────────────────
 
   static Future<List<dynamic>> listarColaboradores(int menuId) async {
@@ -157,17 +222,22 @@ class MenuEditorService {
   }
 
   static Future<Map<String, dynamic>> invitarColaborador(
-      int menuId, String codigo) async {
-    final data = await _req(
-        'POST', '/api/v1/menus/$menuId/colaboradores', {'codigo': codigo});
+    int menuId,
+    String codigo,
+  ) async {
+    final data = await _req('POST', '/api/v1/menus/$menuId/colaboradores', {
+      'codigo': codigo,
+    });
     return data as Map<String, dynamic>;
   }
 
   static Future<void> eliminarColaborador(int menuId, int userId) async {
     final headers = await _authHeaders();
-    final uri =
-        Uri.parse('$kApiBase/api/v1/menus/$menuId/colaboradores/$userId');
-    final res = await http.delete(uri, headers: headers)
+    final uri = Uri.parse(
+      '$kApiBase/api/v1/menus/$menuId/colaboradores/$userId',
+    );
+    final res = await http
+        .delete(uri, headers: headers)
         .timeout(const Duration(seconds: 30));
     if (res.statusCode == 401) throw Exception('Sesión expirada');
     if (res.statusCode < 200 || res.statusCode >= 300) {
@@ -180,9 +250,12 @@ class MenuEditorService {
   }
 
   static Future<Map<String, dynamic>> transferirMenu(
-      int menuId, String codigo) async {
-    final data = await _req(
-        'POST', '/api/v1/menus/$menuId/transferir', {'codigo': codigo});
+    int menuId,
+    String codigo,
+  ) async {
+    final data = await _req('POST', '/api/v1/menus/$menuId/transferir', {
+      'codigo': codigo,
+    });
     return (data ?? {}) as Map<String, dynamic>;
   }
 
@@ -190,7 +263,11 @@ class MenuEditorService {
 
   // Sube una imagen como multipart. tipo: 'logo' | 'banner' | 'producto'
   // Retorna la URL pública, o null si falla (el usuario puede escribir URL manual).
-  static Future<String?> uploadImage(int menuId, File imageFile, String tipo) async {
+  static Future<String?> uploadImage(
+    int menuId,
+    File imageFile,
+    String tipo,
+  ) async {
     try {
       final token = await _getToken();
       final uri = Uri.parse('$kApiBase/api/v1/menus/$menuId/upload');

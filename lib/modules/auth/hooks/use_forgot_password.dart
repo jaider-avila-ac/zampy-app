@@ -8,13 +8,13 @@ enum ForgotPasswordState { form, sent, googleAccount }
 class UseForgotPassword extends ChangeNotifier {
   final emailCtrl = TextEditingController();
 
-  bool                 _loading = false;
-  String               _error   = '';
-  ForgotPasswordState  _state   = ForgotPasswordState.form;
+  bool _loading = false;
+  String _error = '';
+  ForgotPasswordState _state = ForgotPasswordState.form;
 
-  bool                get loading => _loading;
-  String              get error   => _error;
-  ForgotPasswordState get state   => _state;
+  bool get loading => _loading;
+  String get error => _error;
+  ForgotPasswordState get state => _state;
 
   Future<void> submit() async {
     final email = emailCtrl.text.trim();
@@ -25,22 +25,22 @@ class UseForgotPassword extends ChangeNotifier {
     }
 
     _loading = true;
-    _error   = '';
+    _error = '';
     notifyListeners();
 
     try {
       await AuthService.forgotPassword(email);
       _state = ForgotPasswordState.sent;
     } on AuthServiceException catch (e) {
-      // Si el backend indica cuenta de Google, mostramos estado especial
-      if (e.message.toLowerCase().contains('google') ||
-          (e.code != null && e.code!.toLowerCase().contains('google'))) {
+      if (e.code == 'GOOGLE_ACCOUNT' || e.message == 'GOOGLE_ACCOUNT') {
         _state = ForgotPasswordState.googleAccount;
       } else {
-        _error = e.message;
+        _error = e.message.isEmpty
+            ? 'Error de conexión. Intenta de nuevo.'
+            : e.message;
       }
     } catch (_) {
-      _error = 'Error de conexión. Inténtalo de nuevo.';
+      _error = 'Error de conexión. Intenta de nuevo.';
     } finally {
       _loading = false;
       notifyListeners();

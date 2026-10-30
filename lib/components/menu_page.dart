@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart' hide MenuTheme, Banner, CarouselView;
 import 'package:go_router/go_router.dart';
+
 import '../modules/menu/public/models/public_menu_model.dart';
 import '../modules/menu/public/components/banner.dart';
 import '../modules/menu/public/components/category_tabs.dart';
@@ -11,6 +14,7 @@ import '../modules/menu/public/components/carousel_view.dart';
 import '../modules/menu/public/components/reviews_section.dart';
 import '../modules/menu/public/components/footer.dart';
 import '../modules/menu/public/components/share_modal.dart';
+import '../services/estadisticas_service.dart';
 import '../services/interaccion_service.dart';
 
 // Equivalente a src/modules/menu/public/components/MenuPage.jsx en React
@@ -25,25 +29,34 @@ class MenuPage extends StatefulWidget {
     super.key,
     required this.menuData,
     this.menuSlug,
-    this.isPublished  = false,
-    this.showQrButton,  // null → se infiere de menuSlug != null
+    this.menuCodigo,
+    this.isPublished = false,
+    this.showQrButton,
+    this.staffMode = false,
+    this.esPropio = false,
+    this.initialProductId,
   });
 
   final PublicMenuData menuData;
-  final String?        menuSlug;
-  final bool           isPublished;
-  final bool?          showQrButton;
+  final String? menuSlug;
+  final String? menuCodigo;
+  final bool isPublished;
+  final bool? showQrButton;
+  final bool staffMode;
+  final bool esPropio;
+  final String? initialProductId;
 
   @override
   State<MenuPage> createState() => _MenuPageState();
 }
 
 class _MenuPageState extends State<MenuPage> {
-  String  _activeCategory = _kAllId;
-  _View   _viewMode       = _View.grid;
-  bool    _searchOpen     = false;
-  String  _searchQuery    = '';
-  int     _meEncantas     = 0;
+  String _activeCategory = _kAllId;
+  _View _viewMode = _View.grid;
+  bool _searchOpen = false;
+  String _searchQuery = '';
+  int _meEncantas = 0;
+  Timer? _viewTimer;
 
   final _searchCtrl = TextEditingController();
 
@@ -54,10 +67,18 @@ class _MenuPageState extends State<MenuPage> {
   ];
 
   bool get _isSearching => _searchQuery.trim().isNotEmpty;
-  bool get _isAllMode   => _activeCategory == _kAllId && !_isSearching;
+  bool get _isAllMode => _activeCategory == _kAllId && !_isSearching;
 
-  MenuCategory? get _activeCat =>
-      widget.menuData.categories.where((c) => c.id == _activeCategory).firstOrNull;
+  int get _gridColumns {
+    final width = MediaQuery.sizeOf(context).width;
+    return (width / 180).floor().clamp(2, 6);
+  }
+
+  int get _listColumns => MediaQuery.sizeOf(context).width >= 700 ? 2 : 1;
+
+  MenuCategory? get _activeCat => widget.menuData.categories
+      .where((c) => c.id == _activeCategory)
+      .firstOrNull;
 
   String get _activeCatType => _activeCat?.tipoContenido ?? 'con_imagenes';
 
@@ -67,18 +88,22 @@ class _MenuPageState extends State<MenuPage> {
   }
 
   String get _sectionTitle {
-    if (_isSearching)     return '"$_searchQuery"';
-    if (_isAllMode)       return 'Todo el menú';
+    if (_isSearching) return '"$_searchQuery"';
+    if (_isAllMode) return 'Todo el menú';
     return _activeCat?.name ?? '';
   }
 
   List<MenuProduct> get _filteredProducts {
     if (_isSearching) {
       final q = _searchQuery.toLowerCase();
-      return widget.menuData.products.where((p) =>
-          p.name.toLowerCase().contains(q) ||
-          (p.description ?? '').toLowerCase().contains(q) ||
-          p.tags.any((t) => t.toLowerCase().contains(q))).toList();
+      return widget.menuData.products
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(q) ||
+                (p.description ?? '').toLowerCase().contains(q) ||
+                p.tags.any((t) => t.toLowerCase().contains(q)),
+          )
+          .toList();
     }
     if (_activeCategory == _kAllId) return widget.menuData.products;
     return widget.menuData.productsForCategory(_activeCategory);
@@ -87,7 +112,10 @@ class _MenuPageState extends State<MenuPage> {
   // Agrupados por categoría para modo "Todos" grid/list
   List<({MenuCategory cat, List<MenuProduct> items})> get _groupedProducts {
     return widget.menuData.categories
-        .map((cat) => (cat: cat, items: widget.menuData.productsForCategory(cat.id)))
+        .map(
+          (cat) =>
+              (cat: cat, items: widget.menuData.productsForCategory(cat.id)),
+        )
         .where((g) => g.items.isNotEmpty)
         .toList();
   }
@@ -96,12 +124,45 @@ class _MenuPageState extends State<MenuPage> {
   void initState() {
     super.initState();
     _loadResumen();
+
+    if (widget.isPublished && widget.menuSlug != null && !widget.staffMode) {
+      _viewTimer = Timer(const Duration(seconds: 5), () {
+        EstadisticasService.registrarVistaMenu(widget.menuSlug!);
+      });
+    }
+
+    final initialId = widget.initialProductId;
+    if (initialId != null && initialId.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final product = widget.menuData.products
+            .where((p) => p.id == initialId)
+            .firstOrNull;
+        if (product != null) _openProduct(product);
+      });
+    }
   }
 
   @override
   void dispose() {
+    _viewTimer?.cancel();
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  void _openProduct(MenuProduct product) {
+    ProductModal.show(
+      context,
+      product,
+      widget.menuData.theme,
+      menuSlug: widget.menuSlug,
+      menuCodigo: widget.menuCodigo,
+      info: widget.menuData.info,
+      grupos: widget.menuData.grupos,
+      trackView: widget.isPublished && !widget.staffMode,
+      staffMode: widget.staffMode,
+      esPropio: widget.esPropio,
+    );
   }
 
   Future<void> _loadResumen() async {
@@ -125,9 +186,9 @@ class _MenuPageState extends State<MenuPage> {
   void _changeCategory(String id) {
     setState(() {
       _activeCategory = id;
-      _searchQuery    = '';
+      _searchQuery = '';
       _searchCtrl.clear();
-      _searchOpen     = false;
+      _searchOpen = false;
       if (_activeCatType == 'sin_imagenes') _viewMode = _View.list;
     });
   }
@@ -137,48 +198,45 @@ class _MenuPageState extends State<MenuPage> {
     final products = widget.menuData.products;
     if (products.isEmpty) return;
     final random = products[math.Random().nextInt(products.length)];
-    ProductModal.show(context, random, widget.menuData.theme,
-        menuSlug: widget.menuSlug,
-        info:     widget.menuData.info,
-        grupos:   widget.menuData.grupos);
+    _openProduct(random);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = widget.menuData.theme;
-    final info  = widget.menuData.info;
+    final info = widget.menuData.info;
 
     return Container(
       color: theme.bg,
       child: CustomScrollView(
         slivers: [
-
           // ── Navbar sticky (equivale a <Navbar> en React) ─────────────
           SliverAppBar(
-            pinned:                    true,
-            floating:                  false,
+            pinned: true,
+            floating: false,
             automaticallyImplyLeading: false,
-            toolbarHeight:             56,
-            backgroundColor:           theme.navBg,
-            surfaceTintColor:          Colors.transparent,
-            shadowColor:               Colors.transparent,
-            elevation:                 0,
-            titleSpacing:              0,
+            toolbarHeight: 56,
+            backgroundColor: theme.navBg,
+            surfaceTintColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            elevation: 0,
+            titleSpacing: 0,
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(1),
               child: Divider(height: 1, color: theme.navBorder),
             ),
             title: _NavbarRow(
-              info:           info,
-              theme:          theme,
-              searchOpen:     _searchOpen,
-              searchCtrl:     _searchCtrl,
-              onToggle:       _toggleSearch,
+              info: info,
+              theme: theme,
+              searchOpen: _searchOpen,
+              searchCtrl: _searchCtrl,
+              onToggle: _toggleSearch,
               onSearchChange: (v) => setState(() => _searchQuery = v),
               onQr: (widget.showQrButton ?? widget.menuSlug != null)
                   ? (widget.menuSlug != null
-                      ? () => ShareModal.show(context, widget.menuSlug!, theme)
-                      : () {})   // icono visible pero sin acción (ej: preview)
+                        ? () =>
+                              ShareModal.show(context, widget.menuSlug!, theme)
+                        : () {}) // icono visible pero sin acción (ej: preview)
                   : null,
             ),
           ),
@@ -186,7 +244,11 @@ class _MenuPageState extends State<MenuPage> {
           // ── Banner (solo cuando no se busca) ─────────────────────────
           if (!_isSearching)
             SliverToBoxAdapter(
-              child: Banner(info: info, theme: theme),
+              child: Banner(
+                info: info,
+                theme: theme,
+                horario: widget.menuData.horario,
+              ),
             ),
 
           // ── Category tabs sticky bajo el Navbar ───────────────────────
@@ -196,10 +258,21 @@ class _MenuPageState extends State<MenuPage> {
               delegate: _TabDelegate(
                 child: CategoryTabs(
                   categories: _allCategories,
-                  active:     _activeCategory,
-                  onChanged:  _changeCategory,
-                  theme:      theme,
+                  active: _activeCategory,
+                  onChanged: _changeCategory,
+                  theme: theme,
                 ),
+              ),
+            ),
+
+          if (!_isSearching &&
+              _isAllMode &&
+              widget.menuData.featuredProducts.isNotEmpty)
+            SliverToBoxAdapter(
+              child: _FeaturedRow(
+                products: widget.menuData.featuredProducts,
+                theme: theme,
+                onTap: _openProduct,
               ),
             ),
 
@@ -212,24 +285,29 @@ class _MenuPageState extends State<MenuPage> {
                   Text(
                     _sectionTitle,
                     style: TextStyle(
-                      fontSize:   17,
+                      fontSize: 17,
                       fontWeight: FontWeight.w900,
-                      color:      theme.text,
+                      color: theme.text,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(child: Divider(color: theme.border, height: 1)),
                   const SizedBox(width: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
-                      color:        theme.surfaceAlt,
+                      color: theme.surfaceAlt,
                       borderRadius: BorderRadius.circular(99),
                     ),
                     child: Text(
                       '${_filteredProducts.length} ${_isSearching ? "resultados" : "platos"}',
                       style: TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w600, color: theme.textMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: theme.textMuted,
                       ),
                     ),
                   ),
@@ -241,22 +319,30 @@ class _MenuPageState extends State<MenuPage> {
                       child: Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color:        theme.primary.withValues(alpha: 0.10),
+                          color: theme.primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(99),
-                          border:       Border.all(
-                              color: theme.primary.withValues(alpha: 0.30)),
+                          border: Border.all(
+                            color: theme.primary.withValues(alpha: 0.30),
+                          ),
                         ),
-                        child: Icon(Icons.shuffle, size: 15, color: theme.primary),
+                        child: Icon(
+                          Icons.shuffle,
+                          size: 15,
+                          color: theme.primary,
+                        ),
                       ),
                     ),
                   const SizedBox(width: 6),
-                  // Toggle de vistas (grid / list / carousel) — solo si hay imágenes
-                  if (_activeCatType != 'sin_imagenes')
-                    _ViewToggle(
-                      view:      _viewMode,
-                      theme:     theme,
-                      onChanged: (v) => setState(() => _viewMode = v),
-                    ),
+                  // Toggle de vistas. React deja solo "Lista" cuando la
+                  // categoría activa es sin_imagenes.
+                  _ViewToggle(
+                    view: _activeCatType == 'sin_imagenes'
+                        ? _View.list
+                        : _viewMode,
+                    theme: theme,
+                    onlyList: _activeCatType == 'sin_imagenes',
+                    onChanged: (v) => setState(() => _viewMode = v),
+                  ),
                 ],
               ),
             ),
@@ -268,10 +354,12 @@ class _MenuPageState extends State<MenuPage> {
           // ── Reseñas ───────────────────────────────────────────────────
           SliverToBoxAdapter(
             child: ReviewsSection(
-              theme:      theme,
-              menuSlug:   widget.menuSlug,
+              theme: theme,
+              menuSlug: widget.menuSlug,
+              menuCodigo: widget.menuCodigo,
               meEncantas: _meEncantas,
-              ownerId:    widget.menuData.ownerId,
+              esPropio: widget.esPropio,
+              staffMode: widget.staffMode,
             ),
           ),
 
@@ -279,7 +367,6 @@ class _MenuPageState extends State<MenuPage> {
           SliverToBoxAdapter(
             child: MenuFooter(info: info, theme: theme),
           ),
-
         ],
       ),
     );
@@ -296,18 +383,59 @@ class _MenuPageState extends State<MenuPage> {
             padding: const EdgeInsets.symmetric(vertical: 48),
             child: Column(
               children: [
-                Icon(Icons.search_off_outlined, size: 44,
-                  color: theme.textMuted.withValues(alpha: 0.22)),
+                Icon(
+                  Icons.search_off_outlined,
+                  size: 44,
+                  color: theme.textMuted.withValues(alpha: 0.22),
+                ),
                 const SizedBox(height: 10),
-                Text('No se encontraron productos',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: theme.textMuted)),
+                Text(
+                  'No se encontraron productos',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textMuted,
+                  ),
+                ),
                 if (_isSearching)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text('Intenta con otro término',
-                      style: TextStyle(fontSize: 12, color: theme.textMuted.withValues(alpha: 0.6))),
+                    child: Text(
+                      'Intenta con otro término',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.textMuted.withValues(alpha: 0.6),
+                      ),
+                    ),
                   ),
               ],
+            ),
+          ),
+        ),
+      ];
+    }
+
+    if (_isSearching) {
+      return [
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _listColumns,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 0,
+              mainAxisExtent: 140,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ProductListItem(
+                  product: products[i],
+                  theme: theme,
+                  onTap: () => _openProduct(products[i]),
+                ),
+              ),
+              childCount: products.length,
             ),
           ),
         ),
@@ -321,11 +449,9 @@ class _MenuPageState extends State<MenuPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0),
             child: CarouselView(
-              products:     products,
-              theme:        theme,
-              onProductTap: (p) => ProductModal.show(context, p, theme,
-                  menuSlug: widget.menuSlug, info: widget.menuData.info,
-                  grupos: widget.menuData.grupos),
+              products: products,
+              theme: theme,
+              onProductTap: _openProduct,
             ),
           ),
         ),
@@ -340,7 +466,9 @@ class _MenuPageState extends State<MenuPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
-              children: groups.map((g) => _buildGroup(g.cat, g.items, theme)).toList(),
+              children: groups
+                  .map((g) => _buildGroup(g.cat, g.items, theme))
+                  .toList(),
             ),
           ),
         ),
@@ -353,19 +481,17 @@ class _MenuPageState extends State<MenuPage> {
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount:   2,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _gridColumns,
               crossAxisSpacing: 12,
-              mainAxisSpacing:  12,
-              mainAxisExtent:   280,
+              mainAxisSpacing: 12,
+              mainAxisExtent: 280,
             ),
             delegate: SliverChildBuilderDelegate(
               (ctx, i) => ProductCard(
                 product: products[i],
-                theme:   theme,
-                onTap:   () => ProductModal.show(context, products[i], theme,
-                    menuSlug: widget.menuSlug, info: widget.menuData.info,
-                    grupos: widget.menuData.grupos),
+                theme: theme,
+                onTap: () => _openProduct(products[i]),
               ),
               childCount: products.length,
             ),
@@ -378,14 +504,21 @@ class _MenuPageState extends State<MenuPage> {
     return [
       SliverPadding(
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        sliver: SliverList(
+        sliver: SliverGrid(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: _listColumns,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 0,
+            mainAxisExtent: 140,
+          ),
           delegate: SliverChildBuilderDelegate(
-            (ctx, i) => ProductListItem(
-              product: products[i],
-              theme:   theme,
-              onTap:   () => ProductModal.show(context, products[i], theme,
-                    menuSlug: widget.menuSlug, info: widget.menuData.info,
-                    grupos: widget.menuData.grupos),
+            (ctx, i) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ProductListItem(
+                product: products[i],
+                theme: theme,
+                onTap: () => _openProduct(products[i]),
+              ),
             ),
             childCount: products.length,
           ),
@@ -395,61 +528,214 @@ class _MenuPageState extends State<MenuPage> {
   }
 
   // Grupo de categoría para modo "Todos"
-  Widget _buildGroup(MenuCategory cat, List<MenuProduct> items, MenuTheme theme) {
+  Widget _buildGroup(
+    MenuCategory cat,
+    List<MenuProduct> items,
+    MenuTheme theme,
+  ) {
+    final vistaGrupo = cat.tipoContenido == 'sin_imagenes'
+        ? _View.list
+        : _activeView;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Sub-header de categoría
-          Row(children: [
-            Text(cat.name,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: theme.text)),
-            const SizedBox(width: 8),
-            Expanded(child: Divider(color: theme.border, height: 1)),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: theme.surfaceAlt,
-                borderRadius: BorderRadius.circular(99),
+          Row(
+            children: [
+              Text(
+                cat.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: theme.text,
+                ),
               ),
-              child: Text('${items.length}',
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: theme.textMuted)),
-            ),
-          ]),
+              const SizedBox(width: 8),
+              Expanded(child: Divider(color: theme.border, height: 1)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: theme.surfaceAlt,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  '${items.length}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: theme.textMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
 
-          // Grid o lista según _activeView
-          if (_activeView == _View.grid)
+          // Grid o lista según la vista del grupo. Una categoría sin
+          // imágenes siempre usa lista, igual que React.
+          if (vistaGrupo == _View.grid)
             GridView.builder(
               shrinkWrap: true,
-              physics:    const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount:   2,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _gridColumns,
                 crossAxisSpacing: 12,
-                mainAxisSpacing:  12,
-                mainAxisExtent:   280,
+                mainAxisSpacing: 12,
+                mainAxisExtent: 280,
               ),
-              itemCount:    items.length,
-              itemBuilder:  (ctx, i) => ProductCard(
+              itemCount: items.length,
+              itemBuilder: (ctx, i) => ProductCard(
                 product: items[i],
-                theme:   theme,
-                onTap:   () => ProductModal.show(context, items[i], theme,
-                    menuSlug: widget.menuSlug, info: widget.menuData.info,
-                    grupos: widget.menuData.grupos),
+                theme: theme,
+                onTap: () => _openProduct(items[i]),
               ),
             )
           else
-            Column(
-              children: items.map((p) => ProductListItem(
-                product: p,
-                theme:   theme,
-                onTap:   () => ProductModal.show(context, p, theme,
-                    menuSlug: widget.menuSlug, info: widget.menuData.info,
-                    grupos: widget.menuData.grupos),
-              )).toList(),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _listColumns,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 0,
+                mainAxisExtent: 140,
+              ),
+              itemCount: items.length,
+              itemBuilder: (ctx, i) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ProductListItem(
+                  product: items[i],
+                  theme: theme,
+                  onTap: () => _openProduct(items[i]),
+                ),
+              ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeaturedRow extends StatelessWidget {
+  const _FeaturedRow({
+    required this.products,
+    required this.theme,
+    required this.onTap,
+  });
+
+  final List<MenuProduct> products;
+  final MenuTheme theme;
+  final ValueChanged<MenuProduct> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 15, color: theme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Destacados',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: theme.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 178,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: products.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 10),
+              itemBuilder: (context, index) {
+                final product = products[index];
+                return GestureDetector(
+                  onTap: () => onTap(product),
+                  child: Container(
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: theme.surface,
+                      borderRadius: BorderRadius.circular(theme.cardRadius),
+                      border: Border.all(color: theme.border),
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          height: 100,
+                          width: double.infinity,
+                          child:
+                              product.imageUrl != null &&
+                                  product.imageUrl!.isNotEmpty
+                              ? Image.network(
+                                  product.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stack) =>
+                                      Container(color: theme.surfaceAlt),
+                                )
+                              : Container(
+                                  color: theme.surfaceAlt,
+                                  child: Icon(
+                                    Icons.restaurant_outlined,
+                                    color: theme.textMuted,
+                                  ),
+                                ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: theme.text,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                product.hasPromo
+                                    ? '\$${product.promoPrice!.toStringAsFixed(0)}'
+                                    : '\$${product.price.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: product.hasPromo
+                                      ? const Color(0xFF22C55E)
+                                      : theme.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -467,13 +753,13 @@ class _NavbarRow extends StatelessWidget {
     required this.onSearchChange,
     this.onQr,
   });
-  final MenuInfo                info;
-  final MenuTheme               theme;
-  final bool                    searchOpen;
-  final TextEditingController   searchCtrl;
-  final VoidCallback            onToggle;
-  final ValueChanged<String>    onSearchChange;
-  final VoidCallback?           onQr;
+  final MenuInfo info;
+  final MenuTheme theme;
+  final bool searchOpen;
+  final TextEditingController searchCtrl;
+  final VoidCallback onToggle;
+  final ValueChanged<String> onSearchChange;
+  final VoidCallback? onQr;
 
   @override
   Widget build(BuildContext context) {
@@ -488,12 +774,17 @@ class _NavbarRow extends StatelessWidget {
             GestureDetector(
               onTap: () => context.pop(),
               child: Container(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color:        t.navBg,
+                  color: t.navBg,
                   borderRadius: BorderRadius.circular(t.badgeRadius),
                 ),
-                child: Icon(Icons.arrow_back_ios_new, size: 16, color: t.navText),
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  size: 16,
+                  color: t.navText,
+                ),
               ),
             ),
             const SizedBox(width: 6),
@@ -502,25 +793,25 @@ class _NavbarRow extends StatelessWidget {
           // Lado izquierdo: logo + nombre / campo de búsqueda
           Expanded(
             child: searchOpen
-                ? _SearchField(ctrl: searchCtrl, theme: t, onChanged: onSearchChange)
+                ? _SearchField(
+                    ctrl: searchCtrl,
+                    theme: t,
+                    onChanged: onSearchChange,
+                  )
                 : _BusinessInfo(info: info, theme: t),
           ),
           const SizedBox(width: 8),
 
           // Botón QR
           if (onQr != null)
-            _NavBtn(
-              icon:    Icons.qr_code,
-              theme:   t,
-              onTap:   onQr!,
-            ),
+            _NavBtn(icon: Icons.qr_code, theme: t, onTap: onQr!),
 
           // Toggle búsqueda
           _NavBtn(
-            icon:    searchOpen ? Icons.close : Icons.search,
-            theme:   t,
-            active:  searchOpen,
-            onTap:   onToggle,
+            icon: searchOpen ? Icons.close : Icons.search,
+            theme: t,
+            active: searchOpen,
+            onTap: onToggle,
           ),
         ],
       ),
@@ -530,7 +821,7 @@ class _NavbarRow extends StatelessWidget {
 
 class _BusinessInfo extends StatelessWidget {
   const _BusinessInfo({required this.info, required this.theme});
-  final MenuInfo  info;
+  final MenuInfo info;
   final MenuTheme theme;
 
   @override
@@ -541,8 +832,14 @@ class _BusinessInfo extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(t.badgeRadius),
           child: info.logoUrl != null && info.logoUrl!.isNotEmpty
-              ? Image.network(info.logoUrl!, width: 36, height: 36, fit: BoxFit.cover,
-                  errorBuilder: (ctx, e, st) => _InitialsAvatar(name: info.name, theme: t))
+              ? Image.network(
+                  info.logoUrl!,
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
+                  errorBuilder: (ctx, e, st) =>
+                      _InitialsAvatar(name: info.name, theme: t),
+                )
               : _InitialsAvatar(name: info.name, theme: t),
         ),
         const SizedBox(width: 10),
@@ -553,21 +850,34 @@ class _BusinessInfo extends StatelessWidget {
             children: [
               Text(
                 info.name,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: t.navText),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: t.navText,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
               if (info.hasSchedule)
-                Row(children: [
-                  Icon(Icons.access_time_outlined, size: 10, color: t.navText.withValues(alpha: 0.6)),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Text(
-                      info.schedule!,
-                      style: TextStyle(fontSize: 10, color: t.navText.withValues(alpha: 0.6)),
-                      overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time_outlined,
+                      size: 10,
+                      color: t.navText.withValues(alpha: 0.6),
                     ),
-                  ),
-                ]),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(
+                        info.schedule!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: t.navText.withValues(alpha: 0.6),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -578,26 +888,35 @@ class _BusinessInfo extends StatelessWidget {
 
 class _InitialsAvatar extends StatelessWidget {
   const _InitialsAvatar({required this.name, required this.theme});
-  final String    name;
+  final String name;
   final MenuTheme theme;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: 36, height: 36,
+    width: 36,
+    height: 36,
     color: theme.primary,
     alignment: Alignment.center,
     child: Text(
       name.isNotEmpty ? name[0].toUpperCase() : '?',
-      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w900,
+        fontSize: 16,
+      ),
     ),
   );
 }
 
 class _SearchField extends StatefulWidget {
-  const _SearchField({required this.ctrl, required this.theme, required this.onChanged});
+  const _SearchField({
+    required this.ctrl,
+    required this.theme,
+    required this.onChanged,
+  });
   final TextEditingController ctrl;
-  final MenuTheme             theme;
-  final ValueChanged<String>  onChanged;
+  final MenuTheme theme;
+  final ValueChanged<String> onChanged;
 
   @override
   State<_SearchField> createState() => _SearchFieldState();
@@ -618,9 +937,9 @@ class _SearchFieldState extends State<_SearchField> {
     return Container(
       height: 36,
       decoration: BoxDecoration(
-        color:        t.surfaceAlt,
+        color: t.surfaceAlt,
         borderRadius: BorderRadius.circular(t.buttonRadius),
-        border:       Border.all(color: t.border),
+        border: Border.all(color: t.border),
       ),
       child: Row(
         children: [
@@ -631,21 +950,24 @@ class _SearchFieldState extends State<_SearchField> {
           Expanded(
             child: TextField(
               controller: widget.ctrl,
-              autofocus:  true,
-              onChanged:  widget.onChanged,
-              style:      TextStyle(fontSize: 13, color: t.text),
+              autofocus: true,
+              onChanged: widget.onChanged,
+              style: TextStyle(fontSize: 13, color: t.text),
               decoration: InputDecoration(
-                hintText:       'Buscar en el menú...',
-                hintStyle:      TextStyle(fontSize: 13, color: t.textMuted),
-                border:         InputBorder.none,
-                isDense:        true,
+                hintText: 'Buscar en el menú...',
+                hintStyle: TextStyle(fontSize: 13, color: t.textMuted),
+                border: InputBorder.none,
+                isDense: true,
                 contentPadding: EdgeInsets.zero,
               ),
             ),
           ),
           if (widget.ctrl.text.isNotEmpty)
             GestureDetector(
-              onTap: () { widget.ctrl.clear(); widget.onChanged(''); },
+              onTap: () {
+                widget.ctrl.clear();
+                widget.onChanged('');
+              },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Icon(Icons.close, size: 14, color: t.textMuted),
@@ -658,20 +980,26 @@ class _SearchFieldState extends State<_SearchField> {
 }
 
 class _NavBtn extends StatelessWidget {
-  const _NavBtn({required this.icon, required this.theme, required this.onTap, this.active = false});
-  final IconData     icon;
-  final MenuTheme    theme;
+  const _NavBtn({
+    required this.icon,
+    required this.theme,
+    required this.onTap,
+    this.active = false,
+  });
+  final IconData icon;
+  final MenuTheme theme;
   final VoidCallback onTap;
-  final bool         active;
+  final bool active;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      width: 36, height: 36,
+      width: 36,
+      height: 36,
       margin: const EdgeInsets.only(left: 6),
       decoration: BoxDecoration(
-        color:        active ? theme.primary : theme.navText.withValues(alpha: 0.12),
+        color: active ? theme.primary : theme.navText.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(99),
       ),
       child: Icon(icon, size: 17, color: active ? Colors.white : theme.navText),
@@ -681,37 +1009,72 @@ class _NavBtn extends StatelessWidget {
 
 // ── Toggle de vistas ─────────────────────────────────────────────────────────
 class _ViewToggle extends StatelessWidget {
-  const _ViewToggle({required this.view, required this.theme, required this.onChanged});
-  final _View    view;
+  const _ViewToggle({
+    required this.view,
+    required this.theme,
+    required this.onChanged,
+    this.onlyList = false,
+  });
+  final _View view;
   final MenuTheme theme;
   final ValueChanged<_View> onChanged;
+  final bool onlyList;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color:        theme.surfaceAlt,
+        color: theme.surfaceAlt,
         borderRadius: BorderRadius.circular(8),
-        border:       Border.all(color: theme.border),
+        border: Border.all(color: theme.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          _Btn(icon: Icons.grid_view_outlined,       active: view == _View.grid,     theme: theme, onTap: () => onChanged(_View.grid)),
-          _Btn(icon: Icons.list_outlined,             active: view == _View.list,     theme: theme, onTap: () => onChanged(_View.list)),
-          _Btn(icon: Icons.view_carousel_outlined,    active: view == _View.carousel, theme: theme, onTap: () => onChanged(_View.carousel)),
-        ],
+        children: onlyList
+            ? [
+                _Btn(
+                  icon: Icons.list_outlined,
+                  active: true,
+                  theme: theme,
+                  onTap: () => onChanged(_View.list),
+                ),
+              ]
+            : [
+                _Btn(
+                  icon: Icons.grid_view_outlined,
+                  active: view == _View.grid,
+                  theme: theme,
+                  onTap: () => onChanged(_View.grid),
+                ),
+                _Btn(
+                  icon: Icons.list_outlined,
+                  active: view == _View.list,
+                  theme: theme,
+                  onTap: () => onChanged(_View.list),
+                ),
+                _Btn(
+                  icon: Icons.view_carousel_outlined,
+                  active: view == _View.carousel,
+                  theme: theme,
+                  onTap: () => onChanged(_View.carousel),
+                ),
+              ],
       ),
     );
   }
 }
 
 class _Btn extends StatelessWidget {
-  const _Btn({required this.icon, required this.active, required this.theme, required this.onTap});
-  final IconData     icon;
-  final bool         active;
-  final MenuTheme    theme;
+  const _Btn({
+    required this.icon,
+    required this.active,
+    required this.theme,
+    required this.onTap,
+  });
+  final IconData icon;
+  final bool active;
+  final MenuTheme theme;
   final VoidCallback onTap;
 
   @override
@@ -720,10 +1083,14 @@ class _Btn extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(
-        color:        active ? theme.primary : Colors.transparent,
+        color: active ? theme.primary : Colors.transparent,
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Icon(icon, size: 14, color: active ? Colors.white : theme.textMuted),
+      child: Icon(
+        icon,
+        size: 14,
+        color: active ? Colors.white : theme.textMuted,
+      ),
     ),
   );
 }
@@ -733,11 +1100,17 @@ class _TabDelegate extends SliverPersistentHeaderDelegate {
   const _TabDelegate({required this.child});
   final Widget child;
 
-  @override double get minExtent => 52;
-  @override double get maxExtent => 52;
+  @override
+  double get minExtent => 52;
+  @override
+  double get maxExtent => 52;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => child;
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => child;
 
   @override
   bool shouldRebuild(_TabDelegate old) => old.child != child;

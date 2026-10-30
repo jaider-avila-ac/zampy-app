@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
+import '../../../context/auth_context.dart';
+import '../../../services/auth_redirect.dart';
+import '../../../services/google_auth_service.dart';
 import '../../../shared/app_colors.dart';
 import '../hooks/use_forgot_password.dart';
 
@@ -67,7 +71,9 @@ class _ForgotView extends StatelessWidget {
                   'assets/logos/imagotipo-blanco-zammpy.svg',
                   height: 32,
                   colorFilter: const ColorFilter.mode(
-                      Colors.white, BlendMode.srcIn),
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 const SizedBox(height: 32),
 
@@ -93,10 +99,15 @@ class _ForgotView extends StatelessWidget {
                 // Volver al login
                 TextButton.icon(
                   onPressed: () => context.go('/login'),
-                  icon: const Icon(Icons.arrow_back, size: 15,
-                      color: Colors.white),
-                  label: const Text('Volver al inicio de sesión',
-                      style: TextStyle(fontSize: 14, color: Colors.white)),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    size: 15,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Volver al inicio de sesión',
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  ),
                 ),
               ],
             ),
@@ -110,11 +121,13 @@ class _ForgotView extends StatelessWidget {
     switch (ctrl.state) {
       case ForgotPasswordState.sent:
         return _SentState(
-            email: ctrl.emailCtrl.text,
-            onGoReset: () {
-              ctrl.goToReset();
-              context.go('/auth/reset-password');
-            });
+          email: ctrl.emailCtrl.text,
+          onGoReset: () {
+            final email = ctrl.emailCtrl.text.trim();
+            ctrl.goToReset();
+            context.go('/auth/reset-password', extra: email);
+          },
+        );
 
       case ForgotPasswordState.googleAccount:
         return _GoogleAccountState();
@@ -134,11 +147,14 @@ class _FormState extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Recuperar contraseña',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.kTextPrimary)),
+        const Text(
+          'Recuperar contraseña',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: AppColors.kTextPrimary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Ingresa tu correo y te enviaremos un código para restablecer tu contraseña.',
@@ -149,45 +165,50 @@ class _FormState extends StatelessWidget {
         if (ctrl.error.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 16),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: const Color(0xFFFEE2E2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(ctrl.error,
-                style: const TextStyle(
-                    fontSize: 13, color: Color(0xFF991B1B))),
+            child: Text(
+              ctrl.error,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF991B1B)),
+            ),
           ),
 
         // Label
-        const Text('Correo electrónico',
-            style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.kTextSecondary,
-                letterSpacing: 0.3)),
+        const Text(
+          'Correo electrónico',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.kTextSecondary,
+            letterSpacing: 0.3,
+          ),
+        ),
         const SizedBox(height: 6),
         TextField(
-          controller:      ctrl.emailCtrl,
-          keyboardType:    TextInputType.emailAddress,
+          controller: ctrl.emailCtrl,
+          keyboardType: TextInputType.emailAddress,
           textInputAction: TextInputAction.done,
-          onSubmitted:     (_) => ctrl.submit(),
-          style: const TextStyle(
-              fontSize: 15, color: AppColors.kTextPrimary),
+          onSubmitted: (_) => ctrl.submit(),
+          style: const TextStyle(fontSize: 15, color: AppColors.kTextPrimary),
           decoration: InputDecoration(
             hintText: 'tu@correo.com',
-            hintStyle:
-                TextStyle(color: AppColors.kTextMuted, fontSize: 14),
+            hintStyle: TextStyle(color: AppColors.kTextMuted, fontSize: 14),
             border: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFFCBD5E1))),
+              borderSide: BorderSide(color: Color(0xFFCBD5E1)),
+            ),
             enabledBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(color: Color(0xFFCBD5E1))),
+              borderSide: BorderSide(color: Color(0xFFCBD5E1)),
+            ),
             focusedBorder: UnderlineInputBorder(
-                borderSide:
-                    BorderSide(color: AppColors.kBlue, width: 1.5)),
-            contentPadding:
-                const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+              borderSide: BorderSide(color: AppColors.kBlue, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 8,
+              horizontal: 0,
+            ),
             isDense: true,
           ),
         ),
@@ -199,18 +220,24 @@ class _FormState extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.kBlue,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: ctrl.loading ? null : () => ctrl.submit(),
             child: ctrl.loading
                 ? const SizedBox(
-                    width: 18, height: 18,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
-                : const Text('Enviar código',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Enviar código',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
           ),
         ),
       ],
@@ -220,27 +247,32 @@ class _FormState extends StatelessWidget {
 
 class _SentState extends StatelessWidget {
   const _SentState({required this.email, required this.onGoReset});
-  final String        email;
-  final VoidCallback  onGoReset;
+  final String email;
+  final VoidCallback onGoReset;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Icon(Icons.mark_email_read_outlined,
-            size: 56, color: Color(0xFF4F46E5)),
+        const Icon(
+          Icons.mark_email_read_outlined,
+          size: 56,
+          color: Color(0xFF4F46E5),
+        ),
         const SizedBox(height: 16),
-        const Text('¡Código enviado!',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.kTextPrimary)),
+        const Text(
+          '¡Código enviado!',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: AppColors.kTextPrimary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Revisa tu bandeja de entrada en\n$email',
           textAlign: TextAlign.center,
-          style:
-              TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
+          style: TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
         ),
         const SizedBox(height: 28),
         SizedBox(
@@ -249,13 +281,15 @@ class _SentState extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.kBlue,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: onGoReset,
-            child: const Text('Ingresar código',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Ingresar código',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
           ),
         ),
       ],
@@ -272,17 +306,19 @@ class _GoogleAccountState extends StatelessWidget {
       children: [
         const Icon(Icons.g_mobiledata, size: 56, color: Color(0xFF4285F4)),
         const SizedBox(height: 16),
-        const Text('Cuenta de Google',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.kTextPrimary)),
+        const Text(
+          'Cuenta de Google',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: AppColors.kTextPrimary,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Esta cuenta fue creada con Google. Usa el botón "Continuar con Google" para iniciar sesión.',
           textAlign: TextAlign.center,
-          style:
-              TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
+          style: TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
         ),
         const SizedBox(height: 28),
         SizedBox(
@@ -291,13 +327,29 @@ class _GoogleAccountState extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.kBlue,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            onPressed: () => context.go('/login'),
-            child: const Text('Volver al inicio',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            onPressed: () async {
+              final auth = context.read<AuthContext>();
+              final ok = await GoogleAuthService.signIn(auth);
+              if (ok && context.mounted) {
+                context.go(AuthRedirect.consume() ?? '/');
+              }
+            },
+            child: const Text(
+              'Continuar con Google',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => context.go('/login'),
+          child: const Text(
+            'Volver al inicio de sesión',
+            style: TextStyle(fontSize: 13, color: AppColors.kTextSecondary),
           ),
         ),
       ],

@@ -10,20 +10,16 @@ import '../models/public_menu_model.dart';
 // QR generado en el cliente (React usa react-qrcode-logo, nosotros usamos qr_flutter)
 
 class ShareModal extends StatefulWidget {
-  const ShareModal({
-    super.key,
-    required this.slug,
-    required this.theme,
-  });
+  const ShareModal({super.key, required this.slug, required this.theme});
 
-  final String    slug;
+  final String slug;
   final MenuTheme theme;
 
   static Future<void> show(BuildContext context, String slug, MenuTheme theme) {
     return showModalBottomSheet(
-      context:            context,
+      context: context,
       isScrollControlled: true,
-      backgroundColor:    Colors.transparent,
+      backgroundColor: Colors.transparent,
       builder: (_) => ShareModal(slug: slug, theme: theme),
     );
   }
@@ -33,7 +29,7 @@ class ShareModal extends StatefulWidget {
 }
 
 class _ShareModalState extends State<ShareModal> {
-  bool _copied      = false;
+  bool _copied = false;
   bool _downloading = false;
 
   // La clave para capturar el widget QR como imagen
@@ -60,28 +56,30 @@ class _ShareModalState extends State<ShareModal> {
     try {
       // Renderiza el widget QR a imagen usando QrPainter
       final painter = QrPainter(
-        data:    _shareUrl,
+        data: _shareUrl,
         version: QrVersions.auto,
         eyeStyle: const QrEyeStyle(
-          eyeShape:  QrEyeShape.square,
-          color:     Colors.black,
+          eyeShape: QrEyeShape.square,
+          color: Colors.black,
         ),
         dataModuleStyle: const QrDataModuleStyle(
           dataModuleShape: QrDataModuleShape.square,
-          color:           Colors.black,
+          color: Colors.black,
         ),
       );
-      final imageData = await painter.toImageData(600, format: ui.ImageByteFormat.png);
+      final imageData = await painter.toImageData(
+        600,
+        format: ui.ImageByteFormat.png,
+      );
       if (imageData == null) throw Exception('No se pudo generar el QR');
 
-      final tmp  = Directory.systemTemp;
+      final tmp = Directory.systemTemp;
       final file = File('${tmp.path}/qr-${widget.slug}.png');
       await file.writeAsBytes(imageData.buffer.asUint8List());
 
-      await Share.shareXFiles(
-        [XFile(file.path, mimeType: 'image/png')],
-        subject: 'QR Menú digital',
-      );
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'image/png'),
+      ], subject: 'QR Menú digital');
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -99,7 +97,7 @@ class _ShareModalState extends State<ShareModal> {
     return Container(
       margin: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       decoration: BoxDecoration(
-        color:        t.surface,
+        color: t.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SafeArea(
@@ -110,15 +108,14 @@ class _ShareModalState extends State<ShareModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-
               // Drag handle
               Center(
                 child: Container(
-                  width:  36,
+                  width: 36,
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color:        t.border,
+                    color: t.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -130,20 +127,20 @@ class _ShareModalState extends State<ShareModal> {
                   Text(
                     'Compartir menú',
                     style: TextStyle(
-                      fontSize:   17,
+                      fontSize: 17,
                       fontWeight: FontWeight.w900,
-                      color:      t.text,
+                      color: t.text,
                     ),
                   ),
                   const Spacer(),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
-                      width:  32,
+                      width: 32,
                       height: 32,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color:        t.surfaceAlt,
+                        color: t.surfaceAlt,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(Icons.close, size: 16, color: t.textMuted),
@@ -155,10 +152,10 @@ class _ShareModalState extends State<ShareModal> {
 
               // Botón compartir (sistema share sheet)
               _ActionButton(
-                icon:  Icons.share_outlined,
+                icon: Icons.share_outlined,
                 label: 'Compartir',
-                bg:    t.primary,
-                fg:    Colors.white,
+                bg: t.primary,
+                fg: Colors.white,
                 onTap: _shareLink,
               ),
               const SizedBox(height: 16),
@@ -168,24 +165,24 @@ class _ShareModalState extends State<ShareModal> {
                 child: RepaintBoundary(
                   key: _qrKey,
                   child: Container(
-                    width:   220,
-                    height:  220,
+                    width: 220,
+                    height: 220,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:        Colors.white,
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: QrImageView(
-                      data:            _shareUrl,
-                      version:         QrVersions.auto,
+                      data: _shareUrl,
+                      version: QrVersions.auto,
                       backgroundColor: Colors.white,
                       eyeStyle: const QrEyeStyle(
                         eyeShape: QrEyeShape.square,
-                        color:    Colors.black,
+                        color: Colors.black,
                       ),
                       dataModuleStyle: const QrDataModuleStyle(
                         dataModuleShape: QrDataModuleShape.square,
-                        color:           Colors.black,
+                        color: Colors.black,
                       ),
                       errorCorrectionLevel: QrErrorCorrectLevel.H,
                     ),
@@ -196,23 +193,26 @@ class _ShareModalState extends State<ShareModal> {
 
               // Descargar QR
               _ActionButton(
-                icon:        _downloading ? null : Icons.download_outlined,
-                label:       _downloading ? 'Generando...' : 'Descargar QR',
-                bg:          t.surfaceAlt,
-                fg:          t.text,
-                onTap:       _downloading ? null : _downloadQr,
-                loading:     _downloading,
+                icon: _downloading ? null : Icons.download_outlined,
+                label: _downloading ? 'Generando...' : 'Descargar QR',
+                bg: t.surfaceAlt,
+                fg: t.text,
+                onTap: _downloading ? null : _downloadQr,
+                loading: _downloading,
                 borderColor: t.border,
               ),
               const SizedBox(height: 12),
 
               // URL + Copiar
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color:        t.surfaceAlt,
+                  color: t.surfaceAlt,
                   borderRadius: BorderRadius.circular(12),
-                  border:       Border.all(color: t.border),
+                  border: Border.all(color: t.border),
                 ),
                 child: Row(
                   children: [
@@ -220,17 +220,20 @@ class _ShareModalState extends State<ShareModal> {
                       child: Text(
                         _shareUrl,
                         style: TextStyle(fontSize: 12, color: t.text),
-                        maxLines:  1,
-                        overflow:  TextOverflow.ellipsis,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: _copyLink,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color:        t.primary,
+                          color: t.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -238,16 +241,16 @@ class _ShareModalState extends State<ShareModal> {
                           children: [
                             Icon(
                               _copied ? Icons.check : Icons.copy_outlined,
-                              size:  14,
+                              size: 14,
                               color: Colors.white,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               _copied ? 'Copiado' : 'Copiar',
                               style: const TextStyle(
-                                fontSize:   11,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color:      Colors.white,
+                                color: Colors.white,
                               ),
                             ),
                           ],
@@ -276,49 +279,49 @@ class _ActionButton extends StatelessWidget {
     this.borderColor,
   });
 
-  final String      label;
-  final Color       bg;
-  final Color       fg;
+  final String label;
+  final Color bg;
+  final Color fg;
   final VoidCallback? onTap;
-  final IconData?   icon;
-  final bool        loading;
-  final Color?      borderColor;
+  final IconData? icon;
+  final bool loading;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height:    44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color:        bg,
-            borderRadius: BorderRadius.circular(12),
-            border:       borderColor != null ? Border.all(color: borderColor!) : null,
-          ),
-          child: loading
-              ? SizedBox(
-                  width:  18,
-                  height: 18,
-                  child:  CircularProgressIndicator(strokeWidth: 2, color: fg),
-                )
-              : Row(
-                  mainAxisSize:      MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(icon, size: 16, color: fg),
-                      const SizedBox(width: 6),
-                    ],
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize:   13,
-                        fontWeight: FontWeight.w700,
-                        color:      fg,
-                      ),
-                    ),
-                  ],
+    onTap: onTap,
+    child: Container(
+      height: 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: borderColor != null ? Border.all(color: borderColor!) : null,
+      ),
+      child: loading
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 16, color: fg),
+                  const SizedBox(width: 6),
+                ],
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
                 ),
-        ),
-      );
+              ],
+            ),
+    ),
+  );
 }

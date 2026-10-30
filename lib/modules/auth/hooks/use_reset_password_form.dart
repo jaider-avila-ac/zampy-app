@@ -5,21 +5,21 @@ import '../../../services/auth_service.dart';
 
 class UseResetPasswordForm extends ChangeNotifier {
   final List<TextEditingController> codeControllers = [];
-  final List<FocusNode>             codeFocusNodes  = [];
-  final passwordCtrl  = TextEditingController();
-  final confirmCtrl   = TextEditingController();
+  final List<FocusNode> codeFocusNodes = [];
+  final passwordCtrl = TextEditingController();
+  final confirmCtrl = TextEditingController();
 
-  bool   _loading      = false;
-  bool   _done         = false;
-  String _error        = '';
-  bool   _showPass     = false;
-  bool   _showConfirm  = false;
+  bool _loading = false;
+  bool _done = false;
+  String _error = '';
+  bool _showPass = false;
+  bool _showConfirm = false;
 
-  bool   get loading     => _loading;
-  bool   get done        => _done;
-  String get error       => _error;
-  bool   get showPass    => _showPass;
-  bool   get showConfirm => _showConfirm;
+  bool get loading => _loading;
+  bool get done => _done;
+  String get error => _error;
+  bool get showPass => _showPass;
+  bool get showConfirm => _showConfirm;
 
   UseResetPasswordForm() {
     for (var i = 0; i < 6; i++) {
@@ -41,17 +41,17 @@ class UseResetPasswordForm extends ChangeNotifier {
   String get _code => codeControllers.map((c) => c.text).join();
 
   Future<bool> submit() async {
-    final code     = _code.trim();
+    final code = _code.trim();
     final password = passwordCtrl.text;
-    final confirm  = confirmCtrl.text;
+    final confirm = confirmCtrl.text;
 
     if (code.length < 6) {
       _error = 'Ingresa el código de 6 dígitos.';
       notifyListeners();
       return false;
     }
-    if (password.length < 8) {
-      _error = 'La contraseña debe tener al menos 8 caracteres.';
+    if (password.length < 6) {
+      _error = 'La contraseña debe tener al menos 6 caracteres.';
       notifyListeners();
       return false;
     }
@@ -62,7 +62,7 @@ class UseResetPasswordForm extends ChangeNotifier {
     }
 
     _loading = true;
-    _error   = '';
+    _error = '';
     notifyListeners();
 
     try {
@@ -70,7 +70,18 @@ class UseResetPasswordForm extends ChangeNotifier {
       _done = true;
       return true;
     } on AuthServiceException catch (e) {
-      _error = e.message;
+      final msg = e.message;
+      if (msg.contains('CODE_EXPIRED') || msg.contains('EXPIRED')) {
+        _error = 'El código expiró. Vuelve a solicitar uno nuevo.';
+      } else if (msg.contains('CODE_INVALID') || msg.contains('INVALID')) {
+        _error = 'Código incorrecto. Revisa tu correo.';
+      } else {
+        _error = msg.isEmpty ? 'No se pudo cambiar la contraseña.' : msg;
+      }
+      for (final c in codeControllers) {
+        c.clear();
+      }
+      if (codeFocusNodes.isNotEmpty) codeFocusNodes.first.requestFocus();
       return false;
     } catch (_) {
       _error = 'Error de conexión. Inténtalo de nuevo.';
@@ -83,8 +94,12 @@ class UseResetPasswordForm extends ChangeNotifier {
 
   @override
   void dispose() {
-    for (final c in codeControllers) { c.dispose(); }
-    for (final f in codeFocusNodes)  { f.dispose(); }
+    for (final c in codeControllers) {
+      c.dispose();
+    }
+    for (final f in codeFocusNodes) {
+      f.dispose();
+    }
     passwordCtrl.dispose();
     confirmCtrl.dispose();
     super.dispose();

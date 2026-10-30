@@ -1,69 +1,83 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/app_cache.dart';
 import '../../../services/mis_menus_service.dart';
+import '../../explore/models/explore_models.dart';
+import '../models/dashboard_models.dart';
 
-// Equivalente a src/modules/dashboard/hooks/useMisMenus.js en React
-// Sin lógica de delete (se implementará después)
+// Equivalente a src/modules/dashboard/hooks/useMisMenus.js en React.
+// Tarjetas propias + colaboraciones, ambas con código público.
 
 class UseMisMenus extends ChangeNotifier {
-  List<dynamic> _menus        = [];
-  List<dynamic> _colaborados  = [];
-  bool          _loading      = true;
-  bool          _loadingColab = true;
-  int?          _openMenuId;
+  List<TarjetaMenu> _menus = [];
+  List<ColaboracionMenu> _colaborados = [];
+  int? _limiteMenus;
+  bool _loading = true;
+  bool _loadingColab = true;
+  String? _errorMenus;
+  String? _errorColab;
 
-  List<dynamic> get menus        => _menus;
-  List<dynamic> get colaborados  => _colaborados;
-  bool          get loading      => _loading;
-  bool          get loadingColab => _loadingColab;
-  int?          get openMenuId   => _openMenuId;
-
-  // limiteMenus viene del primer menú (igual que React)
-  int? get limiteMenus {
-    if (_menus.isEmpty) return null;
-    final sub = (_menus[0] as Map<String, dynamic>)['subscription'];
-    if (sub == null) return null;
-    return (sub as Map<String, dynamic>)['limiteMenus'] as int?;
-  }
+  List<TarjetaMenu> get menus => _menus;
+  List<ColaboracionMenu> get colaborados => _colaborados;
+  int? get limiteMenus => _limiteMenus;
+  bool get loading => _loading;
+  bool get loadingColab => _loadingColab;
+  String? get errorMenus => _errorMenus;
+  String? get errorColab => _errorColab;
 
   bool get atLimit {
-    final lim = limiteMenus;
+    final lim = _limiteMenus;
     return lim != null && _menus.length >= lim;
   }
 
   Future<void> load() async {
-    // Stale-while-revalidate: mostrar caché inmediatamente
     final cachedMenus = AppCache.get('mis_menus');
     final cachedColab = AppCache.get('mis_colaboraciones');
-    if (cachedMenus != null) {
-      _menus   = _sorted(cachedMenus as List);
+    if (cachedMenus is MisMenusData) {
+      _applyMenus(cachedMenus);
       _loading = false;
     }
-    if (cachedColab != null) {
-      _colaborados  = cachedColab as List;
+    if (cachedColab is List) {
+      _colaborados = cachedColab.whereType<ColaboracionMenu>().toList();
       _loadingColab = false;
     }
     if (cachedMenus != null || cachedColab != null) notifyListeners();
 
-    // Fetch en paralelo
     await Future.wait([_fetchMenus(), _fetchColaboraciones()]);
   }
 
   Future<void> reload() async {
-    _loading      = true;
+    _loading = true;
     _loadingColab = true;
+    _errorMenus = null;
+    _errorColab = null;
     notifyListeners();
     await Future.wait([_fetchMenus(), _fetchColaboraciones()]);
   }
 
+  Future<void> retryMenus() async {
+    _loading = true;
+    _errorMenus = null;
+    notifyListeners();
+    await _fetchMenus();
+  }
+
+  Future<void> retryColaboraciones() async {
+    _loadingColab = true;
+    _errorColab = null;
+    notifyListeners();
+    await _fetchColaboraciones();
+  }
+
   Future<void> _fetchMenus() async {
     try {
-      final data = await MisMenusService.getAll();
-      final sorted = _sorted(data);
+      final data = await MisMenusService.getTarjetas();
+      _applyMenus(data);
+      _errorMenus = null;
       AppCache.set('mis_menus', data);
-      _menus = sorted;
-    } catch (_) {
+    } catch (e) {
       AppCache.markStale('mis_menus');
+      if (_menus.isEmpty) _errorMenus = _cleanError(e);
     }
     _loading = false;
     notifyListeners();
@@ -71,34 +85,22 @@ class UseMisMenus extends ChangeNotifier {
 
   Future<void> _fetchColaboraciones() async {
     try {
-      final data = await MisMenusService.misColaboraciones();
-      AppCache.set('mis_colaboraciones', data);
+      final data = await MisMenusService.getColaboraciones();
       _colaborados = data;
-    } catch (_) {
+      _errorColab = null;
+      AppCache.set('mis_colaboraciones', data);
+    } catch (e) {
       AppCache.markStale('mis_colaboraciones');
+      if (_colaborados.isEmpty) _errorColab = _cleanError(e);
     }
     _loadingColab = false;
     notifyListeners();
   }
 
-  // Ordena por createdAt descendente (igual que useMemo en React)
-  List<dynamic> _sorted(List<dynamic> raw) {
-    final list = List<dynamic>.from(raw);
-    list.sort((a, b) {
-      final da = DateTime.tryParse((a as Map)['createdAt'] as String? ?? '') ?? DateTime(0);
-      final db = DateTime.tryParse((b as Map)['createdAt'] as String? ?? '') ?? DateTime(0);
-      return db.compareTo(da);
-    });
-    return list;
+  void _applyMenus(MisMenusData data) {
+    _menus = data.items;
+    _limiteMenus = data.limiteMenus;
   }
 
-  void toggleDropdown(int menuId) {
-    _openMenuId = _openMenuId == menuId ? null : menuId;
-    notifyListeners();
-  }
-
-  void closeDropdown() {
-    _openMenuId = null;
-    notifyListeners();
-  }
+  String _cleanError(Object e) => e.toString().replaceFirst('Exception: ', '');
 }

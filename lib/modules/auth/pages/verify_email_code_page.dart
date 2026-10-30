@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../context/auth_context.dart';
+import '../../../services/auth_redirect.dart';
 import '../../../shared/app_colors.dart';
 import '../hooks/use_verify_email_code.dart';
 
@@ -12,7 +13,13 @@ import '../hooks/use_verify_email_code.dart';
 
 class VerifyEmailCodePage extends StatefulWidget {
   final String email;
-  const VerifyEmailCodePage({super.key, required this.email});
+  final bool fresh;
+
+  const VerifyEmailCodePage({
+    super.key,
+    required this.email,
+    this.fresh = false,
+  });
 
   @override
   State<VerifyEmailCodePage> createState() => _VerifyEmailCodePageState();
@@ -24,7 +31,12 @@ class _VerifyEmailCodePageState extends State<VerifyEmailCodePage> {
   @override
   void initState() {
     super.initState();
-    _ctrl = UseVerifyEmailCode(widget.email);
+    _ctrl = UseVerifyEmailCode(widget.email, fresh: widget.fresh);
+    if (widget.email.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/register');
+      });
+    }
   }
 
   @override
@@ -72,7 +84,9 @@ class _VerifyView extends StatelessWidget {
                   'assets/logos/imagotipo-blanco-zammpy.svg',
                   height: 32,
                   colorFilter: const ColorFilter.mode(
-                      Colors.white, BlendMode.srcIn),
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
                 const SizedBox(height: 32),
 
@@ -84,10 +98,15 @@ class _VerifyView extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3), width: 1),
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: ctrl.verified
-                      ? _SuccessState(onContinue: () => context.go('/'))
+                      ? _SuccessState(
+                          onContinue: () =>
+                              context.go(AuthRedirect.consume() ?? '/'),
+                        )
                       : _FormState(ctrl: ctrl, email: email, auth: auth),
                 ),
               ],
@@ -106,55 +125,67 @@ class _FormState extends StatelessWidget {
     required this.auth,
   });
   final UseVerifyEmailCode ctrl;
-  final String              email;
-  final AuthContext          auth;
+  final String email;
+  final AuthContext auth;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const Icon(Icons.mark_email_read_outlined,
-            size: 48, color: Colors.white),
+        const Icon(
+          Icons.mark_email_read_outlined,
+          size: 48,
+          color: Colors.white,
+        ),
         const SizedBox(height: 16),
-        const Text('Verifica tu correo',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white)),
+        const Text(
+          'Verifica tu correo',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Enviamos un código de 6 dígitos a\n$email',
           textAlign: TextAlign.center,
           style: TextStyle(
-              fontSize: 14, color: Colors.white.withValues(alpha: 0.85)),
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
         ),
         const SizedBox(height: 28),
 
         if (ctrl.error.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(bottom: 16),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.red.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text(ctrl.error,
-                style: const TextStyle(fontSize: 13, color: Colors.white)),
+            child: Text(
+              ctrl.error,
+              style: const TextStyle(fontSize: 13, color: Colors.white),
+            ),
           ),
 
         // 6 cajas de dígito
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(6, (i) => _DigitBox(
-            controller: ctrl.controllers[i],
-            focusNode:  ctrl.focusNodes[i],
-            nextFocus:  i < 5 ? ctrl.focusNodes[i + 1] : null,
-            prevFocus:  i > 0 ? ctrl.focusNodes[i - 1] : null,
-            onFilled: () {
-              if (i == 5) _submit(context, ctrl, auth);
-            },
-          )),
+          children: List.generate(
+            6,
+            (i) => _DigitBox(
+              controller: ctrl.controllers[i],
+              focusNode: ctrl.focusNodes[i],
+              nextFocus: i < 5 ? ctrl.focusNodes[i + 1] : null,
+              prevFocus: i > 0 ? ctrl.focusNodes[i - 1] : null,
+              onFilled: () {
+                if (i == 5) _submit(context, ctrl, auth);
+              },
+            ),
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -165,19 +196,24 @@ class _FormState extends StatelessWidget {
               backgroundColor: Colors.white,
               foregroundColor: AppColors.kBlue,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            onPressed:
-                ctrl.loading ? null : () => _submit(context, ctrl, auth),
+            onPressed: ctrl.loading ? null : () => _submit(context, ctrl, auth),
             child: ctrl.loading
                 ? SizedBox(
-                    width: 18, height: 18,
+                    width: 18,
+                    height: 18,
                     child: CircularProgressIndicator(
-                        color: AppColors.kBlue, strokeWidth: 2))
-                : const Text('Verificar',
-                    style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700)),
+                      color: AppColors.kBlue,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text(
+                    'Verificar',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
           ),
         ),
         const SizedBox(height: 16),
@@ -192,18 +228,23 @@ class _FormState extends StatelessWidget {
                 ? 'Reenviar en ${ctrl.cooldown}s'
                 : 'Reenviar código',
             style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withValues(
-                    alpha: ctrl.cooldown > 0 ? 0.5 : 1.0),
-                fontWeight: FontWeight.w500),
+              fontSize: 14,
+              color: Colors.white.withValues(
+                alpha: ctrl.cooldown > 0 ? 0.5 : 1.0,
+              ),
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
     );
   }
 
-  Future<void> _submit(BuildContext context, UseVerifyEmailCode ctrl,
-      AuthContext auth) async {
+  Future<void> _submit(
+    BuildContext context,
+    UseVerifyEmailCode ctrl,
+    AuthContext auth,
+  ) async {
     await ctrl.submit(auth);
     // La navegación la maneja _VerifyView al detectar ctrl.verified
   }
@@ -219,17 +260,22 @@ class _SuccessState extends StatelessWidget {
       children: [
         const Icon(Icons.check_circle_outline, size: 56, color: Colors.white),
         const SizedBox(height: 16),
-        const Text('¡Cuenta verificada!',
-            style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Colors.white)),
+        const Text(
+          '¡Cuenta verificada!',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
           'Tu correo fue verificado correctamente.',
           textAlign: TextAlign.center,
           style: TextStyle(
-              fontSize: 14, color: Colors.white.withValues(alpha: 0.85)),
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.85),
+          ),
         ),
         const SizedBox(height: 28),
         SizedBox(
@@ -239,13 +285,15 @@ class _SuccessState extends StatelessWidget {
               backgroundColor: Colors.white,
               foregroundColor: AppColors.kBlue,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: onContinue,
-            child: const Text('Continuar',
-                style:
-                    TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Continuar',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
           ),
         ),
       ],
@@ -264,10 +312,10 @@ class _DigitBox extends StatelessWidget {
   });
 
   final TextEditingController controller;
-  final FocusNode             focusNode;
-  final FocusNode?            nextFocus;
-  final FocusNode?            prevFocus;
-  final VoidCallback?         onFilled;
+  final FocusNode focusNode;
+  final FocusNode? nextFocus;
+  final FocusNode? prevFocus;
+  final VoidCallback? onFilled;
 
   @override
   Widget build(BuildContext context) {
@@ -275,33 +323,37 @@ class _DigitBox extends StatelessWidget {
       width: 44,
       height: 56,
       child: TextField(
-        controller:    controller,
-        focusNode:     focusNode,
-        textAlign:     TextAlign.center,
-        maxLength:     1,
-        keyboardType:  TextInputType.number,
+        controller: controller,
+        focusNode: focusNode,
+        textAlign: TextAlign.center,
+        maxLength: 1,
+        keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Colors.white),
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
         decoration: InputDecoration(
           counterText: '',
           contentPadding: EdgeInsets.zero,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+              color: Colors.white.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+              color: Colors.white.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
-            borderSide:
-                const BorderSide(color: Colors.white, width: 2),
+            borderSide: const BorderSide(color: Colors.white, width: 2),
           ),
           fillColor: Colors.white.withValues(alpha: 0.15),
           filled: true,

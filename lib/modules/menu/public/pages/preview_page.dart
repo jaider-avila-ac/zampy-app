@@ -6,18 +6,17 @@ import '../../../../shared/app_colors.dart';
 import '../hooks/use_public_menu.dart';
 
 // Equivalente a src/modules/menu/public/pages/PreviewPage.jsx en React
-// Muestra el borrador del menú con una barra de "Vista previa" arriba.
-// Por ahora solo lectura — publicar/guardar tema se implementa después.
+// Muestra el borrador del menÃº con una barra de "Vista previa" arriba.
+// Por ahora solo lectura â€” publicar/guardar tema se implementa despuÃ©s.
 
 class PreviewPage extends StatelessWidget {
   const PreviewPage({super.key, required this.menuId});
-  final int menuId;
+  final String menuId;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => UsePublicMenu()
-          ..load(previewId: menuId.toString()),
+      create: (_) => UsePublicMenu()..load(previewId: menuId),
       child: _PreviewView(menuId: menuId),
     );
   }
@@ -25,7 +24,7 @@ class PreviewPage extends StatelessWidget {
 
 class _PreviewView extends StatelessWidget {
   const _PreviewView({required this.menuId});
-  final int menuId;
+  final String menuId;
 
   @override
   Widget build(BuildContext context) {
@@ -34,9 +33,7 @@ class _PreviewView extends StatelessWidget {
     if (ctrl.loading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0F172A),
-        body: Center(
-          child: CircularProgressIndicator(color: AppColors.kBlue),
-        ),
+        body: Center(child: CircularProgressIndicator(color: AppColors.kBlue)),
       );
     }
 
@@ -47,13 +44,17 @@ class _PreviewView extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Menú no encontrado.',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+              const Text(
+                'MenÃº no encontrado.',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+              ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () => context.pop(),
-                child: const Text('Volver',
-                    style: TextStyle(color: AppColors.kBlue)),
+                child: const Text(
+                  'Volver',
+                  style: TextStyle(color: AppColors.kBlue),
+                ),
               ),
             ],
           ),
@@ -66,15 +67,19 @@ class _PreviewView extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Barra de preview ───────────────────────────────────────────
+            // â”€â”€ Barra de preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             _PreviewBar(menuId: menuId),
-            // ── Menú (borrador) ────────────────────────────────────────────
+            // â”€â”€ MenÃº (borrador) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             Expanded(
               child: MenuPage(
-                menuData:     ctrl.menuData!,
-                menuSlug:     null,         // sin registro de vistas ni ShareModal
-                showQrButton: true,         // icono visible pero sin acción
-                isPublished:  false,
+                menuData: ctrl.menuData!,
+                menuSlug: ctrl.menuData!.slug.isEmpty
+                    ? null
+                    : ctrl.menuData!.slug,
+                menuCodigo: ctrl.menuData!.menuId,
+                showQrButton: true,
+                isPublished: false,
+                esPropio: true,
               ),
             ),
           ],
@@ -86,12 +91,12 @@ class _PreviewView extends StatelessWidget {
 
 class _PreviewBar extends StatelessWidget {
   const _PreviewBar({required this.menuId});
-  final int menuId;
+  final String menuId;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color:   const Color(0xFF0F172A),
+      color: const Color(0xFF0F172A),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
@@ -100,25 +105,34 @@ class _PreviewBar extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color:        Colors.white.withValues(alpha: 0.08),
+                color: Colors.white.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.arrow_back,
-                  size: 16, color: Color(0xFF94A3B8)),
+              child: const Icon(
+                Icons.arrow_back,
+                size: 16,
+                color: Color(0xFF94A3B8),
+              ),
             ),
           ),
           const SizedBox(width: 12),
-          const Icon(Icons.visibility_outlined,
-              size: 14, color: Color(0xFFFBBF24)),
-          const SizedBox(width: 6),
-          const Text(
-            'Vista previa',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                color: Colors.white),
+          const Icon(
+            Icons.visibility_outlined,
+            size: 14,
+            color: Color(0xFFFBBF24),
           ),
           const SizedBox(width: 6),
           const Text(
-            '— Borrador · no publicado aún',
+            'Vista previa',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            'â€” Borrador Â· no publicado aÃºn',
             style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
           ),
         ],

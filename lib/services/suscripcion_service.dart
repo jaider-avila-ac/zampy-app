@@ -1,164 +1,156 @@
-import 'dart:convert';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
-import 'api.dart';
+import 'api_client.dart';
 
-// Equivalente a src/services/suscripcionService.js en React
+// Equivalente a src/services/suscripcionService.js en React.
+// La api identifica suscripciones, pagos y menús por su código público: en la app ese código es su
+// "id" (rutas /billing/sus/:susId y /billing/:menuCodigo). Igual que conSus/conPago de React, se copia
+// codigo → id y menuCodigo → menId para que las pantallas no dependan del nombre del campo.
 
-const _storage = FlutterSecureStorage(
-  aOptions: AndroidOptions(encryptedSharedPreferences: true),
-);
+Map<String, dynamic> conPago(Map<String, dynamic> pago) => {
+  ...pago,
+  'id': pago['codigo'],
+};
 
-Future<Map<String, String>> _authHeaders() async {
-  try {
-    final raw = await _storage.read(key: 'auth');
-    if (raw == null) return {'Content-Type': 'application/json'};
-    final token = (jsonDecode(raw) as Map<String, dynamic>)['token'] as String?;
-    return {
-      'Content-Type': 'application/json',
-      if (token != null) 'Authorization': 'Bearer $token',
-    };
-  } catch (_) {
-    return {'Content-Type': 'application/json'};
-  }
-}
+Map<String, dynamic> conSus(Map<String, dynamic> sus) => {
+  ...sus,
+  'id': sus['codigo'],
+  'menId': sus['menuCodigo'],
+  if (sus['pagos'] is List)
+    'pagos': (sus['pagos'] as List)
+        .whereType<Map>()
+        .map((p) => conPago(Map<String, dynamic>.from(p)))
+        .toList(),
+};
 
-Future<dynamic> _req(
-  String method,
-  String path, [
-  Map<String, dynamic>? body,
-]) async {
-  final headers = await _authHeaders();
-  final uri = Uri.parse('$kApiBase$path');
-  final http.Response res;
-
-  switch (method) {
-    case 'GET':
-      res = await http.get(uri, headers: headers).timeout(const Duration(seconds: 30));
-    case 'POST':
-      res = await http.post(uri, headers: headers,
-          body: body != null ? jsonEncode(body) : null)
-          .timeout(const Duration(seconds: 30));
-    case 'PATCH':
-      res = await http.patch(uri, headers: headers,
-          body: body != null ? jsonEncode(body) : null)
-          .timeout(const Duration(seconds: 30));
-    case 'DELETE':
-      res = await http.delete(uri, headers: headers)
-          .timeout(const Duration(seconds: 30));
-    default:
-      throw UnsupportedError('Method not supported: $method');
-  }
-
-  if (res.statusCode == 401) throw Exception('Sesión expirada');
-  if (res.statusCode == 204) return null;
-  if (res.statusCode < 200 || res.statusCode >= 300) {
-    String msg = 'Error ${res.statusCode}';
-    try {
-      msg = (jsonDecode(res.body) as Map)['message'] as String? ?? msg;
-    } catch (_) {}
-    throw Exception(msg);
-  }
-  return res.body.isNotEmpty ? jsonDecode(res.body) : null;
-}
+Map<String, dynamic> _map(dynamic data) =>
+    data is Map ? Map<String, dynamic>.from(data) : <String, dynamic>{};
 
 class SuscripcionService {
   SuscripcionService._();
 
-  static Future<Map<String, dynamic>> getPrecio() async {
-    final data = await _req('GET', '/api/v1/suscripciones/precio');
-    return data as Map<String, dynamic>;
+  static final _api = ApiClient.instance;
+
+  /// Precio actual y planes activos (no requiere sesión).
+  static Future<Map<String, dynamic>> getPrecio() async =>
+      _map(await _api.get('/api/v1/suscripciones/precio', auth: false));
+
+  static Future<List<Map<String, dynamic>>> getMisSuscripciones() async {
+    final data = await _api.get('/api/v1/suscripciones');
+    if (data is! List) return [];
+    return data
+        .whereType<Map>()
+        .map((s) => conSus(Map<String, dynamic>.from(s)))
+        .toList();
   }
 
-  static Future<Map<String, dynamic>> getEstadoPasarela() async {
-    final data = await _req('GET', '/api/v1/suscripciones/estado-pasarela');
-    return data as Map<String, dynamic>;
-  }
+  static Future<Map<String, dynamic>> getMiSuscripcionById(String susId) async =>
+      conSus(_map(await _api.get('/api/v1/suscripciones/$susId')));
 
-  static Future<List<dynamic>> getMisSuscripciones() async {
-    final data = await _req('GET', '/api/v1/suscripciones');
-    return data as List<dynamic>;
-  }
-
-  static Future<Map<String, dynamic>> getMiSuscripcionById(int susId) async {
-    final data = await _req('GET', '/api/v1/suscripciones/$susId');
-    return data as Map<String, dynamic>;
-  }
-
-  static Future<Map<String, dynamic>?> getMiSuscripcion(int menuId) async {
+  /// null si el menú aún no tiene suscripción.
+  static Future<Map<String, dynamic>?> getMiSuscripcion(String menId) async {
     try {
-      final data = await _req('GET', '/api/v1/suscripciones/menus/$menuId');
-      return data as Map<String, dynamic>?;
-    } catch (e) {
-      if (e.toString().contains('404') || e.toString().contains('Error 404')) return null;
+      final data = await _api.get('/api/v1/suscripciones/menus/$menId');
+      return data is Map ? conSus(Map<String, dynamic>.from(data)) : null;
+    } on ApiException catch (e) {
+      if (e.status == 404) return null;
       rethrow;
     }
   }
 
-  static Future<List<dynamic>> getMisPagos(int menuId) async {
-    final data = await _req('GET', '/api/v1/suscripciones/menus/$menuId/pagos');
-    return data as List<dynamic>;
+  /// Página de pagos: { items, siguiente } (cursor; null si no hay más).
+  static Future<Map<String, dynamic>> getMisPagos(
+    String menId, {
+    String? despues,
+  }) async {
+    final r = _map(
+      await _api.get(
+        '/api/v1/suscripciones/menus/$menId/pagos',
+        query: {'despues': ?despues},
+      ),
+    );
+    return {
+      ...r,
+      'items': (r['items'] as List? ?? [])
+          .whereType<Map>()
+          .map((p) => conPago(Map<String, dynamic>.from(p)))
+          .toList(),
+    };
   }
 
-  static Future<Map<String, dynamic>> iniciarPago(int menuId) async {
-    final data = await _req('POST', '/api/v1/suscripciones/menus/$menuId/pagar');
-    return data as Map<String, dynamic>;
-  }
+  /// Renueva el mismo plan. Devuelve { checkoutUrl, referencia, montoCentavos, ... }.
+  static Future<Map<String, dynamic>> iniciarPago(String menId) async =>
+      _map(await _api.post('/api/v1/suscripciones/menus/$menId/pagar'));
 
-  static Future<Map<String, dynamic>> iniciarCheckout(int menuId, [String? plan]) async {
-    final data = await _req('POST', '/api/v1/suscripciones/menus/$menuId/checkout',
-        plan != null ? {'plan': plan} : {});
-    return data as Map<String, dynamic>;
-  }
+  /// Compra de un plan (o cambio).
+  static Future<Map<String, dynamic>> iniciarCheckout(
+    String menId, [
+    String? plan,
+  ]) async => _map(
+    await _api.post(
+      '/api/v1/suscripciones/menus/$menId/checkout',
+      body: {'plan': ?plan},
+    ),
+  );
 
-  static Future<Map<String, dynamic>> iniciarUpgrade(int menuId) async {
-    final data = await _req('POST', '/api/v1/suscripciones/menus/$menuId/upgrade');
-    return data as Map<String, dynamic>;
-  }
+  static Future<Map<String, dynamic>> iniciarUpgrade(String menId) async =>
+      _map(await _api.post('/api/v1/suscripciones/menus/$menId/upgrade'));
 
+  /// Pago integrado con tarjeta tokenizada. Devuelve { wompiTxId, status, mensaje }.
   static Future<Map<String, dynamic>> pagarConTarjeta(
-    int menuId, {
+    String menId, {
     required String tipoPlan,
     required String cardToken,
     required String acceptanceToken,
     required String personalAuthToken,
-  }) async {
-    final data = await _req('POST', '/api/v1/suscripciones/menus/$menuId/pagar-con-tarjeta', {
-      'tipoPlan': tipoPlan,
-      'cardToken': cardToken,
-      'acceptanceToken': acceptanceToken,
-      'personalAuthToken': personalAuthToken,
-    });
-    return data as Map<String, dynamic>;
-  }
+  }) async => _map(
+    await _api.post(
+      '/api/v1/suscripciones/menus/$menId/pagar-con-tarjeta',
+      body: {
+        'tipoPlan': tipoPlan,
+        'cardToken': cardToken,
+        'acceptanceToken': acceptanceToken,
+        'personalAuthToken': personalAuthToken,
+      },
+    ),
+  );
 
-  static Future<Map<String, dynamic>> getAcceptanceTokens() async {
-    final data = await _req('GET', '/api/v1/suscripciones/acceptance-tokens');
-    return data as Map<String, dynamic>;
-  }
+  // ── Cobro automático ──────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getAcceptanceTokens() async =>
+      _map(await _api.get('/api/v1/suscripciones/acceptance-tokens'));
 
   static Future<void> guardarFuentePago(
-      int susId, String cardToken, String acceptanceToken, String personalAuthToken) async {
-    await _req('POST', '/api/v1/suscripciones/$susId/fuente-pago', {
-      'cardToken': cardToken,
-      'acceptanceToken': acceptanceToken,
-      'personalAuthToken': personalAuthToken,
-    });
+    String susId,
+    String cardToken,
+    String acceptanceToken,
+    String personalAuthToken,
+  ) async {
+    await _api.post(
+      '/api/v1/suscripciones/$susId/fuente-pago',
+      body: {
+        'cardToken': cardToken,
+        'acceptanceToken': acceptanceToken,
+        'personalAuthToken': personalAuthToken,
+      },
+    );
   }
 
-  static Future<void> eliminarFuentePago(int susId) async {
-    await _req('DELETE', '/api/v1/suscripciones/$susId/fuente-pago');
+  static Future<void> eliminarFuentePago(String susId) async {
+    await _api.delete('/api/v1/suscripciones/$susId/fuente-pago');
   }
 
-  static Future<void> toggleCobroAuto(int susId, bool enabled) async {
-    await _req('PATCH', '/api/v1/suscripciones/$susId/cobro-auto', {'enabled': enabled});
+  static Future<void> toggleCobroAuto(String susId, bool enabled) async {
+    await _api.patch(
+      '/api/v1/suscripciones/$susId/cobro-auto',
+      body: {'enabled': enabled},
+    );
   }
 
-  static Future<void> cancelarSuscripcion(int menuId) async {
-    await _req('DELETE', '/api/v1/suscripciones/menus/$menuId');
+  static Future<void> cancelarSuscripcion(String menId) async {
+    await _api.delete('/api/v1/suscripciones/menus/$menId');
   }
 
-  static Future<void> cancelarAlFin(int susId) async {
-    await _req('POST', '/api/v1/suscripciones/$susId/cancelar');
+  /// Cancela al fin del período pagado.
+  static Future<void> cancelarAlFin(String susId) async {
+    await _api.post('/api/v1/suscripciones/$susId/cancelar');
   }
 }

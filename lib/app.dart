@@ -1,221 +1,300 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'modules/explore/pages/explore_page.dart';
-import 'modules/menu/public/pages/public_menu_page.dart';
-import 'modules/menu/public/pages/demo_preview_page.dart';
-import 'modules/notifications/pages/notifications_page.dart';
-import 'modules/growth/achievements/pages/logros_page.dart';
-import 'modules/growth/invitations/pages/invitaciones_page.dart';
+
+import 'components/layout/aviso_ubicacion.dart';
+import 'context/auth_context.dart';
+import 'modules/about/pages/about_page.dart';
+import 'modules/auth/pages/forgot_password_page.dart';
+import 'modules/auth/pages/invite_page.dart';
 import 'modules/auth/pages/login_page.dart';
 import 'modules/auth/pages/register_page.dart';
-import 'modules/auth/pages/verify_email_code_page.dart';
-import 'modules/auth/pages/forgot_password_page.dart';
 import 'modules/auth/pages/reset_password_page.dart';
-import 'shared/app_colors.dart';
-import 'modules/profile/pages/settings_page.dart';
-import 'modules/profile/pages/profile_page.dart';
+import 'modules/auth/pages/verify_email_code_page.dart';
+import 'modules/auth/pages/verify_email_sent_page.dart';
+import 'modules/dashboard/pages/menu_hub_page.dart';
 import 'modules/dashboard/pages/mis_menus_page.dart';
-import 'modules/menu/public/pages/preview_page.dart';
-import 'modules/menu/editor/stats/pages/estadisticas_page.dart';
-import 'modules/menu/editor/pages/menu_editor_page.dart';
-import 'modules/menu/editor/pages/menu_info_page.dart';
-import 'modules/menu/editor/pages/product_form_page.dart';
+import 'modules/explore/pages/explore_page.dart';
+import 'modules/growth/achievements/pages/logros_page.dart';
+import 'modules/growth/invitations/pages/invitaciones_page.dart';
 import 'modules/menu/create/create_menu_page.dart';
-import 'modules/subscription/pages/suscripcion_page.dart';
-import 'modules/subscription/pages/suscripcion_overview_page.dart';
-import 'modules/subscription/pages/suscripcion_detail_page.dart';
-import 'modules/subscription/pages/planes_page.dart';
+import 'modules/menu/editor/live/menu_editor_live_page.dart';
+import 'modules/menu/editor/live/product_form_live_page.dart';
+import 'modules/menu/editor/stats/pages/estadisticas_page.dart';
+import 'modules/menu/public/pages/demo_preview_page.dart';
+import 'modules/menu/public/pages/preview_page.dart';
+import 'modules/menu/public/pages/public_menu_page.dart';
+import 'modules/notifications/pages/notifications_page.dart';
+import 'modules/profile/pages/profile_page.dart';
+import 'modules/profile/pages/settings_page.dart';
 import 'modules/subscription/pages/checkout_page.dart';
-import 'modules/about/pages/about_page.dart';
+import 'modules/subscription/pages/planes_page.dart';
+import 'modules/subscription/pages/suscripcion_detail_page.dart';
+import 'modules/subscription/pages/suscripcion_overview_page.dart';
+import 'modules/subscription/pages/suscripcion_page.dart';
+import 'services/auth_redirect.dart';
+import 'shared/app_colors.dart';
 
-// Equivalente a src/App.jsx + src/router/ en React
-// Rutas Fase 1 + Fase 2
-
-// RouteObserver global — permite que _ExploreViewState detecte cuando el usuario
-// vuelve al explorador desde otra pantalla y haga refetch en background
 final routeObserver = RouteObserver<ModalRoute<void>>();
 
-final _router = GoRouter(
-  observers:       [routeObserver],
-  initialLocation: '/',
-  routes: [
-    // ── Fase 1: explorador y menú público ──────────────────────────────────
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const ExplorePage(),
-    ),
-    GoRoute(
-      path: '/menu/:slug',
-      builder: (context, state) {
-        final slug = state.pathParameters['slug']!;
-        return PublicMenuPage(slug: slug);
-      },
-    ),
-    GoRoute(
-      path: '/preview/demo',
-      builder: (context, state) => const DemoPreviewPage(),
-    ),
-    GoRoute(
-      path: '/preview/:id',
-      builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return PreviewPage(menuId: id);
-      },
-    ),
-    GoRoute(
-      path: '/notifications',
-      builder: (context, state) => const NotificationsPage(),
-    ),
-    GoRoute(
-      path: '/menus',
-      builder: (context, state) => const MisMenusPage(),
-    ),
-    GoRoute(
-      path: '/menus/new',
-      builder: (context, state) => const CreateMenuPage(),
-    ),
-    GoRoute(
-      path: '/menus/:id/estadisticas',
-      builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return EstadisticasPage(menuId: id);
-      },
-    ),
-    GoRoute(
-      path: '/menus/:id/edit',
-      builder: (context, state) {
-        final id  = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        final tab = state.uri.queryParameters['tab'];
-        return MenuEditorPage(menuId: id, initialTab: tab);
-      },
-    ),
-    GoRoute(
-      path: '/menus/:id/info',
-      builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return MenuInfoPage(menuId: id);
-      },
-    ),
-    GoRoute(
-      path: '/menus/:id/products/new',
-      builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return ProductFormPage(menuId: id);
-      },
-    ),
-    GoRoute(
-      path: '/menus/:id/products/:pid',
-      builder: (context, state) {
-        final id  = int.tryParse(state.pathParameters['id']  ?? '') ?? 0;
-        final pid = state.pathParameters['pid'] ?? '';
-        return ProductFormPage(menuId: id, productId: pid);
-      },
-    ),
-    GoRoute(
-      path: '/logros',
-      builder: (context, state) => const LogrosPage(),
-    ),
-    GoRoute(
-      path: '/invitaciones',
-      builder: (context, state) => const InvitacionesPage(),
-    ),
-    GoRoute(
-      path: '/settings',
-      builder: (context, state) => const SettingsPage(),
-    ),
-    GoRoute(
-      path: '/suscripcion',
-      builder: (context, state) => const SuscripcionOverviewPage(),
-    ),
-    GoRoute(
-      path: '/perfil',
-      builder: (context, state) => const ProfilePage(),
-    ),
-    // ── Planes de suscripción ─────────────────────────────────────────────
-    GoRoute(
-      path: '/menus/:id/planes',
-      builder: (context, state) {
-        final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 0;
-        return PlanesPage(menuId: id);
-      },
-    ),
+bool _isPublicPath(String path) {
+  if (path == '/' || path == '/explore' || path == '/about') return true;
+  if (path == '/preview/demo') return true;
+  if (path.startsWith('/menu/')) return true;
+  if (path.startsWith('/invite/')) return true;
+  if (path == '/login' || path == '/register') return true;
+  if (path == '/auth/verify-sent' ||
+      path == '/auth/verify-code' ||
+      path == '/auth/forgot-password' ||
+      path == '/auth/reset-password') {
+    return true;
+  }
+  return false;
+}
 
-    // ── Suscripción / Billing ──────────────────────────────────────────────
-    // IMPORTANTE: /billing/sus/:susId debe ir ANTES de /billing/:menuId
-    // para que el segmento literal "sus" tenga prioridad.
-    GoRoute(
-      path: '/billing/sus/:susId',
-      builder: (context, state) {
-        final susId = int.tryParse(state.pathParameters['susId'] ?? '') ?? 0;
-        return SuscripcionDetailPage(susId: susId);
-      },
-    ),
-    GoRoute(
-      path: '/billing/:menuId',
-      builder: (context, state) {
-        final menuId = int.tryParse(state.pathParameters['menuId'] ?? '') ?? 0;
-        return SuscripcionPage(menuId: menuId);
-      },
-      routes: [
-        GoRoute(
-          path: 'checkout',
-          builder: (context, state) {
-            final menuId = int.tryParse(state.pathParameters['menuId'] ?? '') ?? 0;
-            final q      = state.uri.queryParameters;
-            return CheckoutPage(
-              menuId: menuId,
-              tipo:   q['tipo'] ?? 'checkout',
-              plan:   q['plan'],
-            );
-          },
+bool _isGuestPath(String path) {
+  return path == '/login' || path == '/register' || path.startsWith('/invite/');
+}
+
+GoRouter _buildRouter(AuthContext auth) {
+  return GoRouter(
+    observers: [routeObserver],
+    initialLocation: '/',
+    refreshListenable: auth,
+    redirect: (context, state) {
+      final path = state.matchedLocation;
+
+      if (auth.loading) {
+        if (_isPublicPath(path)) return null;
+        AuthRedirect.remember(state.uri.toString());
+        return '/login';
+      }
+
+      final loggedIn = auth.isLoggedIn;
+
+      if (!loggedIn && !_isPublicPath(path)) {
+        AuthRedirect.remember(state.uri.toString());
+        return '/login';
+      }
+
+      if (loggedIn && _isGuestPath(path)) {
+        return AuthRedirect.consume() ?? '/';
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(path: '/', builder: (context, state) => const ExplorePage()),
+      GoRoute(
+        path: '/explore',
+        builder: (context, state) => const ExplorePage(),
+      ),
+      GoRoute(
+        path: '/menu/:slug',
+        builder: (context, state) {
+          final slug = state.pathParameters['slug']!;
+          final query = state.uri.queryParameters;
+          return PublicMenuPage(
+            slug: slug,
+            staffMode: query['staff'] == '1',
+            initialProductId: query['producto'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/preview/demo',
+        builder: (context, state) => const DemoPreviewPage(),
+      ),
+      GoRoute(
+        path: '/preview/:codigo',
+        builder: (context, state) =>
+            PreviewPage(menuId: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsPage(),
+      ),
+      GoRoute(
+        path: '/menus',
+        builder: (context, state) => const MisMenusPage(),
+      ),
+      GoRoute(
+        path: '/menus/new',
+        builder: (context, state) => const CreateMenuPage(),
+      ),
+      GoRoute(
+        path: '/menus/:codigo',
+        builder: (context, state) =>
+            MenuHubPage(codigo: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/menus/:codigo/estadisticas',
+        builder: (context, state) =>
+            EstadisticasPage(menuId: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/menus/:codigo/edit',
+        builder: (context, state) {
+          final tab = state.uri.queryParameters['tab'];
+          return LiveMenuEditorPage(
+            codigo: state.pathParameters['codigo'] ?? '',
+            initialTab: tab,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/menus/:codigo/info',
+        builder: (context, state) => LiveMenuEditorPage(
+          codigo: state.pathParameters['codigo'] ?? '',
+          initialTab: 'info',
         ),
-      ],
-    ),
+      ),
+      GoRoute(
+        path: '/menus/:codigo/products/new',
+        builder: (context, state) =>
+            LiveProductFormPage(codigo: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/menus/:codigo/products/:pid',
+        builder: (context, state) => LiveProductFormPage(
+          codigo: state.pathParameters['codigo'] ?? '',
+          productCode: state.pathParameters['pid'],
+        ),
+      ),
+      GoRoute(path: '/logros', builder: (context, state) => const LogrosPage()),
+      GoRoute(
+        path: '/invitaciones',
+        builder: (context, state) => const InvitacionesPage(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: '/suscripcion',
+        builder: (context, state) => const SuscripcionOverviewPage(),
+      ),
+      GoRoute(
+        path: '/perfil',
+        builder: (context, state) => const ProfilePage(),
+      ),
+      // Menús y suscripciones se identifican por su código público (texto).
+      GoRoute(
+        path: '/menus/:codigo/planes',
+        builder: (context, state) =>
+            PlanesPage(menuId: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/billing/sus/:susId',
+        builder: (context, state) =>
+            SuscripcionDetailPage(
+              susId: state.pathParameters['susId'] ?? '',
+              wompiTxId: state.uri.queryParameters['id'],
+            ),
+      ),
+      GoRoute(
+        path: '/billing/:menuId',
+        builder: (context, state) =>
+            SuscripcionPage(
+              menuId: state.pathParameters['menuId'] ?? '',
+              wompiTxId: state.uri.queryParameters['id'],
+            ),
+        routes: [
+          GoRoute(
+            path: 'checkout',
+            builder: (context, state) {
+              final menuId = state.pathParameters['menuId'] ?? '';
+              final q = state.uri.queryParameters;
+              return CheckoutPage(
+                menuId: menuId,
+                tipo: q['tipo'] ?? 'checkout',
+                plan: q['plan'],
+              );
+            },
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          return LoginPage(
+            registered: q['registered'] == 'true',
+            verified: q['verified'] == 'true',
+            resetSuccess: q['resetSuccess'] == 'true',
+            verifyError: q['verifyError'],
+            oauthError: q['error'],
+          );
+        },
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/invite/:code',
+        builder: (context, state) {
+          return InvitePage(code: state.pathParameters['code'] ?? '');
+        },
+      ),
+      GoRoute(
+        path: '/auth/verify-code',
+        builder: (context, state) {
+          final extra = state.extra;
+          final email = extra is Map
+              ? (extra['email']?.toString() ?? '')
+              : (extra as String? ?? '');
+          final fresh = extra is Map
+              ? extra['fresh'] == true
+              : state.uri.queryParameters['fresh'] == 'true';
+          return VerifyEmailCodePage(email: email, fresh: fresh);
+        },
+      ),
+      GoRoute(
+        path: '/auth/verify-sent',
+        builder: (context, state) {
+          final extra = state.extra;
+          final email = extra is Map
+              ? extra['email']?.toString()
+              : extra as String?;
+          return VerifyEmailSentPage(email: email);
+        },
+      ),
+      GoRoute(
+        path: '/auth/forgot-password',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/auth/reset-password',
+        builder: (context, state) {
+          final extra = state.extra;
+          final email = extra is Map
+              ? extra['email']?.toString()
+              : extra as String?;
+          return ResetPasswordPage(email: email);
+        },
+      ),
+      GoRoute(path: '/about', builder: (context, state) => const AboutPage()),
+    ],
+  );
+}
 
-    // ── Fase 2: autenticación ───────────────────────────────────────────────
-    GoRoute(
-      path: '/login',
-      builder: (context, state) {
-        final q           = state.uri.queryParameters;
-        final registered  = q['registered'] == 'true';
-        final verified    = q['verified']   == 'true';
-        final oauthError  = q['oauthError'];
-        return LoginPage(
-          registered: registered,
-          verified:   verified,
-          oauthError: oauthError,
-        );
-      },
-    ),
-    GoRoute(
-      path: '/register',
-      builder: (context, state) => const RegisterPage(),
-    ),
-    GoRoute(
-      path: '/auth/verify-code',
-      builder: (context, state) {
-        // El email se pasa como extra desde RegisterPage
-        final email = state.extra as String? ?? '';
-        return VerifyEmailCodePage(email: email);
-      },
-    ),
-    GoRoute(
-      path: '/auth/forgot-password',
-      builder: (context, state) => const ForgotPasswordPage(),
-    ),
-    GoRoute(
-      path: '/auth/reset-password',
-      builder: (context, state) => const ResetPasswordPage(),
-    ),
-    GoRoute(
-      path: '/about',
-      builder: (context, state) => const AboutPage(),
-    ),
-  ],
-);
+class ZammpyApp extends StatefulWidget {
+  const ZammpyApp({super.key, required this.auth});
 
-class ZammpyApp extends StatelessWidget {
-  const ZammpyApp({super.key});
+  final AuthContext auth;
+
+  @override
+  State<ZammpyApp> createState() => _ZammpyAppState();
+}
+
+class _ZammpyAppState extends State<ZammpyApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    _router = _buildRouter(widget.auth);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -223,6 +302,11 @@ class ZammpyApp extends StatelessWidget {
       title: 'Zammpy',
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
+      builder: (context, child) => AvisoUbicacion(
+        auth: widget.auth,
+        router: _router,
+        child: child ?? const SizedBox.shrink(),
+      ),
       theme: ThemeData(
         colorSchemeSeed: AppColors.kBlue,
         fontFamily: 'Roboto',

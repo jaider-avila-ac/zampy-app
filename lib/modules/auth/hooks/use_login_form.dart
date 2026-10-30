@@ -5,16 +5,16 @@ import '../../../services/auth_service.dart';
 // Equivalente a src/modules/auth/hooks/useLoginForm.js en React
 
 class UseLoginForm extends ChangeNotifier {
-  final emailCtrl    = TextEditingController();
+  final emailCtrl = TextEditingController();
   final passwordCtrl = TextEditingController();
 
-  bool   _loading    = false;
-  String _error      = '';
-  bool   _showPass   = false;
+  bool _loading = false;
+  String _error = '';
+  bool _showPass = false;
 
-  bool   get loading  => _loading;
-  String get error    => _error;
-  bool   get showPass => _showPass;
+  bool get loading => _loading;
+  String get error => _error;
+  bool get showPass => _showPass;
 
   void toggleShowPass() {
     _showPass = !_showPass;
@@ -22,7 +22,7 @@ class UseLoginForm extends ChangeNotifier {
   }
 
   Future<bool> submit(AuthContext auth) async {
-    final email    = emailCtrl.text.trim();
+    final email = emailCtrl.text.trim();
     final password = passwordCtrl.text;
 
     if (email.isEmpty || password.isEmpty) {
@@ -32,7 +32,7 @@ class UseLoginForm extends ChangeNotifier {
     }
 
     _loading = true;
-    _error   = '';
+    _error = '';
     notifyListeners();
 
     try {
@@ -40,10 +40,20 @@ class UseLoginForm extends ChangeNotifier {
       await auth.login(data);
       return true;
     } on AuthServiceException catch (e) {
-      _error = e.message;
+      if (e.status == 429) {
+        _error = e.message.isEmpty
+            ? 'Demasiados intentos fallidos. Espera unos minutos e intenta de nuevo.'
+            : e.message;
+      } else if (e.status != null) {
+        _error = e.message.isEmpty
+            ? 'Correo o contraseña incorrectos.'
+            : e.message;
+      } else {
+        _error = 'Error de conexión. Intenta de nuevo.';
+      }
       return false;
     } catch (_) {
-      _error = 'Error de conexión. Inténtalo de nuevo.';
+      _error = 'Error de conexión. Intenta de nuevo.';
       return false;
     } finally {
       _loading = false;

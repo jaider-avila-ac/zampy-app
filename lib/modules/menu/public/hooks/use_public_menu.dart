@@ -1,8 +1,9 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart' hide MenuTheme;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
-import '../../../../services/api.dart';
+
+import '../../../../services/api_client.dart';
 import '../../../../services/themes_catalog_service.dart';
 import '../models/public_menu_model.dart';
 
@@ -13,202 +14,228 @@ const _storage = FlutterSecureStorage(
 // Equivalente a src/modules/menu/public/hooks/usePublicMenu.js en React
 
 class UsePublicMenu extends ChangeNotifier {
-  // Un client por instancia — se cierra en dispose() para cancelar
-  // cualquier request en vuelo cuando el usuario sale del menú.
-  // Esto evita que siga descargando imágenes/datos de un menú que ya no se ve.
-  final _client   = http.Client();
-  bool  _disposed = false;
-
   PublicMenuData? _menuData;
-  bool    _loading  = true;
-  bool    _notFound = false;
-  String  _slug     = '';
+  bool _loading = true;
+  bool _notFound = false;
+  String _slug = '';
+  String? _error;
+  bool _staffMode = false;
+  bool _esEditor = false;
 
   PublicMenuData? get menuData => _menuData;
-  bool            get loading  => _loading;
-  bool            get notFound => _notFound;
-  String          get slug     => _slug;
+  bool get loading => _loading;
+  bool get notFound => _notFound;
+  String get slug => _slug;
+  String? get error => _error;
+  bool get staffMode => _staffMode;
+  bool get esEditor => _esEditor;
 
-  Future<void> load({String? slug, bool isDemo = false, String? previewId}) async {
-    _loading  = true;
+  Future<void> load({
+    String? slug,
+    bool isDemo = false,
+    String? previewId,
+    bool staffMode = false,
+  }) async {
+    _loading = true;
     _notFound = false;
+    _error = null;
     _menuData = null;
-    if (!_disposed) notifyListeners();
+    _staffMode = staffMode;
+    _esEditor = false;
+    notifyListeners();
 
     try {
-      final data = isDemo
-          ? await _getDemoData(_client)
-          : previewId != null
-              ? await _getPreviewData(previewId, _client)
-              : await _getPublicData(slug!, _client);
+      PublicMenuData? data;
 
-      if (_disposed) return; // el usuario ya salió — no actualizar estado
+      if (isDemo) {
+        data = await _loadDemo();
+      } else if (previewId != null) {
+        data = await _loadPreview(previewId);
+        _esEditor = true;
+      } else if (slug != null && slug.isNotEmpty) {
+        _slug = slug;
+        final hasSession = await _hasSession();
+        if (hasSession && !staffMode) {
+          final acceso = await _getAcceso(slug);
+          if (acceso?['puedeEditar'] == true) {
+            final codigo = acceso?['codigo']?.toString();
+            if (codigo != null && codigo.isNotEmpty) {
+              data = await _loadPreview(codigo);
+              _esEditor = true;
+            }
+          }
+        }
+        data ??= await _loadPublic(slug);
+      }
+
       if (data == null) {
         _notFound = true;
       } else {
         _menuData = data;
-        _slug     = slug ?? '';
+        _slug = data.slug.isNotEmpty ? data.slug : (slug ?? _slug);
       }
+    } on ApiException catch (e) {
+      _notFound = e.status == 404;
+      _error = e.message;
     } catch (_) {
-      if (_disposed) return;
       _notFound = true;
+      _error = 'No se pudo cargar el menú.';
     }
+
     _loading = false;
-    if (!_disposed) notifyListeners();
+    notifyListeners();
   }
 
-  @override
-  void dispose() {
-    _disposed = true;
-    _client.close(); // cancela el request en vuelo si el usuario salió antes de terminar
-    super.dispose();
-  }
-
-  // ── GET /api/v1/public/menu/:slug ─────────────────────────────────────────
-  static Future<PublicMenuData?> _getPublicData(
-      String slug, http.Client client) async {
-    final results = await Future.wait([
-      client
-          .get(Uri.parse('$kApiBase/api/v1/public/menu/$slug'))
-          .timeout(const Duration(seconds: 15)),
-      ThemesCatalogService.load(),
-    ]);
-
-    final res     = results[0] as http.Response;
-    final catalog = results[1] as List<CatalogSkin>;
-
-    if (res.statusCode == 404) return null;
-    if (res.statusCode < 200 || res.statusCode >= 300) return null;
-
-    final root      = jsonDecode(res.body) as Map<String, dynamic>;
-    final published = root['published'] as Map<String, dynamic>?;
-    if (published == null) return null;
-
-    final design = published['design'] as Map<String, dynamic>?;
-    final theme  = ThemesCatalogService.resolveTheme(
-      catalog, design?['skinId'], design?['paletteId'],
-    );
-
-    return PublicMenuData.fromJson({
-      ...published,
-      'menuId':  root['id'],
-      'slug':    root['slug'],
-      'ownerId': root['ownerId'],
-      'theme':   null,
-    }).copyWithTheme(theme);
-  }
-
-  // ── GET /api/v1/menus/:id/preview  (borrador del dueño) ──────────────────
-  static Future<PublicMenuData?> _getPreviewData(
-      String id, http.Client client) async {
-    final raw  = await _storage.read(key: 'auth');
-    final tok  = raw != null
-        ? (jsonDecode(raw) as Map<String, dynamic>)['token'] as String?
-        : null;
-    final headers = tok != null ? {'Authorization': 'Bearer $tok'} : <String, String>{};
-
-    final results = await Future.wait([
-      client
-          .get(Uri.parse('$kApiBase/api/v1/menus/$id/preview'), headers: headers)
-          .timeout(const Duration(seconds: 15)),
-      ThemesCatalogService.load(),
-    ]);
-
-    final res     = results[0] as http.Response;
-    final catalog = results[1] as List<CatalogSkin>;
-
-    if (res.statusCode == 404) return null;
-    if (res.statusCode < 200 || res.statusCode >= 300) return null;
-
-    final root   = jsonDecode(res.body) as Map<String, dynamic>;
-    // El endpoint preview devuelve el draft directamente (misma forma que published)
-    final draft  = root['draft'] as Map<String, dynamic>? ?? root;
-    final design = draft['design'] as Map<String, dynamic>?;
-    final theme  = ThemesCatalogService.resolveTheme(
-      catalog, design?['skinId'], design?['paletteId'],
-    );
-
-    return PublicMenuData.fromJson({
-      ...draft,
-      'menuId':  root['id'],
-      'slug':    root['slug']    ?? '',
-      'ownerId': root['ownerId'] ?? 0,
-      'theme':   null,
-    }).copyWithTheme(theme);
-  }
-
-  // ── GET /api/v1/public/demo ───────────────────────────────────────────────
-  static Future<PublicMenuData?> _getDemoData(http.Client client) async {
+  Future<bool> _hasSession() async {
     try {
-      final results = await Future.wait([
-        client
-            .get(Uri.parse('$kApiBase/api/v1/public/demo'))
-            .timeout(const Duration(seconds: 15)),
-        ThemesCatalogService.load(),
-      ]);
+      final raw = await _storage.read(key: 'auth');
+      if (raw == null) return false;
+      final token =
+          (jsonDecode(raw) as Map<String, dynamic>)['token'] as String?;
+      return token != null && token.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 
-      final res     = results[0] as http.Response;
-      final catalog = results[1] as List<CatalogSkin>;
-
-      if (res.statusCode < 200 || res.statusCode >= 300) return _staticDemoData();
-      final root      = jsonDecode(res.body) as Map<String, dynamic>;
-      final published = root['published'] as Map<String, dynamic>?;
-      if (published == null) return _staticDemoData();
-
-      final design = published['design'] as Map<String, dynamic>?;
-      final theme  = ThemesCatalogService.resolveTheme(
-        catalog, design?['skinId'], design?['paletteId'],
+  Future<Map<String, dynamic>?> _getAcceso(String slug) async {
+    try {
+      final data = await ApiClient.instance.get(
+        '/api/v1/menus/acceso',
+        query: {'slug': slug},
       );
+      if (data is Map<String, dynamic>) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
-      return PublicMenuData.fromJson({
-        ...published,
-        'menuId':  root['id'],
-        'slug':    root['slug'],
-        'ownerId': root['ownerId'],
-        'theme':   null,
-      }).copyWithTheme(theme);
+  Future<PublicMenuData?> _loadPublic(String slug) async {
+    ApiException? lastError;
+    for (var intento = 0; intento < 3; intento++) {
+      try {
+        final data = await ApiClient.instance.get(
+          '/api/v1/public/menu/$slug',
+          auth: false,
+        );
+        if (data is Map) {
+          final root = Map<String, dynamic>.from(data);
+          if (root['published'] is! Map) return null;
+          final theme = await _fallbackTheme(root);
+          return PublicMenuData.fromRoot(root, catalogTheme: theme);
+        }
+        return null;
+      } on ApiException catch (e) {
+        lastError = e;
+        if (e.status == 404) return null;
+        if (intento < 2) {
+          await Future.delayed(Duration(milliseconds: 700 * (intento + 1)));
+        }
+      }
+    }
+    if (lastError != null) throw lastError;
+    return null;
+  }
+
+  Future<PublicMenuData?> _loadPreview(String codigo) async {
+    final data = await ApiClient.instance.get('/api/v1/menus/$codigo/preview');
+    if (data is! Map) return null;
+    final root = Map<String, dynamic>.from(data);
+    final theme = await _fallbackTheme(root);
+    final menu = PublicMenuData.fromRoot(root, catalogTheme: theme);
+    return menu;
+  }
+
+  Future<PublicMenuData?> _loadDemo() async {
+    try {
+      final data = await ApiClient.instance.get(
+        '/api/v1/public/demo',
+        auth: false,
+      );
+      if (data is! Map) return _staticDemoData();
+      final root = Map<String, dynamic>.from(data);
+      if (root['published'] is! Map) return _staticDemoData();
+      final theme = await _fallbackTheme(root);
+      return PublicMenuData.fromRoot(root, catalogTheme: theme);
     } catch (_) {
       return _staticDemoData();
     }
   }
 
-  // Fallback estático si el backend no responde
+  Future<MenuTheme?> _fallbackTheme(Map<String, dynamic> root) async {
+    if (root['theme'] is Map) return null;
+    final catalog = await ThemesCatalogService.load();
+    if (catalog.isEmpty) return null;
+    final design = root['published'] is Map
+        ? (root['published']['design'] as Map?)?.cast<String, dynamic>()
+        : (root['design'] as Map?)?.cast<String, dynamic>();
+    return ThemesCatalogService.resolveTheme(
+      catalog,
+      design?['skinId'],
+      design?['paletteId'],
+    );
+  }
+
   static PublicMenuData _staticDemoData() {
     return PublicMenuData(
       info: const MenuInfo(
         name: 'Burger & More',
         slogan: 'Sabor que enamora, calidad que conquista',
-        bannerUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&q=75',
+        bannerUrl:
+            'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1200&q=75',
       ),
       theme: const MenuTheme(primary: Color(0xFF4F46E5)),
       categories: const [
         MenuCategory(id: 'burgers', name: 'Hamburguesas', icon: 'burger'),
-        MenuCategory(id: 'drinks',  name: 'Bebidas',      icon: 'cup'),
-        MenuCategory(id: 'desserts',name: 'Postres',      icon: 'cake'),
+        MenuCategory(id: 'drinks', name: 'Bebidas', icon: 'cup'),
+        MenuCategory(id: 'desserts', name: 'Postres', icon: 'cake'),
       ],
       products: const [
         MenuProduct(
-          id: '1', name: 'Classic Burger', categoryId: 'burgers', price: 18000,
-          description: 'Carne de res 150g, lechuga, tomate, cebolla caramelizada y salsa especial.',
-          imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=75',
+          id: '1',
+          name: 'Classic Burger',
+          categoryId: 'burgers',
+          price: 18000,
+          description:
+              'Carne de res 150g, lechuga, tomate, cebolla caramelizada y salsa especial.',
+          imageUrl:
+              'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=75',
           tags: ['Popular'],
         ),
         MenuProduct(
-          id: '2', name: 'BBQ Burger', categoryId: 'burgers', price: 22000,
-          description: 'Doble carne, tocino crocante, cheddar y salsa BBQ ahumada.',
-          imageUrl: 'https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&q=75',
-          promoActive: true, promoPrice: 19000,
+          id: '2',
+          name: 'BBQ Burger',
+          categoryId: 'burgers',
+          price: 22000,
+          description:
+              'Doble carne, tocino crocante, cheddar y salsa BBQ ahumada.',
+          imageUrl:
+              'https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=400&q=75',
+          promoActive: true,
+          promoPrice: 19000,
         ),
         MenuProduct(
-          id: '3', name: 'Limonada Natural', categoryId: 'drinks', price: 7000,
+          id: '3',
+          name: 'Limonada Natural',
+          categoryId: 'drinks',
+          price: 7000,
           description: 'Limonada fresca con menta y azúcar de caña.',
         ),
         MenuProduct(
-          id: '4', name: 'Brownie con Helado', categoryId: 'desserts', price: 10000,
-          description: 'Brownie tibio de chocolate con bola de helado de vainilla.',
-          imageUrl: 'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?w=400&q=75',
+          id: '4',
+          name: 'Brownie con Helado',
+          categoryId: 'desserts',
+          price: 10000,
+          description:
+              'Brownie tibio de chocolate con bola de helado de vainilla.',
+          imageUrl:
+              'https://images.unsplash.com/photo-1564355808539-22fda35bed7e?w=400&q=75',
         ),
       ],
+      slug: 'demo',
+      publicado: false,
     );
   }
 }

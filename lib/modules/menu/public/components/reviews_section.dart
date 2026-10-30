@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart' hide MenuTheme;
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../context/auth_context.dart';
+import '../../../../context/likes_context.dart';
+import '../../../../services/auth_redirect.dart';
 import '../../../../services/interaccion_service.dart';
 import '../models/public_menu_model.dart';
 
 // Equivalente a src/modules/menu/public/components/ReviewsSection.jsx en React
 
 class ReviewModel {
-  final String  id;
-  final String  autorNombre;
+  final String id;
+  final String autorNombre;
   final String? autorAvatar;
-  final String  texto;
+  final String texto;
   final String? tiempoRelativo;
-  final bool    esPropia;
+  final bool esPropia;
 
   const ReviewModel({
     required this.id,
@@ -24,17 +28,20 @@ class ReviewModel {
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) => ReviewModel(
-    id:             json['id']?.toString()            ?? UniqueKey().toString(),
-    autorNombre:    json['autorNombre']  as String?   ?? json['autor'] as String? ?? 'Anónimo',
-    autorAvatar:    json['autorAvatar']  as String?,
-    texto:          json['texto']        as String?   ?? '',
+    id: json['id']?.toString() ?? UniqueKey().toString(),
+    autorNombre:
+        json['autorNombre'] as String? ?? json['autor'] as String? ?? 'Anónimo',
+    autorAvatar: json['autorAvatar'] as String?,
+    texto: json['texto'] as String? ?? '',
     tiempoRelativo: json['tiempoRelativo'] as String?,
-    esPropia:       json['esPropia']     as bool?     ?? false,
+    esPropia: json['esPropia'] as bool? ?? false,
   );
 }
 
 String? _validateReview(String texto) {
-  if (RegExp(r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}').hasMatch(texto)) {
+  if (RegExp(
+    r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}',
+  ).hasMatch(texto)) {
     return 'La reseña no puede contener correos electrónicos';
   }
   if (RegExp(r'https?://|www\.', caseSensitive: false).hasMatch(texto)) {
@@ -48,9 +55,22 @@ String? _validateReview(String texto) {
 
 // ── Datos demo — mismos que React ────────────────────────────────────────────
 const _demoReviews = [
-  ReviewModel(id: 'd1', autorNombre: 'Valentina R.', texto: 'Increíble sabor, el servicio es muy rápido. ¡Volveré pronto!'),
-  ReviewModel(id: 'd2', autorNombre: 'Andrés M.',    texto: 'La hamburguesa clásica es espectacular. Las papas podrían estar más crujientes.'),
-  ReviewModel(id: 'd3', autorNombre: 'Catalina P.',  texto: 'El mejor lugar del sector. El combo familiar alcanzó para todos.'),
+  ReviewModel(
+    id: 'd1',
+    autorNombre: 'Valentina R.',
+    texto: 'Increíble sabor, el servicio es muy rápido. ¡Volveré pronto!',
+  ),
+  ReviewModel(
+    id: 'd2',
+    autorNombre: 'Andrés M.',
+    texto:
+        'La hamburguesa clásica es espectacular. Las papas podrían estar más crujientes.',
+  ),
+  ReviewModel(
+    id: 'd3',
+    autorNombre: 'Catalina P.',
+    texto: 'El mejor lugar del sector. El combo familiar alcanzó para todos.',
+  ),
 ];
 
 class ReviewsSection extends StatefulWidget {
@@ -58,29 +78,35 @@ class ReviewsSection extends StatefulWidget {
     super.key,
     required this.theme,
     this.menuSlug,
+    this.menuCodigo,
     this.meEncantas = 0,
-    this.ownerId,
+    this.esPropio = false,
+    this.staffMode = false,
   });
 
   final MenuTheme theme;
-  final String?   menuSlug;
-  final int       meEncantas;
-  final int?      ownerId;
+  final String? menuSlug;
+  final String? menuCodigo;
+  final int meEncantas;
+  final bool esPropio;
+  final bool staffMode;
 
   @override
   State<ReviewsSection> createState() => _ReviewsSectionState();
 }
 
 class _ReviewsSectionState extends State<ReviewsSection> {
-  List<ReviewModel> _reviews         = [];
-  int               _encantaTotal    = 0;
-  bool              _meEncanta       = false;
-  bool              _myReview        = false;
-  bool              _loadingEncanta  = false;
-  bool              _confirmDelete   = false;
-  bool              _deletingReview  = false;
-  bool              _sending         = false;
-  bool              _loadingData     = true;
+  List<ReviewModel> _reviews = [];
+  int _encantaTotal = 0;
+  bool _meEncanta = false;
+  bool _myReview = false;
+  bool _loadingEncanta = false;
+  bool _confirmDelete = false;
+  bool _deletingReview = false;
+  bool _sending = false;
+  bool _loadingData = true;
+  bool _loadingMore = false;
+  String? _siguiente;
   final _ctrl = TextEditingController();
 
   bool get _isDemo => widget.menuSlug == null;
@@ -90,7 +116,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
     super.initState();
     _encantaTotal = widget.meEncantas;
     if (_isDemo) {
-      _reviews     = List.from(_demoReviews);
+      _reviews = List.from(_demoReviews);
       _loadingData = false;
     } else {
       _loadData();
@@ -98,10 +124,13 @@ class _ReviewsSectionState extends State<ReviewsSection> {
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _loadData() async {
-    final slug      = widget.menuSlug!;
+    final slug = widget.menuSlug!;
     final isLoggedIn = context.read<AuthContext>().isLoggedIn;
 
     final futures = await Future.wait([
@@ -112,33 +141,75 @@ class _ReviewsSectionState extends State<ReviewsSection> {
       if (isLoggedIn) InteraccionService.estadoEncanta(slug),
     ]);
 
-    final rawReviews = futures[0] as List<dynamic>;
-    final resumen    = futures[1] as Map<String, dynamic>?;
-    final encanta    = futures.length > 2 ? futures[2] as Map<String, dynamic>? : null;
+    final page = futures[0] as ResenasPage;
+    final resumen = futures[1] as Map<String, dynamic>?;
+    final encanta = futures.length > 2
+        ? futures[2] as Map<String, dynamic>?
+        : null;
 
     if (!mounted) return;
     setState(() {
-      _reviews      = rawReviews
+      _reviews = page.items
           .whereType<Map<String, dynamic>>()
           .map(ReviewModel.fromJson)
           .toList();
-      _myReview     = _reviews.any((r) => r.esPropia);
-      _encantaTotal = (resumen?['meEncantas'] as num?)?.toInt() ?? widget.meEncantas;
-      _meEncanta    = encanta?['meEncanta'] as bool? ?? false;
-      _loadingData  = false;
+      _siguiente = page.siguiente;
+      _myReview = _reviews.any((r) => r.esPropia);
+      _encantaTotal =
+          (resumen?['meEncantas'] as num?)?.toInt() ?? widget.meEncantas;
+      _meEncanta = encanta?['meEncanta'] as bool? ?? false;
+      _loadingData = false;
     });
+  }
+
+  Future<void> _loadMoreReviews() async {
+    if (_siguiente == null || _loadingMore) return;
+    final auth = context.read<AuthContext>();
+    setState(() => _loadingMore = true);
+    try {
+      final page = auth.isLoggedIn
+          ? await InteraccionService.misResenas(
+              widget.menuSlug!,
+              despues: _siguiente,
+            )
+          : await InteraccionService.getResenas(
+              widget.menuSlug!,
+              despues: _siguiente,
+            );
+      if (!mounted) return;
+      setState(() {
+        _reviews = [
+          ..._reviews,
+          ...page.items.whereType<Map<String, dynamic>>().map(
+            ReviewModel.fromJson,
+          ),
+        ];
+        _siguiente = page.siguiente;
+      });
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
+    }
   }
 
   Future<void> _handleEncanta() async {
     final auth = context.read<AuthContext>();
-    if (!auth.isLoggedIn) { _showAuthModal(); return; }
-    if (_isDemo) return;
+    if (!auth.isLoggedIn) {
+      _showAuthModal();
+      return;
+    }
+    if (_isDemo || widget.menuSlug == null) return;
+
+    final codigo = widget.menuCodigo;
+    if (codigo == null || codigo.isEmpty) return;
+
     setState(() => _loadingEncanta = true);
     try {
-      final data = await InteraccionService.toggleEncanta(widget.menuSlug!);
+      final data = await context.read<LikesContext>().toggleMenu(
+        widget.menuSlug!,
+        codigo,
+      );
       if (data != null && mounted) {
         setState(() {
-          _meEncanta    = data['meEncanta'] as bool? ?? _meEncanta;
           _encantaTotal = (data['total'] as num?)?.toInt() ?? _encantaTotal;
         });
       }
@@ -149,7 +220,10 @@ class _ReviewsSectionState extends State<ReviewsSection> {
 
   Future<void> _handleSendReview() async {
     final auth = context.read<AuthContext>();
-    if (!auth.isLoggedIn) { _showAuthModal(); return; }
+    if (!auth.isLoggedIn) {
+      _showAuthModal();
+      return;
+    }
     final text = _ctrl.text.trim();
     if (text.isEmpty) return;
     final error = _validateReview(text);
@@ -163,14 +237,16 @@ class _ReviewsSectionState extends State<ReviewsSection> {
       if (data != null && mounted) {
         final newReview = ReviewModel.fromJson(data);
         setState(() {
-          _reviews   = [newReview, ..._reviews];
-          _myReview  = true;
+          _reviews = [newReview, ..._reviews];
+          _myReview = true;
           _ctrl.clear();
         });
         _showSnack('¡Gracias por tu opinión!');
       }
     } catch (e) {
-      if (mounted) _showSnack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+      if (mounted) {
+        _showSnack(e.toString().replaceFirst('Exception: ', ''), isError: true);
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -182,8 +258,8 @@ class _ReviewsSectionState extends State<ReviewsSection> {
       await InteraccionService.eliminarResena(widget.menuSlug!);
       if (mounted) {
         setState(() {
-          _reviews       = _reviews.where((r) => !r.esPropia).toList();
-          _myReview      = false;
+          _reviews = _reviews.where((r) => !r.esPropia).toList();
+          _myReview = false;
           _confirmDelete = false;
         });
       }
@@ -204,16 +280,58 @@ class _ReviewsSectionState extends State<ReviewsSection> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(color: widget.theme.border, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: widget.theme.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             Icon(Icons.lock_outline, size: 36, color: widget.theme.primary),
             const SizedBox(height: 12),
-            Text('Inicia sesión',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: widget.theme.text)),
+            Text(
+              'Inicia sesión',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: widget.theme.text,
+              ),
+            ),
             const SizedBox(height: 6),
-            Text('Necesitas una cuenta para realizar esta acción.',
+            Text(
+              'Necesitas una cuenta para realizar esta acción.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: widget.theme.textMuted)),
+              style: TextStyle(fontSize: 13, color: widget.theme.textMuted),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: widget.theme.primary,
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  if (widget.menuSlug != null) {
+                    AuthRedirect.remember('/menu/${widget.menuSlug}');
+                  }
+                  context.push('/login');
+                },
+                child: const Text('Iniciar sesión'),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                if (widget.menuSlug != null) {
+                  AuthRedirect.remember('/menu/${widget.menuSlug}');
+                }
+                context.push('/register');
+              },
+              child: const Text('Crear cuenta'),
+            ),
           ],
         ),
       ),
@@ -222,21 +340,29 @@ class _ReviewsSectionState extends State<ReviewsSection> {
 
   void _showSnack(String msg, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? const Color(0xFFef4444) : const Color(0xFF22c55e),
-      behavior: SnackBarBehavior.floating,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError
+            ? const Color(0xFFef4444)
+            : const Color(0xFF22c55e),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final t          = widget.theme;
-    final auth       = context.watch<AuthContext>();
+    final t = widget.theme;
+    final auth = context.watch<AuthContext>();
+    final likes = context.watch<LikesContext>();
     final isLoggedIn = auth.isLoggedIn;
-    final userId     = auth.user?['userId'] as int?;
-    final isOwner    = isLoggedIn && widget.ownerId != null && userId == widget.ownerId;
-    final reviews    = _isDemo ? _demoReviews : _reviews;
+    final isOwner = widget.esPropio;
+    final reviews = _isDemo ? _demoReviews : _reviews;
+    final meEncantaActivo = _isDemo
+        ? _meEncanta
+        : (widget.menuCodigo != null && likes.menuLiked(widget.menuCodigo!));
+    final puedeInteractuar = !widget.staffMode && !_isDemo;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 32, 16, 0),
@@ -250,69 +376,98 @@ class _ReviewsSectionState extends State<ReviewsSection> {
               children: [
                 Icon(Icons.chat_bubble_outline, size: 16, color: t.primary),
                 const SizedBox(width: 6),
-                Text('RESEÑAS',
+                Text(
+                  'RESEÑAS',
                   style: TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5, color: t.text,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5,
+                    color: t.text,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: t.surfaceAlt,
                     borderRadius: BorderRadius.circular(99),
                   ),
                   child: Text(
                     '${reviews.length}',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: t.textMuted),
-                  ),
-                ),
-                const Spacer(),
-                // Botón Me encanta
-                GestureDetector(
-                  onTap: _loadingEncanta ? null : _handleEncanta,
-                  child: AnimatedOpacity(
-                    opacity: _loadingEncanta ? 0.5 : 1,
-                    duration: const Duration(milliseconds: 150),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color:        _meEncanta ? const Color(0xFFec4899) : t.surfaceAlt,
-                        borderRadius: BorderRadius.circular(t.buttonRadius),
-                        border:       Border.all(
-                          color: _meEncanta ? const Color(0xFFec4899) : t.border,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _meEncanta ? Icons.favorite : Icons.favorite_border,
-                            size: 13,
-                            color: _meEncanta ? Colors.white : t.textMuted,
-                          ),
-                          if (_encantaTotal > 0) ...[
-                            const SizedBox(width: 4),
-                            Text('$_encantaTotal',
-                              style: TextStyle(
-                                fontSize: 11, fontWeight: FontWeight.w600,
-                                color: _meEncanta ? Colors.white : t.textMuted,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(width: 4),
-                          Text('Me encanta',
-                            style: TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.w600,
-                              color: _meEncanta ? Colors.white : t.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: t.textMuted,
                     ),
                   ),
                 ),
+                const Spacer(),
+                if (puedeInteractuar)
+                  GestureDetector(
+                    onTap: _loadingEncanta ? null : _handleEncanta,
+                    child: AnimatedOpacity(
+                      opacity: _loadingEncanta ? 0.5 : 1,
+                      duration: const Duration(milliseconds: 150),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: meEncantaActivo
+                              ? const Color(0xFFec4899)
+                              : t.surfaceAlt,
+                          borderRadius: BorderRadius.circular(t.buttonRadius),
+                          border: Border.all(
+                            color: meEncantaActivo
+                                ? const Color(0xFFec4899)
+                                : t.border,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              meEncantaActivo
+                                  ? Icons.favorite
+                                  : Icons.favorite_border,
+                              size: 13,
+                              color: meEncantaActivo
+                                  ? Colors.white
+                                  : t.textMuted,
+                            ),
+                            if (_encantaTotal > 0) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '$_encantaTotal',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: meEncantaActivo
+                                      ? Colors.white
+                                      : t.textMuted,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(width: 4),
+                            Text(
+                              'Me encanta',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: meEncantaActivo
+                                    ? Colors.white
+                                    : t.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -320,7 +475,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
           const SizedBox(height: 12),
 
           // ── Formulario o prompt de login ───────────────────────────────
-          if (!_isDemo && !isOwner) ...[
+          if (puedeInteractuar && !isOwner) ...[
             if (!isLoggedIn)
               GestureDetector(
                 onTap: _showAuthModal,
@@ -335,21 +490,34 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                   child: Row(
                     children: [
                       Container(
-                        width: 36, height: 36,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color:  t.primary.withValues(alpha: 0.12),
-                          shape:  BoxShape.circle,
+                          color: t.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.chat_bubble_outline, size: 15, color: t.primary),
+                        child: Icon(
+                          Icons.chat_bubble_outline,
+                          size: 15,
+                          color: t.primary,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('¿Quieres dejar tu reseña?',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: t.text)),
-                          Text('Inicia sesión o regístrate →',
-                            style: TextStyle(fontSize: 11, color: t.primary)),
+                          Text(
+                            '¿Quieres dejar tu reseña?',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: t.text,
+                            ),
+                          ),
+                          Text(
+                            'Inicia sesión o regístrate →',
+                            style: TextStyle(fontSize: 11, color: t.primary),
+                          ),
                         ],
                       ),
                     ],
@@ -358,7 +526,10 @@ class _ReviewsSectionState extends State<ReviewsSection> {
               )
             else if (_myReview)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 margin: const EdgeInsets.only(bottom: 12),
                 decoration: BoxDecoration(
                   color: t.surfaceAlt,
@@ -368,43 +539,74 @@ class _ReviewsSectionState extends State<ReviewsSection> {
                 child: _confirmDelete
                     ? Row(
                         children: [
-                          Text('¿Eliminar tu reseña?',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-                              color: Color(0xFFef4444))),
+                          Text(
+                            '¿Eliminar tu reseña?',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFef4444),
+                            ),
+                          ),
                           const Spacer(),
                           TextButton(
-                            onPressed: _deletingReview ? null : () => setState(() => _confirmDelete = false),
-                            child: Text('Cancelar', style: TextStyle(fontSize: 11, color: t.text)),
+                            onPressed: _deletingReview
+                                ? null
+                                : () => setState(() => _confirmDelete = false),
+                            child: Text(
+                              'Cancelar',
+                              style: TextStyle(fontSize: 11, color: t.text),
+                            ),
                           ),
                           const SizedBox(width: 4),
                           ElevatedButton(
-                            onPressed: _deletingReview ? null : _handleDeleteReview,
+                            onPressed: _deletingReview
+                                ? null
+                                : _handleDeleteReview,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFef4444),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
                               minimumSize: Size.zero,
                               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            child: Text(_deletingReview ? 'Eliminando…' : 'Sí, eliminar'),
+                            child: Text(
+                              _deletingReview ? 'Eliminando…' : 'Sí, eliminar',
+                            ),
                           ),
                         ],
                       )
                     : Row(
                         children: [
-                          Text('Ya dejaste una reseña en este menú',
-                            style: TextStyle(fontSize: 12, color: t.textMuted)),
+                          Text(
+                            'Ya dejaste una reseña en este menú',
+                            style: TextStyle(fontSize: 12, color: t.textMuted),
+                          ),
                           const Spacer(),
                           GestureDetector(
                             onTap: () => setState(() => _confirmDelete = true),
                             child: Row(
                               children: [
-                                const Icon(Icons.delete_outline, size: 13, color: Color(0xFFef4444)),
+                                const Icon(
+                                  Icons.delete_outline,
+                                  size: 13,
+                                  color: Color(0xFFef4444),
+                                ),
                                 const SizedBox(width: 3),
-                                const Text('Eliminar',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500,
-                                    color: Color(0xFFef4444))),
+                                const Text(
+                                  'Eliminar',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFFef4444),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -413,33 +615,62 @@ class _ReviewsSectionState extends State<ReviewsSection> {
               )
             else ...[
               // Textarea + botón enviar
-              _ReviewForm(theme: t, ctrl: _ctrl, sending: _sending, onSend: _handleSendReview),
+              _ReviewForm(
+                theme: t,
+                ctrl: _ctrl,
+                sending: _sending,
+                onSend: _handleSendReview,
+              ),
               const SizedBox(height: 12),
             ],
           ],
 
           // ── Lista de reseñas o estado vacío ────────────────────────────
           if (_loadingData)
-            Center(child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              child: CircularProgressIndicator(color: t.primary),
-            ))
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: CircularProgressIndicator(color: t.primary),
+              ),
+            )
           else if (reviews.isEmpty)
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Column(children: [
-                  Icon(Icons.chat_bubble_outline, size: 36,
-                    color: t.textMuted.withValues(alpha: 0.3)),
-                  const SizedBox(height: 8),
-                  Text('Sé el primero en dejar una reseña',
-                    style: TextStyle(fontSize: 13, color: t.textMuted)),
-                ]),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 36,
+                      color: t.textMuted.withValues(alpha: 0.3),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sé el primero en dejar una reseña',
+                      style: TextStyle(fontSize: 13, color: t.textMuted),
+                    ),
+                  ],
+                ),
               ),
             )
           else
             Column(
-              children: reviews.map((rev) => _ReviewCard(review: rev, theme: t)).toList(),
+              children: reviews
+                  .map((rev) => _ReviewCard(review: rev, theme: t))
+                  .toList(),
+            ),
+          if (!_isDemo && _siguiente != null)
+            Center(
+              child: TextButton(
+                onPressed: _loadingMore ? null : _loadMoreReviews,
+                child: Text(
+                  _loadingMore ? 'Cargando…' : 'Ver más reseñas',
+                  style: TextStyle(
+                    color: t.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -455,10 +686,10 @@ class _ReviewForm extends StatefulWidget {
     required this.sending,
     required this.onSend,
   });
-  final MenuTheme            theme;
+  final MenuTheme theme;
   final TextEditingController ctrl;
-  final bool                 sending;
-  final VoidCallback         onSend;
+  final bool sending;
+  final VoidCallback onSend;
 
   @override
   State<_ReviewForm> createState() => _ReviewFormState();
@@ -473,11 +704,12 @@ class _ReviewFormState extends State<_ReviewForm> {
 
   @override
   Widget build(BuildContext context) {
-    final t        = widget.theme;
-    final text     = widget.ctrl.text;
-    final error    = text.trim().isNotEmpty ? _validateReview(text.trim()) : null;
-    final tooLong  = text.length > 150;
-    final canSend  = text.trim().isNotEmpty && !tooLong && error == null && !widget.sending;
+    final t = widget.theme;
+    final text = widget.ctrl.text;
+    final error = text.trim().isNotEmpty ? _validateReview(text.trim()) : null;
+    final tooLong = text.length > 150;
+    final canSend =
+        text.trim().isNotEmpty && !tooLong && error == null && !widget.sending;
     final borderCol = (tooLong || (error != null && text.trim().isNotEmpty))
         ? const Color(0xFFef4444)
         : t.border;
@@ -497,16 +729,25 @@ class _ReviewFormState extends State<_ReviewForm> {
                 ),
                 child: TextField(
                   controller: widget.ctrl,
-                  maxLines:   2,
-                  minLines:   2,
-                  maxLength:  150,
-                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                  maxLines: 2,
+                  minLines: 2,
+                  maxLength: 150,
+                  buildCounter:
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
                   style: TextStyle(fontSize: 13, color: t.text),
                   decoration: InputDecoration(
-                    hintText:         'Comparte tu experiencia...',
-                    hintStyle:        TextStyle(fontSize: 13, color: t.textMuted),
-                    border:           InputBorder.none,
-                    contentPadding:   const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    hintText: 'Comparte tu experiencia...',
+                    hintStyle: TextStyle(fontSize: 13, color: t.textMuted),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                 ),
               ),
@@ -518,18 +759,31 @@ class _ReviewFormState extends State<_ReviewForm> {
                 opacity: canSend ? 1.0 : 0.4,
                 duration: const Duration(milliseconds: 150),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
-                    color:        t.primary,
+                    color: t.primary,
                     borderRadius: BorderRadius.circular(t.buttonRadius),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.send_outlined, size: 13, color: Colors.white),
+                      const Icon(
+                        Icons.send_outlined,
+                        size: 13,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 4),
-                      Text(widget.sending ? 'Enviando…' : 'Enviar',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+                      Text(
+                        widget.sending ? 'Enviando…' : 'Enviar',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -540,14 +794,21 @@ class _ReviewFormState extends State<_ReviewForm> {
         if (error != null && text.trim().isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(error,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFFef4444))),
+            child: Text(
+              error,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFef4444),
+              ),
+            ),
           ),
         Align(
           alignment: Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text('${150 - text.length} caracteres restantes',
+            child: Text(
+              '${150 - text.length} caracteres restantes',
               style: TextStyle(
                 fontSize: 11,
                 color: tooLong ? const Color(0xFFef4444) : t.textMuted,
@@ -564,7 +825,7 @@ class _ReviewFormState extends State<_ReviewForm> {
 class _ReviewCard extends StatelessWidget {
   const _ReviewCard({required this.review, required this.theme});
   final ReviewModel review;
-  final MenuTheme   theme;
+  final MenuTheme theme;
 
   @override
   Widget build(BuildContext context) {
@@ -573,15 +834,19 @@ class _ReviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color:        t.surface,
+        color: t.surface,
         borderRadius: BorderRadius.circular(t.cardRadius),
-        border:       Border.all(color: t.border),
+        border: Border.all(color: t.border),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Avatar
-          _Avatar(nombre: review.autorNombre, avatar: review.autorAvatar, theme: t),
+          _Avatar(
+            nombre: review.autorNombre,
+            avatar: review.autorAvatar,
+            theme: t,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -592,7 +857,11 @@ class _ReviewCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         review.autorNombre,
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: t.text),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: t.text,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -605,7 +874,11 @@ class _ReviewCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   review.texto,
-                  style: TextStyle(fontSize: 13, height: 1.5, color: t.textMuted),
+                  style: TextStyle(
+                    fontSize: 13,
+                    height: 1.5,
+                    color: t.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -618,16 +891,19 @@ class _ReviewCard extends StatelessWidget {
 
 class _Avatar extends StatelessWidget {
   const _Avatar({required this.nombre, this.avatar, required this.theme});
-  final String    nombre;
-  final String?   avatar;
+  final String nombre;
+  final String? avatar;
   final MenuTheme theme;
 
   @override
   Widget build(BuildContext context) {
     if (avatar != null && avatar!.isNotEmpty) {
       return ClipOval(
-        child: Image.network(avatar!,
-          width: 36, height: 36, fit: BoxFit.cover,
+        child: Image.network(
+          avatar!,
+          width: 36,
+          height: 36,
+          fit: BoxFit.cover,
           errorBuilder: (ctx, e, st) => _initials(),
         ),
       );
@@ -636,12 +912,17 @@ class _Avatar extends StatelessWidget {
   }
 
   Widget _initials() => Container(
-        width: 36, height: 36,
-        decoration: BoxDecoration(color: theme.primary, shape: BoxShape.circle),
-        alignment: Alignment.center,
-        child: Text(
-          nombre.isNotEmpty ? nombre[0].toUpperCase() : '?',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-        ),
-      );
+    width: 36,
+    height: 36,
+    decoration: BoxDecoration(color: theme.primary, shape: BoxShape.circle),
+    alignment: Alignment.center,
+    child: Text(
+      nombre.isNotEmpty ? nombre[0].toUpperCase() : '?',
+      style: const TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+        fontSize: 13,
+      ),
+    ),
+  );
 }

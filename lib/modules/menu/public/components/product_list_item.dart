@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart' hide MenuTheme;
+
 import '../models/public_menu_model.dart';
+import 'product_image.dart';
 
 // Equivalente a src/components/ProductListItem.jsx en React
 // Fila de producto en modo lista
@@ -13,7 +15,7 @@ class ProductListItem extends StatelessWidget {
   });
 
   final MenuProduct product;
-  final MenuTheme   theme;
+  final MenuTheme theme;
   final VoidCallback onTap;
 
   @override
@@ -30,20 +32,23 @@ class ProductListItem extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Imagen — 72x72
-            if (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+            // La lista solo muestra imagen cuando el producto realmente
+            // tiene una; las categorías sin imágenes no reservan el espacio.
+            if (product.imageUrl != null && product.imageUrl!.isNotEmpty) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(theme.badgeRadius.clamp(0, 16)),
-                child: Image.network(
-                  product.imageUrl!,
-                  width: 76, height: 76,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, e, st) => _imgFallback(),
+                borderRadius: BorderRadius.circular(
+                  theme.badgeRadius.clamp(0, 16),
                 ),
-              )
-            else
-              _imgFallback(),
-            const SizedBox(width: 12),
+                child: ProductImage(
+                  url: product.imageUrl,
+                  width: 76,
+                  height: 76,
+                  backgroundColor: theme.surfaceAlt,
+                  foregroundColor: theme.textMuted,
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
 
             // Información
             Expanded(
@@ -72,19 +77,36 @@ class ProductListItem extends StatelessWidget {
                   const SizedBox(height: 6),
                   // Precio
                   if (product.hasPromo)
-                    Row(children: [
-                      Text('\$${_fmt(product.price)}',
-                          style: TextStyle(fontSize: 11, color: theme.textMuted,
-                              decoration: TextDecoration.lineThrough)),
-                      const SizedBox(width: 6),
-                      Text('\$${_fmt(product.promoPrice!)}',
-                          style: const TextStyle(fontWeight: FontWeight.w900,
-                              fontSize: 14, color: Color(0xFF22C55E))),
-                    ])
+                    Row(
+                      children: [
+                        Text(
+                          '\$${_fmt(product.price)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.textMuted,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '\$${_fmt(product.promoPrice!)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            color: Color(0xFF22C55E),
+                          ),
+                        ),
+                      ],
+                    )
                   else
-                    Text('\$${_fmt(product.price)}',
-                        style: TextStyle(fontWeight: FontWeight.w900,
-                            fontSize: 14, color: theme.primary)),
+                    Text(
+                      '\$${_fmt(product.price)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        color: theme.primary,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -94,7 +116,11 @@ class ProductListItem extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.remove_red_eye_outlined, size: 12, color: theme.primary),
+                Icon(
+                  Icons.remove_red_eye_outlined,
+                  size: 12,
+                  color: theme.primary,
+                ),
                 const SizedBox(width: 2),
                 Icon(Icons.chevron_right, size: 14, color: theme.primary),
               ],
@@ -105,15 +131,11 @@ class ProductListItem extends StatelessWidget {
     );
   }
 
-  Widget _imgFallback() => Container(
-        width: 76, height: 76,
-        decoration: BoxDecoration(
-            color: theme.surfaceAlt,
-            borderRadius: BorderRadius.circular(theme.badgeRadius.clamp(0, 16))),
-      );
-
   String _fmt(double p) {
     final s = p == p.toInt() ? p.toInt().toString() : p.toString();
-    return s.replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.');
+    return s.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
   }
 }

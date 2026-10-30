@@ -1,24 +1,47 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'api.dart';
+import 'api_client.dart';
+import '../modules/explore/models/explore_models.dart';
+import '../modules/menu/create/models/create_menu_models.dart';
 
 // Equivalente a src/services/publicApiService.js en React
 
 class PublicApiService {
   PublicApiService._();
 
-  // GET /api/v1/public/menus?search=...
-  static Future<List<dynamic>> buscarMenus(String search) async {
-    try {
-      final params = <String, String>{};
-      if (search.trim().isNotEmpty) params['search'] = search.trim();
-      final uri = Uri.parse('$kApiBase/api/v1/public/menus')
-          .replace(queryParameters: params.isEmpty ? null : params);
-      final res = await http.get(uri).timeout(const Duration(seconds: 15));
-      if (res.statusCode < 200 || res.statusCode >= 300) return [];
-      return jsonDecode(res.body) as List;
-    } catch (_) {
-      return [];
-    }
+  static Future<List<TarjetaMenu>> buscarMenus({
+    String search = '',
+    String categoria = '',
+    String municipio = '',
+  }) async {
+    final data = await ApiClient.instance.get(
+      '/api/v1/public/menus',
+      auth: false,
+      query: {
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+        if (categoria.isNotEmpty) 'categoria': categoria,
+        if (municipio.isNotEmpty) 'municipio': municipio,
+      },
+    );
+
+    final list = data is List ? data : const [];
+    return list
+        .whereType<Map>()
+        .map((item) => TarjetaMenu.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+  }
+
+  static Future<List<CategoriaRestaurante>> listarCategorias() async {
+    final data = await ApiClient.instance.get(
+      '/api/v1/public/categorias',
+      auth: false,
+    );
+    final list = data is List ? data : const [];
+    return list
+        .whereType<Map>()
+        .map(
+          (item) =>
+              CategoriaRestaurante.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .where((cat) => cat.codigo.isNotEmpty)
+        .toList();
   }
 }
