@@ -6,6 +6,7 @@ import '../components/logro_card.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
 import '../../../../components/layout/sidebar.dart';
+import '../../../../shared/responsive.dart';
 
 // Equivalente a src/modules/growth/achievements/pages/LogrosPage.jsx
 
@@ -72,16 +73,16 @@ class _LogrosView extends StatelessWidget {
         body: CustomScrollView(
           slivers: [
             // Banner informativo
-            const SliverPadding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
-              sliver: SliverToBoxAdapter(child: _InfoBanner()),
+            SliverPadding(
+              padding: contenidoPadding(context, horizontal: 20, top: 16, bottom: 0),
+              sliver: const SliverToBoxAdapter(child: _InfoBanner()),
             ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
             // Mensajes y aplicar días a un menú
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: contenidoPadding(context, horizontal: 20, top: 0, bottom: 0),
               sliver: SliverToBoxAdapter(child: _Avisos(ctrl: ctrl)),
             ),
 
@@ -123,7 +124,7 @@ class _LogrosView extends StatelessWidget {
             // Listas
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: contenidoPadding(context, horizontal: 20, top: 0, bottom: 32),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     if (ctrl.pendientes.isNotEmpty) ...[

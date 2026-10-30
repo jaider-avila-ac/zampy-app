@@ -8,6 +8,7 @@ import '../../../shared/location_cascade_input.dart';
 import '../../../shared/telefono_input.dart';
 import '../../../components/layout/sidebar.dart';
 import '../hooks/use_profile.dart';
+import '../../../shared/responsive.dart';
 
 // Equivalente a src/modules/profile/pages/ProfilePage.jsx en React
 
@@ -36,7 +37,7 @@ class _ProfileView extends StatelessWidget {
       drawer: const AppSidebar(),
       appBar: const AppHeader(title: 'Mi perfil'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+        padding: contenidoPadding(context, top: 20, bottom: 40),
         children: [
 
           // ── Datos personales ─────────────────────────────────────────────

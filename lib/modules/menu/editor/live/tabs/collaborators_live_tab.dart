@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../../shared/responsive.dart';
 
 import '../../../../../services/colaboracion_service.dart';
 import '../../../../../shared/app_colors.dart';
@@ -248,7 +249,7 @@ class _CollaboratorsLiveTabState extends State<CollaboratorsLiveTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+        padding: contenidoPadding(context),
         children: [
           _invitarSection(),
           const SizedBox(height: 24),

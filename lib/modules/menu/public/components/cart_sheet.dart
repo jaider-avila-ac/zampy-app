@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide MenuTheme;
 import 'package:provider/provider.dart';
+import '../../../../shared/responsive.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../context/auth_context.dart';
@@ -34,6 +35,7 @@ class CartSheet extends StatefulWidget {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        constraints: hojaConstraints(context),
         backgroundColor: Colors.transparent,
         builder: (_) => CartSheet(menuCodigo: menuCodigo, theme: theme, info: info),
       );

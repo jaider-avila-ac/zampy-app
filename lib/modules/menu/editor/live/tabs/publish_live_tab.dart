@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../../shared/responsive.dart';
 
 import '../../../../../services/live_editor_service.dart';
 import '../../../../../shared/app_colors.dart';
@@ -170,7 +171,7 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
         !widget.menu.esPropio && (firstPublish || !widget.menu.tieneAcceso);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
+      padding: contenidoPadding(context, bottom: 30),
       children: [
         // Avisos de la suscripción (solo el dueño puede consultarla); se recargan al cambiar su estado.
         if (widget.menu.esPropio)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../shared/responsive.dart';
 
 import '../../../components/layout/sidebar.dart';
 import '../../../services/pedido_service.dart';
@@ -170,7 +171,7 @@ class _PedidosPageState extends State<PedidosPage> {
           : RefreshIndicator(
               onRefresh: _cargar,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                padding: contenidoPadding(context),
                 children: [
                   const _Nota(),
                   const SizedBox(height: 12),

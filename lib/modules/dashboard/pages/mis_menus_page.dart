@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../../shared/responsive.dart';
 
 import '../../../components/layout/sidebar.dart';
 import '../../../shared/app_colors.dart';
@@ -89,7 +90,7 @@ class _MisMenusView extends StatelessWidget {
           onRefresh: ctrl.reload,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            padding: contenidoPadding(context, maxWidth: 960, bottom: 40),
             children: [
               if (!ctrl.loading && ctrl.limiteMenus != null) ...[
                 _LimitBadge(

@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart' hide MenuTheme;
 import 'package:provider/provider.dart';
+import '../../../../shared/responsive.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../components/ui/auth_required_modal.dart';
@@ -52,6 +53,7 @@ class ProductModal extends StatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      constraints: hojaConstraints(context, maxWidth: 640),
       backgroundColor: Colors.transparent,
       barrierColor: Colors.black.withValues(alpha: 0.68),
       builder: (_) => ProductModal(

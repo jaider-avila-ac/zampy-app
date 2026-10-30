@@ -42,6 +42,10 @@ La actualización se ejecutará **fase por fase**, con autorización explícita 
    - actualización de este documento;
    - resumen al usuario y detención hasta nueva autorización.
 8. Si una fase queda con errores importantes, integraciones pendientes o funcionalidad incompleta, **no se marca COMPLETADA**; se registra su limitación.
+9. **La app también se usa en tablets** (indicado por el usuario el 2026-10-30), sobre todo para la operación del negocio. Toda pantalla nueva o reescrita debe verse bien en anchos de tablet: usar `lib/shared/responsive.dart` (`contenidoPadding` centra listas y formularios sin achicar el área de scroll; `esTablet`/`esAncho` para grillas y dos columnas; `hojaConstraints` para que las hojas inferiores no ocupen todo el ancho).
+10. Si se detecta un error en React se corrige en React y se documenta en la fase (autorizado por el usuario el 2026-10-30). El backend solo se modifica con autorización explícita.
+
+**Adaptación a tablets aplicada (2026-10-30):** `contenidoPadding` en Mis menús, Logros, Invitaciones, Notificaciones, Estadísticas (además 4 métricas por fila en tablet), Mis pedidos, Suscripciones (lista y detalle), Perfil, Ajustes y las pestañas Colaboradores y Publicar del editor. `hojaConstraints` en el carrito y en el detalle del producto. Prueba: `test/responsive_test.dart`. Explorar y el menú público ya usan grillas propias; se revisarán en la Fase 17.
 
 ---
 

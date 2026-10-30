@@ -7,6 +7,7 @@ import '../components/notification_item.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
 import '../../../components/layout/sidebar.dart';
+import '../../../shared/responsive.dart';
 
 // Equivalente a src/modules/notifications/pages/NotificationsPage.jsx
 
@@ -146,7 +147,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
               )
             else if (ctrl.error != null && ctrl.items.isEmpty)
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: contenidoPadding(context, horizontal: 20, top: 0, bottom: 0),
                 sliver: SliverToBoxAdapter(
                   child: _ErrorCard(
                     message: ctrl.error!,
@@ -156,7 +157,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
               )
             else if (ctrl.items.isEmpty)
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: contenidoPadding(context, horizontal: 20, top: 0, bottom: 0),
                 sliver: const SliverToBoxAdapter(child: _EmptyCard()),
               )
             else ...[
@@ -177,7 +178,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                padding: contenidoPadding(context, horizontal: 20, top: 0, bottom: 32),
                 sliver: SliverToBoxAdapter(
                   child: _LoadMore(
                     hayMas: ctrl.hayMas,

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../services/suscripcion_service.dart';
 import '../../../shared/app_colors.dart';
 import '../../../components/layout/sidebar.dart';
+import '../../../shared/responsive.dart';
 
 // Equivalente a src/modules/subscription/pages/SuscripcionOverviewPage.jsx en React
 // Accesible desde el sidebar (/suscripcion).
@@ -95,7 +96,7 @@ class _SuscripcionOverviewPageState extends State<SuscripcionOverviewPage> {
                   child: _suscripciones.isEmpty
                       ? _EmptyState()
                       : ListView.separated(
-                          padding: const EdgeInsets.all(16),
+                          padding: contenidoPadding(context, bottom: 16),
                           itemCount: _suscripciones.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 10),

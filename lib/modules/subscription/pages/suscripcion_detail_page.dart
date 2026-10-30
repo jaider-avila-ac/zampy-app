@@ -8,6 +8,7 @@ import '../../../services/suscripcion_service.dart';
 import '../../../shared/app_colors.dart';
 import '../components/auto_charge_section.dart';
 import '../utils/sus_format.dart';
+import '../../../shared/responsive.dart';
 
 // Equivalente a src/modules/subscription/pages/SuscripcionDetailPage.jsx en React
 // (+ hooks/useSuscripcionDetail.js: recarga con el aviso en vivo de suscripción, sin sondeo).
@@ -260,7 +261,7 @@ class _SuscripcionDetailPageState extends State<SuscripcionDetailPage> {
         (sus?['pagos'] as List?)?.cast<Map<String, dynamic>>() ?? const [];
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: contenidoPadding(context),
       children: [
         if (widget.wompiTxId != null &&
             (!hasSus || estado == 'WAITING_ACTIVATION')) ...[

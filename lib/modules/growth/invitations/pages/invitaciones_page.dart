@@ -6,6 +6,7 @@ import '../hooks/use_invitaciones.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
 import '../../../../components/layout/sidebar.dart';
+import '../../../../shared/responsive.dart';
 
 // Equivalente a src/modules/growth/invitations/pages/InvitacionesPage.jsx
 
@@ -42,7 +43,7 @@ class _InvitacionesView extends StatelessWidget {
         drawer: const AppSidebar(),
         appBar: const AppHeader(title: 'Invitaciones'),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: contenidoPadding(context, horizontal: 20, top: 20, bottom: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../../shared/responsive.dart';
 
 import '../../../../../components/layout/sidebar.dart';
 import '../../../../../services/estadisticas_service.dart';
@@ -135,7 +136,7 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
     final productos = (s['productos'] as List? ?? []).whereType<Map>().toList();
     final encantas = (s['encantasProductos'] as List? ?? []).whereType<Map>().toList();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: contenidoPadding(context, maxWidth: 960),
       children: [
         _rango(),
         const SizedBox(height: 6),
@@ -151,7 +152,7 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
         ],
         const SizedBox(height: 16),
         GridView.count(
-          crossAxisCount: 2,
+          crossAxisCount: esTablet(context) ? 4 : 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 10,

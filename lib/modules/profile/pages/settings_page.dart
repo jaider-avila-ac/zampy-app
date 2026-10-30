@@ -6,6 +6,7 @@ import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
 import '../../../components/layout/sidebar.dart';
 import '../hooks/use_settings.dart';
+import '../../../shared/responsive.dart';
 
 // Equivalente a src/modules/profile/pages/SettingsPage.jsx en React
 
@@ -36,7 +37,7 @@ class _SettingsView extends StatelessWidget {
         color: AppColors.kBlue,
         onRefresh: ctrl.recargarDisp,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+          padding: contenidoPadding(context, top: 20, bottom: 40),
           children: [
 
             // ── Header ─────────────────────────────────────────────────────
