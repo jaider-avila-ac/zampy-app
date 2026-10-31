@@ -79,14 +79,10 @@ class _NotificationsViewState extends State<_NotificationsView> {
     }
   }
 
+  // los pedidos (del cliente y del negocio) se abren encima, para volver a las notificaciones
   void _navigate(String destino) {
-    if (destino == '/pedidos' ||
-        RegExp(r'^/menus/[^/]+/pedidos$').hasMatch(destino)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Los pedidos se habilitan en la Fase 14.'),
-        ),
-      );
+    if (destino == '/pedidos' || RegExp(r'^/menus/[^/]+/pedidos$').hasMatch(destino)) {
+      context.push(destino);
       return;
     }
     context.go(destino);

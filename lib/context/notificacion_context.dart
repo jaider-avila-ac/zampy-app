@@ -148,12 +148,12 @@ class NotificacionContext extends ChangeNotifier {
         try {
           final data = jsonDecode(frame.body ?? '{}') as Map<String, dynamic>;
           final codigo = data['menuCodigo']?.toString();
-          if (codigo != null && codigo.isNotEmpty) {
-            _pedidosMenuCodigo = codigo;
-          }
+          // sin menú en el evento: aplica a cualquier pantalla (no se arrastra el menú del evento anterior)
+          _pedidosMenuCodigo = codigo != null && codigo.isNotEmpty ? codigo : null;
           _pedidosSeq++;
           notifyListeners();
         } catch (_) {
+          _pedidosMenuCodigo = null;
           _pedidosSeq++;
           notifyListeners();
         }

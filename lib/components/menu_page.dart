@@ -20,6 +20,10 @@ import '../modules/menu/public/components/carousel_view.dart';
 import '../modules/menu/public/components/reviews_section.dart';
 import '../modules/menu/public/components/footer.dart';
 import '../modules/menu/public/components/share_modal.dart';
+import '../modules/menu/public/components/order_sheet.dart';
+import '../modules/menu/public/components/orden_mesero_ui.dart';
+import '../modules/mesero/hooks/use_orden_mesero.dart';
+import '../modules/mesero/utils/tomar_orden.dart';
 import '../services/estadisticas_service.dart';
 import '../services/interaccion_service.dart';
 
@@ -41,7 +45,11 @@ class MenuPage extends StatefulWidget {
     this.staffMode = false,
     this.esPropio = false,
     this.initialProductId,
+    this.mesero,
   });
+
+  /// El mesero toma aquí la orden de esta mesa/cuenta (nunca un pedido de cliente). Requiere [menuCodigo].
+  final DestinoOrden? mesero;
 
   final PublicMenuData menuData;
   final String? menuSlug;
@@ -65,6 +73,11 @@ class _MenuPageState extends State<MenuPage> {
   Timer? _viewTimer;
 
   final _searchCtrl = TextEditingController();
+
+  // la orden del mesero: local, aparte del carrito del cliente
+  late final UseOrdenMesero? _orden = widget.mesero == null || widget.menuCodigo == null
+      ? null
+      : UseOrdenMesero(menu: widget.menuCodigo!, destino: widget.mesero!);
 
   // Categorías con "Todos" al inicio — igual que React
   List<MenuCategory> get _allCategories => [
@@ -160,7 +173,24 @@ class _MenuPageState extends State<MenuPage> {
   void dispose() {
     _viewTimer?.cancel();
     _searchCtrl.dispose();
+    _orden?.dispose();
     super.dispose();
+  }
+
+  void _agregarAOrden(Map<String, dynamic> item) {
+    _orden?.agregar(item);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('¡Agregado a la orden!'),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 2),
+    ));
+  }
+
+  Future<void> _abrirOrden() async {
+    final orden = _orden;
+    if (orden == null) return;
+    final volver = await OrderSheet.show(context, orden: orden, theme: widget.menuData.theme);
+    if (volver && mounted) context.pop();
   }
 
   void _openProduct(MenuProduct product) {
@@ -175,6 +205,7 @@ class _MenuPageState extends State<MenuPage> {
       trackView: widget.isPublished && !widget.staffMode,
       staffMode: widget.staffMode,
       esPropio: widget.esPropio,
+      onConfiguredAdd: _orden == null ? null : _agregarAOrden,
     );
   }
 
@@ -219,10 +250,23 @@ class _MenuPageState extends State<MenuPage> {
     final theme = widget.menuData.theme;
     final info = widget.menuData.info;
 
+    final orden = _orden;
     return Stack(
       children: [
-        _contenido(theme, info),
+        if (orden == null)
+          _contenido(theme, info)
+        else
+          Column(children: [
+            BannerOrdenMesero(orden: orden, onVolver: () => context.pop()),
+            Expanded(child: _contenido(theme, info)),
+          ]),
         if (_pedidosActivos) _botonCarrito(theme),
+        if (orden != null)
+          Positioned(
+            right: 16,
+            bottom: 16 + MediaQuery.of(context).padding.bottom,
+            child: BotonOrdenMesero(orden: orden, theme: theme, onPressed: _abrirOrden),
+          ),
       ],
     );
   }

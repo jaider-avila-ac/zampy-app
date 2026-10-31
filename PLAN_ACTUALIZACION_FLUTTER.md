@@ -1292,7 +1292,7 @@ Que en Flutter, igual que en React, el dueño o un editor editen el menú en su 
 
 ### Fase 14 — Pedidos del negocio y mesas
 
-**Estado:** PENDIENTE
+**Estado:** COMPLETADA (2026-10-30)
 **Depende de:** Fase 4, Fase 7, Fase 13.
 **Bloquea a:** Fase 15/16.
 
@@ -1320,13 +1320,48 @@ Implementar la gestión de pedidos y cuentas de mesa del negocio, con estados, p
 - `lib/app.dart`
 
 **Tareas verificables**
-- [ ] Implementar servicios de pedidos/cuentas/mesas con códigos.
-- [ ] Implementar pantalla de pedidos y filtros.
-- [ ] Implementar cuentas, ajustes y pagos.
-- [ ] Implementar CRUD de mesas.
-- [ ] Integrar eventos de pedidos.
-- [ ] Añadir estados y permisos.
-- [ ] Ejecutar analyze/test y documentar.
+- [x] Implementar servicios de pedidos/cuentas/mesas con códigos.
+- [x] Implementar pantalla de pedidos y filtros.
+- [x] Implementar cuentas, ajustes y pagos.
+- [x] Implementar CRUD de mesas.
+- [x] Integrar eventos de pedidos.
+- [x] Añadir estados y permisos.
+- [x] Ejecutar analyze/test y documentar.
+
+**1. React: reorganización de `src/modules/orders` y de mesas (antes de portar)**
+- Antes: `MenuPedidosPage.jsx` (433 líneas) tenía la carga de las tres pestañas, la paginación, las métricas, la confirmación de estados y un único `error`/`cargandoMas` compartido entre pestañas (un error de cuentas aparecía en pedidos). `PedidoTableRow.jsx` duplicaba las acciones (teléfono y escritorio). `PedidoComanda.jsx` era código muerto. `MesasPage.jsx` mezclaba carga, eventos, acciones y vista.
+- Después: `hooks/` (`usePaginaCursor`, `usePedidosNegocio`, `useCuentasCerradas`, `useCuentasEnCurso`, `useResumenVentas`, `useAccionesCuenta`, `useEventosPedidos`), `utils/fechas.js` (`bogotaHoy`), `components/FiltroFechas.jsx`, `components/ResumenVentas.jsx`, `components/pedidos/` (`estadoPedido.js`, `AccionesPedido`, `DetallePedido`, `ValorPagado`, `PedidoTableRow`, `FiltroPedidosPanel`, `VistaPedidos`) y `components/cuentas/` (`CuentasPanel`, `CuentaRow`, `DetalleCuenta`, `AjusteCuentaModal`, `PagoCuentaModal`, `AgregarItemCuentaModal`, `VistaCuentas`). La página quedó en 87 líneas, solo composición. Mesas: `useMesas.js`, `MesaRow.jsx` y `MesasPage.jsx` como composición.
+- Verificación: `eslint` sin errores en `orders` y `mesas`; `vite build` OK.
+
+**2. Errores de React corregidos (detectados al portar)**
+- Asignar repartidor enviaba `Number(codigo)` → `NaN`: los repartidores viajan por el código de su usuario (texto).
+- `ValorPagado` no manejaba el error del guardado (fallaba en silencio); ahora lo muestra.
+- `AgregarItemCuentaModal` filtraba por `p.visible` (no existe) en vez de `isVisible`: se podían agregar productos ocultos.
+- La métrica "Cobrado — valor pagado registrado" mostraba `totalEntregado`, que en el backend es la suma del **total** de los pedidos entregados (no del valor pagado). Ahora dice "Entregado — total de pedidos entregados".
+- `DetalleCuenta` usaba `key={a.id}`/`key={p.id}` en ajustes y pagos, que no traen código (claves `undefined`).
+- `AjusteCuentaModal`, `PagoCuentaModal` y `MesaFormModal` reiniciaban el formulario con `setState` dentro de un efecto (regla `set-state-in-effect`); ahora se montan al abrir con `key`.
+- Mesas: la confirmación de **Activar** salía en rojo (`danger`) como si fuera destructiva; el error no se limpiaba al recargar; la grilla de 5 columnas fijas (~500 px) se desbordaba en el teléfono (ahora tarjeta en móvil y tabla desde `md`).
+- Errores de backend: ninguno encontrado (contrato verificado leyendo `PedidoConsultaService`, `PedidoItemsMapper`, `OrdenMesaReadService`, `CuentaMesaApplicationServiceImpl`, `PedidoGestionService`, `MesaResponse`; sin cambios).
+
+**3. Resultado real de Fase 14 (Flutter)**
+- Servicios: `pedido_service.dart` (pedidos del menú con métricas, cambiar estado, valor pagado, repartidores, asignar repartidor `{repartidor: código}`, resumen de ventas, cuentas cerradas/en curso, ventas por mesero, agregar ítem, ajuste y movimiento de pago con `requestId`) y `mesa_service.dart` (CRUD, activar y cerrar/cancelar cuenta).
+- Modelos tipados por código: `orders/models/pedido_negocio.dart` (`PedidoNegocio`, `ItemPedido` —también ítems antiguos guardados como JSON en texto—, `MetricasPedidos`, `Repartidor`, `ResumenVentas`), `orders/models/cuenta_mesa.dart` (`CuentaMesa`, rondas, ajustes, pagos, `VentaMesero`) y `menu/editor/mesas/mesa_model.dart`.
+- Estado (equivalentes a los hooks): `PaginaCursor<T>` (cursor, cargar más, descarta respuestas viejas, refresco silencioso), `UsePedidosNegocio`, `UseCuentasCerradas` / `UseCuentasEnCurso` (nunca se mezclan), `UseResumenVentas`, `CatalogoMenu` (productos y grupos **publicados**, solo al abrir "Agregar ítem") y `EventosPedidos` (WebSocket por menú).
+- `/menus/:codigo/pedidos` (`MenuPedidosPage`): venta total del rango, pestañas Pedidos / En curso / Cuentas, rango de fechas compartido con el día de Bogotá, métricas, lista paginada, confirmación de estados, valor pagado, repartidor, detalle desplegable, cuentas con ajuste/pago/agregar ítem (modal de producto en modo personal con nota de cocina) y cerrar/cancelar. Refresco silencioso por eventos del menú y con "tirar para recargar". Si el usuario no es dueño/editor se muestra el aviso de permiso.
+- `/menus/:codigo/mesas` (`MesasPage`): lista, crear/editar (hoja inferior), activar/desactivar y eliminar (bloqueado con pedidos activos) con confirmación y refresco en vivo.
+- Tablet: pedidos y mesas pasan de tarjeta a fila con columnas desde 600 px; contenido centrado (1100/900 px); hojas con ancho máximo; "Agregar ítem" muestra catálogo y selección lado a lado.
+- Hub: "Pedidos" y "Mesas" ya abren sus pantallas; las notificaciones "Ver pedidos" / "Ver mis pedidos" navegan (antes avisaban "Fase 14").
+- `ProductModal`: en modo personal muestra "Nota para cocina" y "Agregar a la orden" (`onConfiguredAdd`), igual que React; antes mostraba "Pedir por WhatsApp".
+- `NotificacionContext`: un evento de pedidos sin `menuCodigo` ya no conserva el menú del evento anterior (podía ignorar eventos que sí aplicaban).
+
+**Verificación ejecutada**
+- `flutter analyze`: 0 errores; solo los 2 avisos informativos preexistentes del editor antiguo.
+- `flutter test`: 66/66 OK. Nuevo `test/pedidos_negocio_test.dart` (16 pruebas): formato y día de Bogotá, modelos por código, ítems en texto, acciones por estado, detalle desplegado, cuentas en curso/cerradas, mesas ocupadas, y sin desbordes a 320/360 px y a 1024 px (la prueba detectó y se corrigió un desborde de la tarjeta de venta total con cifras grandes).
+- 16 rutas nuevas responden 401 sin sesión (existen con el contrato usado).
+
+**Limitaciones**
+- Sin prueba E2E con una sesión real (cambiar estados, cerrar cuentas, agregar ítems): requiere iniciar sesión en un dispositivo.
+- Editar una mesa no permite vaciar la capacidad (igual que React: se omite si va vacía).
 
 **Criterios de aceptación**
 1. El negocio ve y cambia estados de pedidos reales.
@@ -1338,7 +1373,7 @@ Implementar la gestión de pedidos y cuentas de mesa del negocio, con estados, p
 
 ### Fase 15 — Modo mesero
 
-**Estado:** PENDIENTE
+**Estado:** COMPLETADA (2026-10-30)
 **Depende de:** Fase 3, Fase 14.
 **Bloquea a:** nada crítico.
 
@@ -1364,12 +1399,44 @@ Implementar la vista de mesero: mesas, cuentas divididas, rondas, pagos y cierre
 - `lib/app.dart`
 
 **Tareas verificables**
-- [ ] Implementar servicios de mesero.
-- [ ] Implementar vista de mesas y panel.
-- [ ] Implementar cuentas/rondas/pagos/cierre.
-- [ ] Implementar pedido desde menú público en modo mesero.
-- [ ] Añadir permisos/rol y tiempo real.
-- [ ] Ejecutar analyze/test y documentar.
+- [x] Implementar servicios de mesero.
+- [x] Implementar vista de mesas y panel.
+- [x] Implementar cuentas/rondas/pagos/cierre.
+- [x] Implementar pedido desde menú público en modo mesero.
+- [x] Añadir permisos/rol y tiempo real.
+- [x] Ejecutar analyze/test y documentar.
+
+**1. React: reorganización de `src/modules/mesero`**
+- Antes: `MesaPedidosPanel.jsx` (414 líneas) tenía 4 componentes (ronda, abono, elegir destino, panel) y toda la lógica (carga, eventos, estados, cierre, cancelación, abono, URL del menú). `MisPedidosMesero.jsx` mezclaba carga, paginación y vista; `MeseroPage.jsx` cargaba y escuchaba eventos.
+- Después: `hooks/` (`useMesasMesero`, `useCuentasDeMesa`, `useAccionesMesero`, `useHistorialMesero`), `utils/estadoRonda.js` (estados, hora, `urlTomarOrden`), `components/MesasGrid.jsx`, `components/panel/` (`MesaPedidosPanel` solo composición, `CabeceraCuenta`, `RondaCard`, `AbonoModal`, `AgregarOpcionModal`) y `components/historial/` (`MisPedidosMesero`, `RondaRow`, `OrdenCard`). Reutiliza `useEventosPedidos` y `bogotaHoy` de `orders`.
+- Verificación: `eslint` sin errores; `vite build` OK.
+
+**2. Errores de React corregidos**
+- **Cuenta duplicada al dividir la mesa:** tras enviar una ronda con "Nueva cuenta", "Agregar más productos" → confirmar volvía a mandar `nuevaCuenta: true` y el backend abría **otra** cuenta ("Cuenta 3"…). Ahora `OrderSheet` apunta la URL (`?orden=`) a la cuenta devuelta (`ordenCodigo`) y quita `nuevaCuenta`.
+- Carga inicial de mesas sin manejo de error: un fallo dejaba una promesa sin manejar y se veía "Sin mesas configuradas". Ahora se muestra el error.
+- Cambiar el estado de una ronda tragaba el error (`catch {}`): la ronda no cambiaba sin aviso. Ahora avisa.
+- El abono que fallaba dejaba una promesa sin manejar dentro del modal; ahora el error se muestra en el modal y sigue abierto.
+- "Mis órdenes" tragaba los errores y mostraba la lista vacía; ahora muestra el error (también al cargar más).
+- Las cuentas de la mesa se pedían de nuevo cada vez que se recargaba la lista de mesas (el panel dependía del objeto mesa, que cambia en cada recarga), y dos veces con cada evento. Ahora dependen del código; el panel se monta por mesa y nunca muestra un instante las cuentas de la mesa anterior.
+- Cancelar una ronda no pedía confirmación (es irreversible y fácil de tocar por error en el teléfono); ahora la pide.
+
+**3. Resultado real de Fase 15 (Flutter)**
+- `mesa_service.dart`: mesas del mesero, cuentas de la mesa, agregar ronda (a una cuenta, a una nueva o a la principal), estado de ronda, abono, cerrar/cancelar (con `mesaLibre`, total y rondas), `mis-rondas` y `mis-ordenes` paginado.
+- Modelos: `MesaMesero` (bloqueo por otro mesero, dividida) y ampliación de `CuentaMesa`/`RondaCuenta`/`ItemRonda` (código y hora de la ronda, precio unitario, total pagado, mesa en el historial).
+- Estado: `UseMesasMesero`, `UseCuentasDeMesa` (uno por mesa), `AccionesMesero` (resultados para avisar), `UseHistorialMesero`, `UseOrdenMesero` (la orden local y su envío idempotente con `requestId`) y `DestinoOrden` (mesa/cuenta, leído de `?mesa=&mesaNombre=&orden=&nuevaCuenta=1` igual que React).
+- `/mesero/:codigo` (`MeseroPage`): pestañas Mesas / Mis órdenes; cuadrícula de mesas (libre, órdenes activas, dividida, bloqueada por otro mesero); panel de la mesa con pestañas de cuentas, resumen total/pagado/saldo, rondas activas y completadas (preparar, entregar, cancelar con confirmación), cerrar (solo sin rondas activas y saldo en cero), cancelar (solo sin platos entregados), abonar y "Agregar" (pregunta si es para esta cuenta o una nueva). En tablet ancha (≥ 900 px) mesas y panel lado a lado; en el teléfono, una a la vez y "atrás" vuelve a la cuadrícula. Refresco en vivo por eventos del menú.
+- Tomar la orden: "Agregar" abre el mismo menú público (`/menu/:slug?mesa=…`) con la franja "Tomando orden para …", el producto se configura con nota para cocina y "Agregar a la orden", el botón "La orden · N" abre `OrderSheet` (ítems, nota o nombre de la cuenta nueva, total, confirmar, "¡Orden enviada!", "Agregar más productos" / "Volver a mesas"). Al volver se recargan las cuentas. Tras la primera ronda, las siguientes van a la misma cuenta (el error de React ya no existe en la app).
+- `ProductModal`: "Agregar a la orden" y la nota de cocina solo aparecen cuando hay una orden (`onConfiguredAdd`); con `?staff=1` (repartidor) solo se consulta.
+- Hub: el mesero va a `/mesero/:codigo` (antes abría el menú en solo lectura); el repartidor tiene "Ver menú" con `?staff=1`.
+
+**Verificación ejecutada**
+- `flutter analyze`: 0 errores (solo los 2 avisos antiguos del editor).
+- `flutter test`: 77/77 OK. Nuevo `test/mesero_test.dart` (11): destino desde/hacia la URL, la cuenta nueva no se repite, mesa bloqueada/dividida, orden (sumar, cantidades, quitar), tarjeta de mesa a 360/1024 px, ronda pendiente, reglas de cerrar/abonar y la hoja de la orden a 360 px (detectó y se corrigió un desborde en la etiqueta de la nota).
+- 7 rutas del mesero responden 401 sin sesión.
+
+**Limitaciones**
+- Sin prueba E2E con una cuenta de mesero real (abrir mesa, rondas, dividir, abonar, cerrar).
+- No hay sonido de aviso (igual que en la Fase 4: no existe un asset aprobado).
 
 **Criterios de aceptación**
 1. Un mesero abre una mesa, crea una ronda y la ve en la cuenta.
@@ -1381,7 +1448,7 @@ Implementar la vista de mesero: mesas, cuentas divididas, rondas, pagos y cierre
 
 ### Fase 16 — Modo repartidor
 
-**Estado:** PENDIENTE
+**Estado:** COMPLETADA (2026-10-30)
 **Depende de:** Fase 14 (asignación), Fase 4 (eventos).
 **Bloquea a:** nada crítico.
 
@@ -1402,10 +1469,37 @@ Implementar la vista de repartidor con pedidos asignados, toma de pedido y estad
 - `lib/app.dart`
 
 **Tareas verificables**
-- [ ] Implementar servicio y pantalla.
-- [ ] Implementar toma/estados.
-- [ ] Añadir permisos y tiempo real.
-- [ ] Ejecutar analyze/test y documentar.
+- [x] Implementar servicio y pantalla.
+- [x] Implementar toma/estados.
+- [x] Añadir permisos y tiempo real.
+- [x] Ejecutar analyze/test y documentar.
+
+**1. React: reorganización de `src/modules/repartidor`**
+- Antes: `RepartidorPage.jsx` (234 líneas) cargaba, paginaba, escuchaba eventos, ejecutaba acciones y pintaba la tarjeta.
+- Después: `hooks/useMisPedidosRepartidor.js` (carga, refresco sin spinner, eventos, cargar más), `hooks/useAccionesRepartidor.js` (tomar y cambiar estado con toast), `components/PedidoRepartidorCard.jsx` y la página como composición. Reutiliza `itemsDePedido` (orders) y `ESTADO_RONDA` (mesero). `eslint` sin errores; `vite build` OK.
+
+**2. Errores de React corregidos**
+- La carga se tragaba los errores (`catch(() => {})`): se veían métricas en cero y "Sin pedidos por entregar". Ahora se muestra el error (también al cargar más).
+- `JSON.parse(pedido.items)` sin protección: un ítem guardado mal rompía toda la pantalla. Ahora usa `itemsDePedido`.
+- Los errores se mostraban con `alert()` (bloquea la pantalla); ahora con un toast.
+- Cancelar un pedido no pedía confirmación (es irreversible); ahora la pide.
+- Con el pedido ya tomado, el botón decía "Tomar y preparar" cuando solo lo pasa a preparación; ahora dice "Poner en preparación".
+- La métrica de `totalCobrado` se rotulaba "Total"; ahora "Cobrado". El subtítulo decía "Solo tus pedidos y entregas", pero la lista incluye los pedidos disponibles; ahora lo dice.
+- Botones sin estado de carga: se podía tocar dos veces; ahora se deshabilitan mientras la acción está en curso.
+
+**3. Resultado real de Fase 16 (Flutter)**
+- `repartidor_service.dart` (mis pedidos por cursor y tomar pedido); el cambio de estado reutiliza `PedidoService.cambiarEstado`.
+- `PedidoRepartidor` (envuelve `PedidoNegocio` + `asignadoAMi`) y `MetricasRepartidor`; `UsePedidosRepartidor` sobre `PaginaCursor` con tomar/cambiar estado y recarga sin spinner.
+- `/repartidor/:codigo` (`RepartidorPage`): entregas / cancelados / cobrado del día, pestañas "Por entregar (n)" e "Historial (n)", tarjetas con tomar pedido (sin datos de entrega hasta tomarlo), datos del cliente con el teléfono para llamar, poner en preparación, entregado y cancelar (con confirmación), cargar más y refresco en vivo y al tirar hacia abajo. En tablet ancha (≥ 860 px de contenido) las tarjetas van en dos columnas.
+- Hub: el repartidor tiene "Vista repartidor" y "Ver menú" (`?staff=1`, solo consulta).
+
+**Verificación ejecutada**
+- `flutter analyze`: 0 errores (solo los 2 avisos antiguos del editor).
+- `flutter test`: 82/82 OK. Nuevo `test/repartidor_test.dart` (5): modelo disponible/asignado y métricas, tarjeta disponible, tarjeta propia a 320 y 1024 px (detectó y se corrigió un desborde del teléfono a 320 px) y pedido entregado sin acciones.
+- `GET /repartidor/{menú}/mis-pedidos` y `PATCH /pedidos/{código}/repartidor/tomar` responden 401 sin sesión.
+
+**Limitaciones**
+- Sin prueba E2E con una cuenta de repartidor real.
 
 **Criterios de aceptación**
 1. El repartidor ve pedidos del menú y toma uno.
@@ -1688,25 +1782,25 @@ Estados permitidos: **PENDIENTE**, **EN PROCESO**, **BLOQUEADA**, **COMPLETADA**
 - Problemas/limitaciones: sin prueba E2E de un pedido real; la nota de cocina sigue siendo solo del modo mesero (Fase 15).
 
 ### Fase 14 — Pedidos negocio/mesas
-- Estado: PENDIENTE.
-- Archivos modificados: —
-- Funcionalidades implementadas: —
-- Pruebas: —
-- Problemas/limitaciones: —
+- Estado: COMPLETADA (2026-10-30).
+- Archivos nuevos: `lib/services/mesa_service.dart`, `lib/shared/confirmar_dialog.dart`, `lib/modules/orders/{models,hooks,utils,components/{comun,pedidos,cuentas}}/…`, `lib/modules/orders/pages/menu_pedidos_page.dart`, `lib/modules/menu/editor/mesas/{mesa_model,use_mesas,mesa_tile,mesa_form_sheet,mesas_page}.dart`, `test/pedidos_negocio_test.dart`. Modificados: `lib/services/pedido_service.dart`, `lib/app.dart`, `lib/modules/dashboard/pages/menu_hub_page.dart`, `lib/modules/notifications/pages/notifications_page.dart`, `lib/modules/menu/public/components/product_modal.dart`, `lib/context/notificacion_context.dart`.
+- React: `src/modules/orders/**` y `src/modules/menu/editor/mesas/**` reorganizados por responsabilidad, con 9 errores corregidos (ver la sección de la fase).
+- Pruebas: analyze sin errores; 66 tests OK; 16 rutas verificadas (401 sin sesión).
+- Problemas/limitaciones: sin prueba E2E con sesión real.
 
 ### Fase 15 — Mesero
-- Estado: PENDIENTE.
-- Archivos modificados: —
-- Funcionalidades implementadas: —
-- Pruebas: —
-- Problemas/limitaciones: —
+- Estado: COMPLETADA (2026-10-30).
+- Archivos nuevos: `lib/modules/mesero/{models,hooks,utils,components/{panel,historial},pages}/…`, `lib/modules/menu/public/components/{order_sheet,orden_mesero_ui}.dart`, `test/mesero_test.dart`. Modificados: `lib/services/mesa_service.dart`, `lib/modules/orders/models/cuenta_mesa.dart`, `lib/components/menu_page.dart`, `lib/modules/menu/public/pages/public_menu_page.dart`, `lib/modules/menu/public/components/product_modal.dart`, `lib/modules/dashboard/pages/menu_hub_page.dart`, `lib/app.dart`.
+- React: `src/modules/mesero/**` reorganizado y `OrderSheet.jsx` corregido (7 errores, ver la sección de la fase).
+- Pruebas: analyze sin errores; 77 tests OK; 7 rutas verificadas (401 sin sesión).
+- Problemas/limitaciones: sin prueba E2E con una cuenta de mesero real.
 
 ### Fase 16 — Repartidor
-- Estado: PENDIENTE.
-- Archivos modificados: —
-- Funcionalidades implementadas: —
-- Pruebas: —
-- Problemas/limitaciones: —
+- Estado: COMPLETADA (2026-10-30).
+- Archivos nuevos: `lib/services/repartidor_service.dart`, `lib/modules/repartidor/{models,hooks,components,pages}/…`, `test/repartidor_test.dart`. Modificados: `lib/app.dart`, `lib/modules/dashboard/pages/menu_hub_page.dart`.
+- React: `src/modules/repartidor/**` reorganizado con 7 errores corregidos (ver la sección de la fase).
+- Pruebas: analyze sin errores; 82 tests OK; 2 rutas verificadas (401 sin sesión).
+- Problemas/limitaciones: sin prueba E2E con una cuenta de repartidor real.
 
 ### Fase 17 — QA final
 - Estado: PENDIENTE.
@@ -1746,8 +1840,8 @@ Estos puntos **no se resuelven en este documento**; se validarán al iniciar la 
 
 ## 13. Siguiente paso
 
-Las Fases 1–7 están implementadas; la Fase 8 es reservada y queda cubierta por Fase 4. El siguiente paso es la **Fase 9 — Colaboradores y transferencia**, pendiente de autorización.
+Las Fases 1–16 están implementadas (la 8 es reservada y queda cubierta por la 4). El siguiente paso es la **Fase 17 — Verificación final y endurecimiento**: limpiar el editor antiguo (`modules/menu/editor/tabs`, avisos pendientes), dependencias sin uso (`permission_handler`), `android/build` en `.gitignore` y una pasada final de pruebas.
 
-**No se ha modificado ningún archivo de `menu-digital`.**
+**React (`menu-digital`) se ha modificado solo para corregir errores detectados al portar y reorganizar módulos por responsabilidad (autorizado por el usuario); cada cambio está registrado en su fase. El backend solo se modificó una vez, con autorización (resultado de Wompi).**
 
 Las fases 9–16 quedan pendientes por presupuesto de contexto; el plan y las limitaciones están registrados para retomarlas.

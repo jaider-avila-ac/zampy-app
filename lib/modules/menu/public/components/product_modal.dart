@@ -26,7 +26,12 @@ class ProductModal extends StatefulWidget {
     this.trackView = false,
     this.staffMode = false,
     this.esPropio = false,
+    this.onConfiguredAdd,
   });
+
+  /// Personal del negocio (staffMode): recibe el ítem configurado (misma forma que el carrito) en lugar de ir al
+  /// carrito, como onConfiguredAdd de React. La hoja se cierra al agregar.
+  final void Function(Map<String, dynamic> item)? onConfiguredAdd;
 
   final MenuProduct product;
   final MenuTheme theme;
@@ -49,6 +54,7 @@ class ProductModal extends StatefulWidget {
     bool trackView = false,
     bool staffMode = false,
     bool esPropio = false,
+    void Function(Map<String, dynamic> item)? onConfiguredAdd,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -66,6 +72,7 @@ class ProductModal extends StatefulWidget {
         trackView: trackView,
         staffMode: staffMode,
         esPropio: esPropio,
+        onConfiguredAdd: onConfiguredAdd,
       ),
     );
   }
@@ -81,6 +88,7 @@ class _ProductModalState extends State<ProductModal> {
   final List<String> _selIngredients = [];
   final List<String> _selExtras = [];
   final Map<String, Set<String>> _selGrupos = {};
+  final _notaCocina = TextEditingController(); // solo personal (staffMode)
 
   @override
   void initState() {
@@ -103,6 +111,7 @@ class _ProductModalState extends State<ProductModal> {
 
   @override
   void dispose() {
+    _notaCocina.dispose();
     super.dispose();
   }
 
@@ -199,6 +208,10 @@ class _ProductModalState extends State<ProductModal> {
 
   // ── Carrito (pedidos activos) ─────────────────────────────────────────────
 
+  /// El personal arma una orden (mesero en una mesa, o el admin agregando a una cuenta): nota para cocina y
+  /// "Agregar a la orden". Con ?staff=1 (repartidor) solo se consulta el menú.
+  bool get _tomaOrden => widget.onConfiguredAdd != null;
+
   bool get _pedidosActivos =>
       !widget.staffMode && widget.menuCodigo != null && (widget.info?.pedidosActivos ?? false);
 
@@ -255,8 +268,13 @@ class _ProductModalState extends State<ProductModal> {
         'extrasTotal': extrasTotal,
         'gruposTotal': gruposTotal,
       },
-      'note': null,
+      'note': _tomaOrden && _notaCocina.text.trim().isNotEmpty ? _notaCocina.text.trim() : null,
     };
+  }
+
+  void _agregarALaOrden() {
+    widget.onConfiguredAdd?.call(_configuredItem());
+    Navigator.of(context).pop();
   }
 
   void _agregarAlCarrito() {
@@ -952,18 +970,51 @@ class _ProductModalState extends State<ProductModal> {
                       ),
                     ],
 
+                    // el personal deja una nota para cocina (igual que React)
+                    if (_tomaOrden) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Nota para cocina (opcional)',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: t.textMuted),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _notaCocina,
+                        maxLength: 250,
+                        minLines: 2,
+                        maxLines: 3,
+                        style: TextStyle(fontSize: 13, color: t.text),
+                        decoration: InputDecoration(
+                          hintText: 'Ej: sin tomate, salsa aparte, poco picante…',
+                          hintStyle: TextStyle(fontSize: 13, color: t.textMuted),
+                          counterText: '',
+                          filled: true,
+                          fillColor: t.surfaceAlt,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: t.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: t.border),
+                          ),
+                        ),
+                      ),
+                    ],
+
                     // ── Botón WhatsApp ─────────────────────────────────
                     const SizedBox(height: 24),
                     Opacity(
-                      opacity: (_pedidosActivos || hasWa || hasPhone) ? 1.0 : 0.5,
+                      opacity: (_pedidosActivos || _tomaOrden || hasWa || hasPhone) ? 1.0 : 0.5,
                       child: SizedBox(
                         width: double.infinity,
                         height: 48,
-                        // Con pedidos activos el cliente arma su carrito (como React);
-                        // si no, se mantiene el pedido directo por WhatsApp.
-                        child: _pedidosActivos
+                        // Con pedidos activos el cliente arma su carrito (como React); el personal agrega a la
+                        // orden; si no, se mantiene el pedido directo por WhatsApp.
+                        child: (_pedidosActivos || _tomaOrden)
                             ? ElevatedButton.icon(
-                                onPressed: _agregarAlCarrito,
+                                onPressed: _tomaOrden ? _agregarALaOrden : _agregarAlCarrito,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: t.primary,
                                   foregroundColor: Colors.white,
@@ -975,8 +1026,8 @@ class _ProductModalState extends State<ProductModal> {
                                   ),
                                 ),
                                 icon: const Icon(Icons.shopping_cart_outlined, size: 17),
-                                label: const Text(
-                                  'Agregar al carrito',
+                                label: Text(
+                                  _tomaOrden ? 'Agregar a la orden' : 'Agregar al carrito',
                                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                 ),
                               )

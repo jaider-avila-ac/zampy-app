@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../components/menu_page.dart';
 import '../../../../shared/app_colors.dart';
 import '../edicion/menu_editable.dart';
+import '../../../mesero/utils/tomar_orden.dart';
 import '../hooks/use_public_menu.dart';
 
 // Equivalente a src/pages/PublicMenuPage.jsx en React
@@ -15,10 +16,16 @@ class PublicMenuPage extends StatelessWidget {
     this.staffMode = false,
     this.initialProductId,
     this.editar,
+    this.mesero,
   });
 
   final String slug;
   final bool staffMode;
+
+  /// `?mesa=…`: el mesero arma la orden de esa mesa (ve el menú como el cliente, sin edición ni carrito).
+  final DestinoOrden? mesero;
+
+  bool get _personal => staffMode || mesero != null;
   final String? initialProductId;
 
   /// `?editar=sección`: abre esa sección de la edición al llegar (si quien entra puede editar el menú).
@@ -27,10 +34,11 @@ class PublicMenuPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => UsePublicMenu()..load(slug: slug, staffMode: staffMode),
+      create: (_) => UsePublicMenu()..load(slug: slug, staffMode: _personal),
       child: _PublicMenuView(
         slug: slug,
-        staffMode: staffMode,
+        staffMode: _personal,
+        mesero: mesero,
         initialProductId: initialProductId,
         editar: editar,
       ),
@@ -44,12 +52,14 @@ class _PublicMenuView extends StatelessWidget {
     required this.staffMode,
     this.initialProductId,
     this.editar,
+    this.mesero,
   });
 
   final String slug;
   final bool staffMode;
   final String? initialProductId;
   final String? editar;
+  final DestinoOrden? mesero;
 
   @override
   Widget build(BuildContext context) {
@@ -128,6 +138,7 @@ class _PublicMenuView extends StatelessWidget {
           staffMode: staffMode,
           esPropio: menu.esPropio || ctrl.esEditor,
           initialProductId: initialProductId,
+          mesero: mesero,
         ),
       ),
     );

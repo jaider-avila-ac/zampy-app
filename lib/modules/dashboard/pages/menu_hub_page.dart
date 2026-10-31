@@ -140,10 +140,6 @@ class _MenuHubPageState extends State<MenuHubPage> {
     }
   }
 
-  void _futureAction(String label, String fase) {
-    _snack('$label estará disponible en la Fase $fase.');
-  }
-
   // Igual que PasosMenu.jsx: casi todo se completa en el propio menú (/menu/:slug?editar=<sección que se abre al
   // llegar>); el horario, en la información del menú.
   static const _editarPorPaso = {
@@ -324,20 +320,35 @@ class _MenuHubPageState extends State<MenuHubPage> {
       onTap: () => context.push('/menu/${menu.slug}'),
     );
 
+    // el mesero toma pedidos desde su vista (mesas y cuentas), como en React; antes abría el menú en solo lectura
     if (menu.esMesero) {
       actions.add(
         _HubAction(
           icon: Icons.restaurant_outlined,
           label: 'Vista mesero',
-          onTap: () => context.push('/menu/${menu.slug}?staff=1'),
+          onTap: () => context.push('/mesero/${menu.codigo}'),
         ),
       );
       actions.add(verPublico);
       return actions;
     }
 
+    // el repartidor toma y entrega pedidos desde su vista; el menú solo lo consulta (?staff=1 desactiva el carrito)
     if (menu.esRepartidor) {
-      actions.add(verPublico);
+      actions.add(
+        _HubAction(
+          icon: Icons.local_shipping_outlined,
+          label: 'Vista repartidor',
+          onTap: () => context.push('/repartidor/${menu.codigo}'),
+        ),
+      );
+      actions.add(
+        _HubAction(
+          icon: Icons.open_in_new,
+          label: 'Ver menú',
+          onTap: () => context.push('/menu/${menu.slug}?staff=1'),
+        ),
+      );
       return actions;
     }
 
@@ -368,14 +379,14 @@ class _MenuHubPageState extends State<MenuHubPage> {
         _HubAction(
           icon: Icons.receipt_long_outlined,
           label: 'Pedidos',
-          onTap: () => _futureAction('Los pedidos', '14'),
+          onTap: () => context.push('/menus/${menu.codigo}/pedidos'),
         ),
       );
       actions.add(
         _HubAction(
           icon: Icons.table_restaurant_outlined,
           label: 'Mesas',
-          onTap: () => _futureAction('Las mesas', '15'),
+          onTap: () => context.push('/menus/${menu.codigo}/mesas'),
         ),
       );
       actions.add(

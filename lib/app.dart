@@ -19,11 +19,16 @@ import 'modules/growth/invitations/pages/invitaciones_page.dart';
 import 'modules/menu/create/create_menu_page.dart';
 import 'modules/menu/editor/live/menu_editor_live_page.dart';
 import 'modules/menu/editor/info/menu_info_page.dart';
+import 'modules/menu/editor/mesas/mesas_page.dart';
 import 'modules/menu/editor/stats/pages/estadisticas_page.dart';
 import 'modules/menu/public/pages/demo_preview_page.dart';
 import 'modules/menu/public/pages/preview_page.dart';
 import 'modules/menu/public/pages/public_menu_page.dart';
+import 'modules/mesero/pages/mesero_page.dart';
+import 'modules/repartidor/pages/repartidor_page.dart';
+import 'modules/mesero/utils/tomar_orden.dart';
 import 'modules/notifications/pages/notifications_page.dart';
+import 'modules/orders/pages/menu_pedidos_page.dart';
 import 'modules/orders/pages/pedidos_page.dart';
 import 'modules/profile/pages/profile_page.dart';
 import 'modules/profile/pages/settings_page.dart';
@@ -99,6 +104,7 @@ GoRouter _buildRouter(AuthContext auth) {
             staffMode: query['staff'] == '1',
             initialProductId: query['producto'],
             editar: query['editar'],
+            mesero: DestinoOrden.deQuery(query),
           );
         },
       ),
@@ -151,6 +157,23 @@ GoRouter _buildRouter(AuthContext auth) {
           codigo: state.pathParameters['codigo'] ?? '',
           enfocarHorario: state.uri.queryParameters['paso'] == 'horario',
         ),
+      ),
+      // pedidos y mesas del negocio (dueño o editor)
+      GoRoute(
+        path: '/menus/:codigo/pedidos',
+        builder: (context, state) => MenuPedidosPage(codigo: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/menus/:codigo/mesas',
+        builder: (context, state) => MesasPage(codigo: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/mesero/:codigo',
+        builder: (context, state) => MeseroPage(codigo: state.pathParameters['codigo'] ?? ''),
+      ),
+      GoRoute(
+        path: '/repartidor/:codigo',
+        builder: (context, state) => RepartidorPage(codigo: state.pathParameters['codigo'] ?? ''),
       ),
       GoRoute(path: '/logros', builder: (context, state) => const LogrosPage()),
       GoRoute(path: '/pedidos', builder: (context, state) => const PedidosPage()),
