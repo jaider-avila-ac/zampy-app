@@ -18,7 +18,7 @@ import 'modules/growth/achievements/pages/logros_page.dart';
 import 'modules/growth/invitations/pages/invitaciones_page.dart';
 import 'modules/menu/create/create_menu_page.dart';
 import 'modules/menu/editor/live/menu_editor_live_page.dart';
-import 'modules/menu/editor/live/product_form_live_page.dart';
+import 'modules/menu/editor/info/menu_info_page.dart';
 import 'modules/menu/editor/stats/pages/estadisticas_page.dart';
 import 'modules/menu/public/pages/demo_preview_page.dart';
 import 'modules/menu/public/pages/preview_page.dart';
@@ -98,6 +98,7 @@ GoRouter _buildRouter(AuthContext auth) {
             slug: slug,
             staffMode: query['staff'] == '1',
             initialProductId: query['producto'],
+            editar: query['editar'],
           );
         },
       ),
@@ -142,23 +143,13 @@ GoRouter _buildRouter(AuthContext auth) {
           );
         },
       ),
+      // La información completa del menú (como MenuInfoPage de React); ?paso=horario abre en el horario.
+      // Los productos ya no tienen pantalla propia: se crean y editan en el propio menú.
       GoRoute(
         path: '/menus/:codigo/info',
-        builder: (context, state) => LiveMenuEditorPage(
+        builder: (context, state) => MenuInfoPage(
           codigo: state.pathParameters['codigo'] ?? '',
-          initialTab: 'info',
-        ),
-      ),
-      GoRoute(
-        path: '/menus/:codigo/products/new',
-        builder: (context, state) =>
-            LiveProductFormPage(codigo: state.pathParameters['codigo'] ?? ''),
-      ),
-      GoRoute(
-        path: '/menus/:codigo/products/:pid',
-        builder: (context, state) => LiveProductFormPage(
-          codigo: state.pathParameters['codigo'] ?? '',
-          productCode: state.pathParameters['pid'],
+          enfocarHorario: state.uri.queryParameters['paso'] == 'horario',
         ),
       ),
       GoRoute(path: '/logros', builder: (context, state) => const LogrosPage()),

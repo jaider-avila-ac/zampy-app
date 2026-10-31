@@ -21,6 +21,8 @@ class UsePublicMenu extends ChangeNotifier {
   String? _error;
   bool _staffMode = false;
   bool _esEditor = false;
+  // respuesta de GET /menus/acceso cuando quien abre el menú lo puede editar: {codigo, rol, publicado, puedeEditar}
+  Map<String, dynamic>? _acceso;
 
   PublicMenuData? get menuData => _menuData;
   bool get loading => _loading;
@@ -29,6 +31,32 @@ class UsePublicMenu extends ChangeNotifier {
   String? get error => _error;
   bool get staffMode => _staffMode;
   bool get esEditor => _esEditor;
+  Map<String, dynamic>? get acceso => _acceso;
+
+  /// Edición en el propio menú: lo ve con las opciones de edición quien puede editarlo (dueño o editor).
+  bool get editando => _acceso != null;
+  bool get esPropietario => _acceso?['rol'] == 'propietario';
+  bool get publicado => _acceso != null ? _acceso!['publicado'] == true : (_menuData?.publicado ?? false);
+
+  /// Vuelve a pedir el contenido sin mostrar la pantalla de carga (tras guardar una sección).
+  Future<void> recargar() async {
+    final codigo = _acceso?['codigo']?.toString();
+    if (codigo == null) return;
+    try {
+      final data = await _loadPreview(codigo, incluirOcultos: true);
+      if (data != null) {
+        _menuData = data;
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  /// El menú se publicó o despublicó: se vuelve a preguntar el acceso (cambia "publicado").
+  Future<void> recargarAcceso() async {
+    final a = await _getAcceso(_slug);
+    if (a?['puedeEditar'] == true) _acceso = a;
+    await recargar();
+  }
 
   Future<void> load({
     String? slug,
@@ -42,6 +70,7 @@ class UsePublicMenu extends ChangeNotifier {
     _menuData = null;
     _staffMode = staffMode;
     _esEditor = false;
+    _acceso = null;
     notifyListeners();
 
     try {
@@ -60,8 +89,9 @@ class UsePublicMenu extends ChangeNotifier {
           if (acceso?['puedeEditar'] == true) {
             final codigo = acceso?['codigo']?.toString();
             if (codigo != null && codigo.isNotEmpty) {
-              data = await _loadPreview(codigo);
+              data = await _loadPreview(codigo, incluirOcultos: true);
               _esEditor = true;
+              _acceso = acceso;
             }
           }
         }
@@ -139,13 +169,12 @@ class UsePublicMenu extends ChangeNotifier {
     return null;
   }
 
-  Future<PublicMenuData?> _loadPreview(String codigo) async {
+  Future<PublicMenuData?> _loadPreview(String codigo, {bool incluirOcultos = false}) async {
     final data = await ApiClient.instance.get('/api/v1/menus/$codigo/preview');
     if (data is! Map) return null;
     final root = Map<String, dynamic>.from(data);
     final theme = await _fallbackTheme(root);
-    final menu = PublicMenuData.fromRoot(root, catalogTheme: theme);
-    return menu;
+    return PublicMenuData.fromRoot(root, catalogTheme: theme, incluirOcultos: incluirOcultos);
   }
 
   Future<PublicMenuData?> _loadDemo() async {

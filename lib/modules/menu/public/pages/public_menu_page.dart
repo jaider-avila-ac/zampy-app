@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../components/menu_page.dart';
 import '../../../../shared/app_colors.dart';
+import '../edicion/menu_editable.dart';
 import '../hooks/use_public_menu.dart';
 
 // Equivalente a src/pages/PublicMenuPage.jsx en React
@@ -13,11 +14,15 @@ class PublicMenuPage extends StatelessWidget {
     required this.slug,
     this.staffMode = false,
     this.initialProductId,
+    this.editar,
   });
 
   final String slug;
   final bool staffMode;
   final String? initialProductId;
+
+  /// `?editar=sección`: abre esa sección de la edición al llegar (si quien entra puede editar el menú).
+  final String? editar;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +32,7 @@ class PublicMenuPage extends StatelessWidget {
         slug: slug,
         staffMode: staffMode,
         initialProductId: initialProductId,
+        editar: editar,
       ),
     );
   }
@@ -37,11 +43,13 @@ class _PublicMenuView extends StatelessWidget {
     required this.slug,
     required this.staffMode,
     this.initialProductId,
+    this.editar,
   });
 
   final String slug;
   final bool staffMode;
   final String? initialProductId;
+  final String? editar;
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +95,28 @@ class _PublicMenuView extends StatelessWidget {
     }
 
     final menu = ctrl.menuData!;
+
+    // Como un perfil: el dueño o un editor (lo dice el backend con GET /menus/acceso) lo edita aquí mismo; ve el menú
+    // igual que el cliente, con las opciones de edición. El personal (mesero, repartidor) y los demás lo ven normal.
+    final codigo = ctrl.acceso?['codigo']?.toString();
+    if (ctrl.editando && codigo != null) {
+      return Scaffold(
+        backgroundColor: menu.theme.bg,
+        body: SafeArea(
+          child: MenuEditable(
+            menuData: menu,
+            menuCodigo: codigo,
+            publicado: ctrl.publicado,
+            esPropio: ctrl.esPropietario,
+            recargar: ctrl.recargar,
+            onEstado: ctrl.recargarAcceso,
+            seccionInicial: editar,
+            initialProductId: initialProductId,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: menu.theme.bg,
       body: SafeArea(

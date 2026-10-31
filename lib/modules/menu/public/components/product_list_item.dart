@@ -41,6 +41,7 @@ class ProductListItem extends StatelessWidget {
                 ),
                 child: ProductImage(
                   url: product.imageUrl,
+                  alignment: product.imageAlignment,
                   width: 76,
                   height: 76,
                   backgroundColor: theme.surfaceAlt,

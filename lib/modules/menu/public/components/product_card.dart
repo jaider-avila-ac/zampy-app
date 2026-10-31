@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide MenuTheme;
 
+import '../edicion/edicion_menu.dart';
 import '../models/public_menu_model.dart';
 import 'product_image.dart';
 
@@ -57,6 +58,7 @@ class ProductCard extends StatelessWidget {
                 children: [
                   ProductImage(
                     url: product.imageUrl,
+                    alignment: product.imageAlignment,
                     fit: BoxFit.cover,
                     backgroundColor: t.surfaceAlt,
                     foregroundColor: t.textMuted,
@@ -85,7 +87,8 @@ class ProductCard extends StatelessWidget {
                   // Rating badge — top-right — solo si rating > 0
                   if (product.rating != null && product.rating! > 0)
                     Positioned(
-                      top: 8,
+                      // editando, el "⋯" ocupa la esquina: la calificación baja (igual que React)
+                      top: EdicionMenu.of(context) != null ? 46 : 8,
                       right: 8,
                       child: Container(
                         padding: const EdgeInsets.symmetric(

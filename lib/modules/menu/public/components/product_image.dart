@@ -7,6 +7,7 @@ class ProductImage extends StatefulWidget {
     super.key,
     required this.url,
     this.fit = BoxFit.cover,
+    this.alignment = Alignment.center,
     this.width,
     this.height,
     this.backgroundColor = const Color(0xFFF1F5F9),
@@ -15,6 +16,8 @@ class ProductImage extends StatefulWidget {
 
   final String? url;
   final BoxFit fit;
+  // qué parte de la foto se ve (posición elegida por el dueño)
+  final Alignment alignment;
   final double? width;
   final double? height;
   final Color backgroundColor;
@@ -108,6 +111,7 @@ class _ProductImageState extends State<ProductImage> {
     return Image.network(
       url,
       fit: widget.fit,
+      alignment: widget.alignment,
       width: widget.width,
       height: widget.height,
       gaplessPlayback: true,

@@ -144,8 +144,26 @@ class _MenuHubPageState extends State<MenuHubPage> {
     _snack('$label estará disponible en la Fase $fase.');
   }
 
+  // Igual que PasosMenu.jsx: casi todo se completa en el propio menú (/menu/:slug?editar=<sección que se abre al
+  // llegar>); el horario, en la información del menú.
+  static const _editarPorPaso = {
+    'imagenes': 'portada',
+    'ubicacion': 'informacion',
+    'contacto': 'informacion',
+    'productos': 'producto-nuevo',
+    'redes': 'informacion',
+    'galeria': 'informacion',
+  };
+
   void _openStep(PasoMenu paso) {
-    context.push('/menus/${widget.codigo}/edit?tab=info');
+    final menu = _menu;
+    if (menu == null) return;
+    if (paso.codigo == 'horario') {
+      context.push('/menus/${menu.codigo}/info?paso=horario');
+      return;
+    }
+    final editar = _editarPorPaso[paso.codigo];
+    context.push('/menu/${menu.slug}${editar == null ? '' : '?editar=$editar'}');
   }
 
   @override
@@ -328,7 +346,8 @@ class _MenuHubPageState extends State<MenuHubPage> {
         _HubAction(
           icon: Icons.edit_outlined,
           label: 'Editar menú',
-          onTap: () => context.push('/menus/${menu.codigo}/edit'),
+          // se edita en el propio menú, como un perfil (igual que React)
+          onTap: () => context.push('/menu/${menu.slug}'),
         ),
       );
       actions.add(

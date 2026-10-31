@@ -6,13 +6,14 @@ import '../../../../services/live_editor_service.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
 import 'editor_models.dart';
-import 'tabs/categories_live_tab.dart';
 import 'tabs/collaborators_live_tab.dart';
-import 'tabs/design_live_tab.dart';
 import 'tabs/groups_live_tab.dart';
-import 'tabs/info_live_tab.dart';
-import 'tabs/products_live_tab.dart';
 import 'tabs/publish_live_tab.dart';
+
+// Lo que queda del editor por pestañas (como en React): grupos de opciones, plan y visibilidad, y colaboradores.
+// Las categorías, los productos, el diseño y la información se editan en el propio menú (/menu/:slug, ver
+// modules/menu/public/edicion); la información completa y el horario también en /menus/:codigo/info. Cualquier
+// otra pestaña lleva al propio menú.
 
 class LiveMenuEditorPage extends StatefulWidget {
   const LiveMenuEditorPage({super.key, required this.codigo, this.initialTab});
@@ -28,17 +29,15 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
   LiveMenu? _menu;
   bool _loading = true;
   String? _error;
-  String _tab = 'info';
+  String _tab = 'groups';
 
   static const _tabs = [
-    ('info', 'Información'),
-    ('categories', 'Categorías'),
-    ('products', 'Productos'),
     ('groups', 'Grupos'),
-    ('design', 'Diseño'),
-    ('publish', 'Publicar'),
+    ('publish', 'Plan y visibilidad'),
     ('collaborators', 'Colaboradores'),
   ];
+
+  bool get _tabDelEditor => _tabs.any((t) => t.$1 == widget.initialTab);
 
   @override
   void initState() {
@@ -57,6 +56,11 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
       if (!mounted) return;
       if (menu.esMesero || menu.esRepartidor) {
         context.replace('/menu/${menu.slug}?staff=1');
+        return;
+      }
+      // sin pestaña (o una que ya se edita en el menú): al propio menú, como RedirigirMiMenu de React
+      if (!_tabDelEditor) {
+        context.replace('/menu/${menu.slug}');
         return;
       }
       setState(() {
@@ -160,7 +164,7 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
     final tabs = _tabs
         .where((t) => t.$1 != 'collaborators' || menu.esPropio)
         .toList();
-    final active = tabs.any((t) => t.$1 == _tab) ? _tab : 'info';
+    final active = tabs.any((t) => t.$1 == _tab) ? _tab : 'groups';
 
     return Column(
       children: [
@@ -203,16 +207,8 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
 
   Widget _tabContent(String tab, LiveMenu menu) {
     switch (tab) {
-      case 'info':
-        return InfoLiveTab(menu: menu, onChanged: _refresh);
-      case 'categories':
-        return CategoriesLiveTab(menu: menu, onChanged: _refresh);
-      case 'products':
-        return ProductsLiveTab(menu: menu, onChanged: _refresh);
       case 'groups':
         return GroupsLiveTab(menu: menu, onChanged: _refresh);
-      case 'design':
-        return DesignLiveTab(menu: menu, onChanged: _refresh);
       case 'publish':
         return PublishLiveTab(menu: menu, onChanged: _refresh, onSnack: _snack);
       case 'collaborators':

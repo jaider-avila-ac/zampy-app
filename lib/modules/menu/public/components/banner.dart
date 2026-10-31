@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' hide MenuTheme;
 
+import '../edicion/editable.dart';
 import '../models/public_menu_model.dart';
 import '../utils/contact_links.dart';
 import '../utils/horario.dart';
@@ -43,15 +44,23 @@ class Banner extends StatelessWidget {
             SizedBox(
               height: 288,
               width: double.infinity,
-              child: _BannerImage(bannerUrl: info.bannerUrl, theme: theme),
+              child: Editable(
+                seccion: 'portada',
+                etiqueta: 'Portada',
+                child: _BannerImage(bannerUrl: info.bannerUrl, theme: theme),
+              ),
             ),
             // Logo: mitad sobresale del banner — 132px → 66px fuera
             Positioned(
               bottom: -66,
-              child: _Logo(
-                logoUrl: info.logoUrl,
-                name: info.name,
-                theme: theme,
+              child: Editable(
+                seccion: 'logo',
+                etiqueta: 'Logo',
+                child: _Logo(
+                  logoUrl: info.logoUrl,
+                  name: info.name,
+                  theme: theme,
+                ),
               ),
             ),
           ],

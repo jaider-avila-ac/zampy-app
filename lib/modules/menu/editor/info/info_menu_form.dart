@@ -4,23 +4,30 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../../services/geography_service.dart';
-import '../../../../../services/image_upload_service.dart';
-import '../../../../../services/live_editor_service.dart';
-import '../../../../../shared/app_colors.dart';
-import '../editor_models.dart';
+import '../../../../services/geography_service.dart';
+import '../../../../services/image_upload_service.dart';
+import '../../../../services/live_editor_service.dart';
+import '../../../../shared/app_colors.dart';
+import '../live/editor_models.dart';
 
-class InfoLiveTab extends StatefulWidget {
-  const InfoLiveTab({super.key, required this.menu, required this.onChanged});
+// Equivalente a src/modules/menu/editor/MenuInfoPage.jsx en React: toda la información del menú en una sola
+// pantalla (identidad y enlace, contacto, ubicación, redes, galería y horario). Lo más común también se edita en el
+// propio menú (FormInformacion); el horario y el enlace solo aquí.
+class InfoMenuForm extends StatefulWidget {
+  const InfoMenuForm({super.key, required this.menu, required this.onChanged, this.enfocarHorario = false});
 
   final LiveMenu menu;
   final Future<void> Function() onChanged;
 
+  /// Abre la pantalla en el horario (como ?paso=4 en React, desde "Completa tu menú" o el menú de edición).
+  final bool enfocarHorario;
+
   @override
-  State<InfoLiveTab> createState() => _InfoLiveTabState();
+  State<InfoMenuForm> createState() => _InfoMenuFormState();
 }
 
-class _InfoLiveTabState extends State<InfoLiveTab> {
+class _InfoMenuFormState extends State<InfoMenuForm> {
+  final _horarioKey = GlobalKey();
   late final TextEditingController _name;
   late final TextEditingController _slogan;
   late final TextEditingController _slug;
@@ -54,6 +61,12 @@ class _InfoLiveTabState extends State<InfoLiveTab> {
   @override
   void initState() {
     super.initState();
+    if (widget.enfocarHorario) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _horarioKey.currentContext;
+        if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300));
+      });
+    }
     final i = widget.menu.info;
     _name = TextEditingController(text: i.name);
     _slogan = TextEditingController(text: i.slogan);
@@ -561,6 +574,7 @@ class _InfoLiveTabState extends State<InfoLiveTab> {
         ),
         const SizedBox(height: 12),
         _Card(
+          key: _horarioKey,
           title: 'Horario de atención',
           child: Column(
             children: [
@@ -581,7 +595,7 @@ class _InfoLiveTabState extends State<InfoLiveTab> {
 }
 
 class _Card extends StatelessWidget {
-  const _Card({required this.title, required this.child});
+  const _Card({super.key, required this.title, required this.child});
   final String title;
   final Widget child;
 

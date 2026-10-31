@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 
 import '../context/cart_context.dart';
 import '../modules/menu/public/components/cart_sheet.dart';
+import '../modules/menu/public/edicion/edicion_menu.dart';
+import '../modules/menu/public/edicion/producto/producto_editable.dart';
 
 import '../modules/menu/public/models/public_menu_model.dart';
 import '../modules/menu/public/components/banner.dart';
@@ -120,7 +122,8 @@ class _MenuPageState extends State<MenuPage> {
           (cat) =>
               (cat: cat, items: widget.menuData.productsForCategory(cat.id)),
         )
-        .where((g) => g.items.isNotEmpty)
+        // editando: también las vacías, para agregarles productos
+        .where((g) => EdicionMenu.of(context) != null || g.items.isNotEmpty)
         .toList();
   }
 
@@ -273,6 +276,11 @@ class _MenuPageState extends State<MenuPage> {
               preferredSize: const Size.fromHeight(1),
               child: Divider(height: 1, color: theme.navBorder),
             ),
+            // editando: el menú de edición en la cabecera (MenuHamburguesa)
+            actions: [
+              if (EdicionMenu.of(context)?.encabezado case final encabezado?)
+                Padding(padding: const EdgeInsets.only(right: 8), child: encabezado),
+            ],
             title: _NavbarRow(
               info: info,
               theme: theme,
@@ -477,11 +485,7 @@ class _MenuPageState extends State<MenuPage> {
             delegate: SliverChildBuilderDelegate(
               (ctx, i) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: ProductListItem(
-                  product: products[i],
-                  theme: theme,
-                  onTap: () => _openProduct(products[i]),
-                ),
+                child: _fila(products[i], theme),
               ),
               childCount: products.length,
             ),
@@ -536,11 +540,7 @@ class _MenuPageState extends State<MenuPage> {
               mainAxisExtent: 280,
             ),
             delegate: SliverChildBuilderDelegate(
-              (ctx, i) => ProductCard(
-                product: products[i],
-                theme: theme,
-                onTap: () => _openProduct(products[i]),
-              ),
+              (ctx, i) => _tarjeta(products[i], theme),
               childCount: products.length,
             ),
           ),
@@ -562,11 +562,7 @@ class _MenuPageState extends State<MenuPage> {
           delegate: SliverChildBuilderDelegate(
             (ctx, i) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: ProductListItem(
-                product: products[i],
-                theme: theme,
-                onTap: () => _openProduct(products[i]),
-              ),
+              child: _fila(products[i], theme),
             ),
             childCount: products.length,
           ),
@@ -576,11 +572,23 @@ class _MenuPageState extends State<MenuPage> {
   }
 
   // Grupo de categoría para modo "Todos"
+  // Tarjeta y fila de un producto. Editando el menú se envuelven con el "⋯" de edición (ProductoEditable).
+  Widget _tarjeta(MenuProduct p, MenuTheme theme) => ProductoEditable(
+        producto: p,
+        child: ProductCard(product: p, theme: theme, onTap: () => _openProduct(p)),
+      );
+
+  Widget _fila(MenuProduct p, MenuTheme theme) => ProductoEditable(
+        producto: p,
+        child: ProductListItem(product: p, theme: theme, onTap: () => _openProduct(p)),
+      );
+
   Widget _buildGroup(
     MenuCategory cat,
     List<MenuProduct> items,
     MenuTheme theme,
   ) {
+    final edicion = EdicionMenu.of(context);
     final vistaGrupo = cat.tipoContenido == 'sin_imagenes'
         ? _View.list
         : _activeView;
@@ -594,13 +602,27 @@ class _MenuPageState extends State<MenuPage> {
           Row(
             children: [
               Text(
-                cat.name,
+                cat.isVisible ? cat.name : '${cat.name} (oculta)',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: theme.text,
+                  color: cat.isVisible ? theme.text : theme.textMuted,
                 ),
               ),
+              // editando: agregar un producto directo a esta categoría
+              if (edicion != null) ...[
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => edicion.abrir('producto-nuevo', cat.id),
+                  borderRadius: BorderRadius.circular(99),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(color: const Color(0xFF4F46E5), borderRadius: BorderRadius.circular(99)),
+                    child: const Text('+ Producto',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
+                  ),
+                ),
+              ],
               const SizedBox(width: 8),
               Expanded(child: Divider(color: theme.border, height: 1)),
               const SizedBox(width: 8),
@@ -636,11 +658,7 @@ class _MenuPageState extends State<MenuPage> {
                 mainAxisExtent: 280,
               ),
               itemCount: items.length,
-              itemBuilder: (ctx, i) => ProductCard(
-                product: items[i],
-                theme: theme,
-                onTap: () => _openProduct(items[i]),
-              ),
+              itemBuilder: (ctx, i) => _tarjeta(items[i], theme),
             )
           else
             GridView.builder(
@@ -655,11 +673,7 @@ class _MenuPageState extends State<MenuPage> {
               itemCount: items.length,
               itemBuilder: (ctx, i) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: ProductListItem(
-                  product: items[i],
-                  theme: theme,
-                  onTap: () => _openProduct(items[i]),
-                ),
+                child: _fila(items[i], theme),
               ),
             ),
         ],

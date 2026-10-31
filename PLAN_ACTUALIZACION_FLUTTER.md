@@ -4,7 +4,7 @@
 > **Proyecto a actualizar:** `C:\Users\jaide\Desktop\juan\zammpy_app`
 > **Documento de seguimiento:** este archivo.
 > **Última actualización:** 2026-10-30
-> **Estado del proceso:** FASES 1–7 y 9–13 COMPLETADAS; Fase 8 es reservada. Fases 14–17 pendientes.
+> **Estado del proceso:** FASES 1–7, 9–13 y 13b (edición en el propio menú) COMPLETADAS; Fase 8 es reservada. Fases 14–17 pendientes.
 > **API base confirmada por el usuario:** `https://manzana.zammpy.com`.
 
 ---
@@ -1241,6 +1241,52 @@ Implementar el carrito persistido en servidor y la solicitud de pedido del clien
 2. Se crea una solicitud real y se muestra WhatsApp si existe.
 3. El historial muestra pedidos y permite cancelar/recibir.
 4. Analyze sin errores.
+
+---
+
+### Fase 13b — Edición en el propio menú (pedida por el usuario el 2026-10-30)
+
+**Estado:** COMPLETADA
+
+**Objetivo**
+Que en Flutter, igual que en React, el dueño o un editor editen el menú en su mismo enlace (`/menu/:slug`, como un perfil): el menú se ve como lo ve el cliente y solo se suman las opciones de edición. Antes, se reorganizó el módulo de React por responsabilidades. Por último, se quitó del editor antiguo de Flutter lo que ya se edita en el menú, como hizo React.
+
+**1. React: reorganización de `src/modules/menu/public/edicion` (autorizado por el usuario)**
+- Antes: 11 archivos planos; `FormulariosCatalogo.jsx` (371 líneas) tenía 7 formularios; `PanelEdicion.jsx` decidía qué abrir y además tenía 3 formularios; `MenuEditable.jsx` incluía `MenuHamburguesa` con publicar/despublicar; `ProductoEditable.jsx` mezclaba la posición del menú flotante, las acciones y la vista; `FormCategorias`/`FormInformacion` mezclaban lógica y vista. `FormIdentidad` era código muerto (la sección `identidad` no la abría nadie; nombre y eslogan están en "Información del negocio").
+- Después (archivo más grande: 96 líneas):
+  - `index.js`: entrada pública (`ProductoEditable`, `Editable`, `useEdicionMenu`). `MenuEditable` se importa directo para evitar el ciclo MenuPage → edicion → MenuEditable → MenuPage.
+  - `contexto.js`, `EdicionMenuProvider.jsx`, `Editable.jsx`, `MenuEditable.jsx` (solo composición).
+  - `hooks/`: `useGuardar`, `useSeccionAbierta` (`?editar=`), `usePublicacion`.
+  - `cabecera/`: `MenuHamburguesa`, `opcionesEdicion`.
+  - `panel/`: `PanelEdicion` (solo decide el formulario), `secciones` (títulos y secciones de enlace).
+  - `negocio/`: `FormImagen` + `imagenes`, `FormInformacion` + `useInformacionNegocio`.
+  - `categorias/`: `useCategorias`, `FormCategorias`, `FilaCategoria`, `NuevaCategoria`, `IconoTipoCategoria`.
+  - `producto/`: `ProductoEditable`, `useMenuFlotante`, `useAccionesProducto`, `MenuOpcionesProducto`, `partesProducto`, `conFotos`, `opcionesProducto`, `FotoProducto` (compartido por nuevo/básico), `AjustarFoto`, `FormNuevoProducto`, `FormProductoBasico`, `FormParteProducto`, `FormOpciones`, `FormGrupos`, `FormPromocion`.
+  - `tema/`: `FormTema`, `PruebaTema`.
+- Mejora de paso: crear una categoría solo limpia el campo si se creó (antes lo limpiaba aunque fallara).
+- Verificación: `eslint` de la carpeta sin errores; `vite build` correcto. React no tiene pruebas automáticas.
+
+**2. Flutter: `lib/modules/menu/public/edicion` (misma organización)**
+- `edicion_menu.dart` (InheritedWidget: abrir, código, recargar, encabezado), `editable.dart` (portada y logo: el toque abre su formulario y no lo de adentro), `menu_editable.dart` (composición + prueba de tema), `comun/guardar.dart` (mixin `GuardarSeccion`, avisos y campos comunes).
+- `cabecera/`: `menu_hamburguesa.dart` (panel lateral desde la derecha: Tu negocio, Catálogo, Diseño, Publicar/Despublicar, Ir al panel), `opciones_edicion.dart`, `publicacion.dart`.
+- `panel/`: `panel_edicion.dart` (hoja inferior en teléfono, diálogo de 600 px en tablet), `secciones.dart`.
+- `negocio/`: `form_imagen.dart` (logo con recorte cuadrado, portada), `form_informacion.dart` + `informacion_negocio.dart` (guarda solo las secciones que cambiaron; galería con subida diferida).
+- `categorias/`: `categorias_edicion.dart`, `form_categorias.dart`, `fila_categoria.dart`, `nueva_categoria.dart` (orden guardado una sola vez, deshacer).
+- `producto/`: `producto_editable.dart` ("⋯" con `PopupMenuButton`, producto oculto en gris con marca), `acciones_producto.dart`, `partes_producto.dart`, `con_fotos.dart`, `opciones_producto.dart`, `foto_producto.dart`, `ajustar_foto.dart` (arrastrar sobre 9:7), `selector_categoria.dart` y formularios `nuevo`, `basico`, `opciones` (tamaños/ingredientes/adiciones), `grupos`, `promocion`, `parte_producto`.
+- `tema/`: `form_tema.dart` (el menú de atrás cambia al instante), `prueba_tema.dart` (barra "¿Te gusta cómo queda?": volver, elegir otro, dejar este tema), `tema_elegido.dart`.
+- Integración: `PublicMenuPage` muestra `MenuEditable` si `GET /menus/acceso` dice `puedeEditar`, con `?editar=` desde la ruta. `UsePublicMenu` guarda el acceso, carga la vista previa con lo oculto (`fromRoot(incluirOcultos: true)`) y ofrece `recargar()`/`recargarAcceso()`. `MenuPage` muestra el menú de edición en la cabecera, envuelve tarjetas y filas con `ProductoEditable`, agrega "+ Producto" y "(oculta)" a cada categoría y muestra las categorías vacías. `Banner` envuelve portada y logo con `Editable`. La calificación de la tarjeta baja para no chocar con el "⋯", igual que React.
+- Modelo: `MenuProduct` suma `imageX/imageY` (`imagePosition`), `imageAlignment` y `enExplorar`. La posición de la foto ya se aplica en la tarjeta, la lista y el detalle (antes Flutter la ignoraba).
+
+**3. Editor antiguo de Flutter, igual que React**
+- `LiveMenuEditorPage` queda con Grupos, Plan y visibilidad y Colaboradores. `/menus/:codigo/edit` sin pestaña, o con una que ya se edita en el menú, redirige a `/menu/:slug` (como `RedirigirMiMenu`).
+- Eliminados: `categories_live_tab.dart`, `products_live_tab.dart`, `design_live_tab.dart`, `product_form_live_page.dart` y las rutas `/menus/:codigo/products/new` y `/products/:pid`.
+- La pestaña Información pasó a `editor/info/info_menu_form.dart` + `menu_info_page.dart` en `/menus/:codigo/info` (como `MenuInfoPage` de React; `?paso=horario` abre en el horario). Ahí siguen el enlace del menú y el horario.
+- Panel del menú: "Editar menú" lleva a `/menu/:slug`. Los pasos de "Completa tu menú" abren `/menu/:slug?editar=…` (portada, información, producto nuevo) o el horario, con el mismo mapeo que `PasosMenu.jsx`.
+
+**Verificación**
+- `flutter analyze` sin errores (2 avisos previos del editor viejo `modules/menu/editor/tabs`, sin rutas). `flutter test`: 50 OK. Nuevo `test/edicion_menu_test.dart`: sin edición todo se ve como cliente; editando, la portada abre su sección y no lo de adentro; el producto oculto se marca; el "⋯" abre cada parte. La prueba encontró y se corrigió un desborde del texto en el menú del "⋯".
+- Rutas verificadas contra `manzana.zammpy.com` sin sesión (todas 401, ninguna 404): `/menus/acceso`, `/preview`, `/secciones/diseno` e `identidad`, `/categorias/orden`, `/productos/{código}` y sus partes (`tamanos`, `promocion`, `explorar`), `/horario`.
+- Pendiente: probar en teléfono y tablet con una cuenta dueña real (no hay credenciales en este entorno).
 
 ---
 

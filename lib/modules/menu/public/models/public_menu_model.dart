@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:flutter/painting.dart' show Alignment;
+
 // Modelos de datos para el menú público
 // Equivalente a los tipos usados en usePublicMenu.js y MenuPage.jsx en React
 
@@ -401,7 +403,15 @@ class MenuProduct {
   final double? rating;
   final int? totalVotos;
   final bool isFeatured;
+  // qué parte de la foto se ve en la tarjeta, en porcentaje (0-100); 50/50 = centro
+  final double imageX;
+  final double imageY;
+  // si el producto aparece en Explorar (el dueño puede quitarlo)
+  final bool enExplorar;
   final int order;
+
+  // la posición de la foto como alineación (equivale a object-position de React)
+  Alignment get imageAlignment => Alignment(imageX / 50 - 1, imageY / 50 - 1);
 
   const MenuProduct({
     required this.id,
@@ -424,6 +434,9 @@ class MenuProduct {
     this.rating,
     this.totalVotos,
     this.isFeatured = false,
+    this.imageX = 50,
+    this.imageY = 50,
+    this.enExplorar = true,
     this.order = 0,
   });
 
@@ -469,6 +482,9 @@ class MenuProduct {
       rating: (json['rating'] as num?)?.toDouble(),
       totalVotos: (json['totalVotos'] as num?)?.toInt(),
       isFeatured: json['isFeatured'] as bool? ?? false,
+      imageX: ((json['imagePosition'] as Map?)?['x'] as num?)?.toDouble() ?? 50,
+      imageY: ((json['imagePosition'] as Map?)?['y'] as num?)?.toDouble() ?? 50,
+      enExplorar: json['enExplorar'] != false,
       order: (json['order'] as num?)?.toInt() ?? 0,
     );
   }
@@ -553,9 +569,11 @@ class PublicMenuData {
     ubicacion: ubicacion,
   );
 
+  // incluirOcultos: el dueño o el editor ven también las categorías y productos ocultos (para editarlos)
   factory PublicMenuData.fromRoot(
     Map<String, dynamic> root, {
     MenuTheme? catalogTheme,
+    bool incluirOcultos = false,
   }) {
     Map<String, dynamic>? asMap(dynamic value) =>
         value is Map ? Map<String, dynamic>.from(value) : null;
@@ -578,7 +596,7 @@ class PublicMenuData {
         (content['categories'] as List? ?? [])
             .whereType<Map>()
             .map((c) => MenuCategory.fromJson(Map<String, dynamic>.from(c)))
-            .where((c) => c.isVisible)
+            .where((c) => incluirOcultos || c.isVisible)
             .toList()
           ..sort((a, b) => a.order.compareTo(b.order));
 
@@ -586,7 +604,7 @@ class PublicMenuData {
         (content['products'] as List? ?? [])
             .whereType<Map>()
             .map((p) => MenuProduct.fromJson(Map<String, dynamic>.from(p)))
-            .where((p) => p.isVisible)
+            .where((p) => incluirOcultos || p.isVisible)
             .toList()
           ..sort((a, b) => a.order.compareTo(b.order));
 
