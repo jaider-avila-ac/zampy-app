@@ -370,11 +370,20 @@ class _PedidoCardState extends State<_PedidoCard> {
                 IconButton(
                   tooltip: 'Marcar como recibido',
                   onPressed: widget.marcando ? null : widget.onRecibido,
+                  // como React: botón relleno índigo con el check en blanco
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.kBlue,
+                    foregroundColor: Colors.white,
+                  ),
                   icon: widget.marcando
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.check_circle_outline, color: AppColors.kBlue),
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_circle, color: Colors.white),
                 ),
-              if (estado == 'entregado') const Icon(Icons.check_circle, size: 18, color: AppColors.kTextSecondary),
+              if (estado == 'entregado') const Icon(Icons.check_circle, size: 18, color: AppColors.kBlueLight),
               if (estado == 'cancelado') const Icon(Icons.cancel, size: 18, color: AppColors.kTextMuted),
             ],
           ),
