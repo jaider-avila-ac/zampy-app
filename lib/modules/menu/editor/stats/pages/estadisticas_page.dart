@@ -160,22 +160,20 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
           childAspectRatio: 1.35,
           children: [
             _Metrica(icon: Icons.visibility_outlined, valor: _num(s['totalVistas'] as num?), label: 'Vistas del menú'),
+            // Como React: un solo color en toda la pantalla, el índigo (default de _Metrica).
             _Metrica(
               icon: Icons.favorite_outline,
-              color: const Color(0xFFF43F5E),
               valor: _num(s['meEncantas'] as num?),
               label: 'Me encanta (menú completo)',
             ),
             _Metrica(
               icon: Icons.shopping_cart_outlined,
-              color: const Color(0xFF4F46E5),
               valor: _num(s['totalOperaciones'] as num?),
               label: 'Operaciones entregadas',
               detalle: '${s['pedidosDomicilio'] ?? 0} domicilio · ${s['rondasMesa'] ?? 0} rondas',
             ),
             _Metrica(
               icon: Icons.trending_up,
-              color: const Color(0xFFD97706),
               valor: '${(s['conversionOperaciones'] as num? ?? 0).toString().replaceAll('.', ',')}%',
               label: 'Operaciones por visita',
             ),
@@ -221,7 +219,6 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
                 imageUrl: p['imageUrl'] as String?,
                 valor: _num(p['meEncantas'] as num?),
                 icon: Icons.favorite,
-                iconColor: const Color(0xFFF43F5E),
               ),
           ]),
         const SizedBox(height: 24),
@@ -281,13 +278,11 @@ class _Metrica extends StatelessWidget {
     required this.valor,
     required this.label,
     this.detalle,
-    this.color = AppColors.kBlue,
   });
   final IconData icon;
   final String valor;
   final String label;
   final String? detalle;
-  final Color color;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -301,7 +296,7 @@ class _Metrica extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: color),
+            Icon(icon, size: 20, color: AppColors.kBlue),
             const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -327,7 +322,7 @@ class _Titulo extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 10),
         child: Row(
           children: [
-            Icon(icon, size: 16, color: AppColors.kTextSecondary),
+            Icon(icon, size: 16, color: AppColors.kBlue),
             const SizedBox(width: 6),
             Text(texto, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.kTextPrimary)),
           ],
@@ -400,14 +395,12 @@ class _FilaProducto extends StatelessWidget {
     required this.valor,
     required this.icon,
     this.rank,
-    this.iconColor = AppColors.kTextMuted,
   });
   final int? rank;
   final String nombre;
   final String? imageUrl;
   final String valor;
   final IconData icon;
-  final Color iconColor;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -439,9 +432,9 @@ class _FilaProducto extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.kTextPrimary)),
             ),
-            Icon(icon, size: 13, color: iconColor),
+            Icon(icon, size: 13, color: AppColors.kBlue),
             const SizedBox(width: 4),
-            Text(valor, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.kTextPrimary)),
+            Text(valor, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.kBlue)),
           ],
         ),
       );

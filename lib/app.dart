@@ -39,7 +39,9 @@ import 'modules/subscription/pages/suscripcion_page.dart';
 import 'services/auth_redirect.dart';
 import 'shared/app_colors.dart';
 
-final routeObserver = RouteObserver<ModalRoute<void>>();
+// Solo PageRoute: así el "silentRefresh" al volver a Explorar se dispara con navegaciones de
+// página reales, NO al cerrar un popup/menú (⋯) o un diálogo (que también son ModalRoute).
+final routeObserver = RouteObserver<PageRoute<void>>();
 
 bool _isPublicPath(String path) {
   if (path == '/' || path == '/explore' || path == '/about') return true;

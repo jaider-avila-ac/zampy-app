@@ -64,7 +64,8 @@ class _ExploreViewState extends State<_ExploreView> with RouteAware {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final route = ModalRoute.of(context);
-    if (route != null) routeObserver.subscribe(this, route);
+    // Solo se observa la PageRoute propia: abrir/cerrar un popup (⋯) o diálogo no debe recargar.
+    if (route is PageRoute) routeObserver.subscribe(this, route);
 
     if (!_initialized) {
       _initialized = true;
