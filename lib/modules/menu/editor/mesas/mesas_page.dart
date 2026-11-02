@@ -10,6 +10,7 @@ import '../../../../shared/responsive.dart';
 import '../../../orders/components/comun/estados_lista.dart';
 import '../../../orders/hooks/eventos_pedidos.dart';
 import '../../../orders/hooks/pagina_cursor.dart' show mensaje;
+import '../live/editor_tabs_bar.dart';
 import 'mesa_form_sheet.dart';
 import 'mesa_model.dart';
 import 'mesa_tile.dart';
@@ -93,7 +94,9 @@ class _MesasPageState extends State<MesasPage> {
           icon: const Icon(Icons.add, size: 18),
           label: const Text('Nueva mesa', style: TextStyle(fontWeight: FontWeight.w700)),
         ),
-        body: ListenableBuilder(
+        body: Column(children: [
+          EditorTabsBar(codigo: widget.codigo, active: 'mesas'),
+          Expanded(child: ListenableBuilder(
           listenable: _mesas,
           builder: (context, _) => RefreshIndicator(
             color: AppColors.kBlue,
@@ -128,5 +131,7 @@ class _MesasPageState extends State<MesasPage> {
             ),
           ),
         ),
+        ),
+        ]),
       );
 }

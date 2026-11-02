@@ -7,6 +7,7 @@ import '../../../services/mis_menus_service.dart';
 import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
 import '../../../shared/responsive.dart';
+import '../../menu/editor/live/editor_tabs_bar.dart';
 import '../components/comun/filtro_fechas.dart';
 import '../components/comun/resumen_ventas_card.dart';
 import '../components/cuentas/vista_cuentas.dart';
@@ -109,7 +110,9 @@ class _MenuPedidosPageState extends State<MenuPedidosPage> {
       backgroundColor: AppColors.kBgPage,
       drawer: const AppSidebar(),
       appBar: AppHeader(title: 'Pedidos', subtitle: _nombre),
-      body: _sinPermiso
+      body: Column(children: [
+        EditorTabsBar(codigo: widget.codigo, active: 'pedidos'),
+        Expanded(child: _sinPermiso
           ? const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
@@ -173,6 +176,8 @@ class _MenuPedidosPageState extends State<MenuPedidosPage> {
                 ],
               ),
             ),
+        ),
+      ]),
     );
   }
 }

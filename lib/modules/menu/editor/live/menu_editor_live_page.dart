@@ -6,6 +6,7 @@ import '../../../../services/live_editor_service.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
 import 'editor_models.dart';
+import 'editor_tabs_bar.dart';
 import 'tabs/collaborators_live_tab.dart';
 import 'tabs/groups_live_tab.dart';
 import 'tabs/publish_live_tab.dart';
@@ -103,11 +104,11 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
       child: Scaffold(
         backgroundColor: AppColors.kBgPage,
         drawer: const AppSidebar(),
-        // Cada sección (Grupos / Plan y visibilidad / Colaboradores) es su propia vista: el título es el
-        // de la sección y no se muestran las otras como pestañas.
+        // Header como el MenuEditorLayout de React: nombre del menú + /slug; las secciones van en la
+        // barra de pestañas (abajo), sin íconos de editar/estadísticas en el header.
         appBar: AppHeader(
-          title: _tituloTab(_tab),
-          subtitle: menu?.info.name,
+          title: menu?.info.name.isNotEmpty == true ? menu!.info.name : 'Editor del menú',
+          subtitle: menu == null ? null : '/${menu.slug}',
         ),
         body: _buildBody(menu),
       ),
@@ -147,18 +148,23 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
       );
     }
 
-    // Vista única por sección (sin pestañas): colaboradores solo para el dueño; si el tab no aplica, grupos.
+    // colaboradores solo para el dueño; si el tab no aplica, grupos.
     final puede = (_tab != 'collaborators' || menu.esPropio) &&
         _tabs.any((t) => t.$1 == _tab);
     final active = puede ? _tab : 'groups';
-    return _tabContent(active, menu);
+    return Column(
+      children: [
+        EditorTabsBar(
+          codigo: widget.codigo,
+          active: active,
+          esPropio: menu.esPropio,
+          // dentro del editor, cambiar de sección no recarga el menú
+          onEditorTab: (id) => setState(() => _tab = id),
+        ),
+        Expanded(child: _tabContent(active, menu)),
+      ],
+    );
   }
-
-  String _tituloTab(String tab) => switch (tab) {
-    'publish' => 'Plan y visibilidad',
-    'collaborators' => 'Colaboradores',
-    _ => 'Grupos de opciones',
-  };
 
   Widget _tabContent(String tab, LiveMenu menu) {
     switch (tab) {
