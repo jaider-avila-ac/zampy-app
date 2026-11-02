@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../services/api_client.dart';
-import '../../../services/colaboracion_service.dart';
 import '../../../services/explore_service.dart';
 import '../../../services/public_api_service.dart';
 import '../models/explore_models.dart';
@@ -13,11 +11,6 @@ import '../models/explore_models.dart';
 // Equivalente a src/modules/explore/hooks/useExplore.js en React
 
 class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
-  static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
-  static const _municipioKey = 'explore:municipio';
-
   String _vista = 'menus';
   ExploreFiltros? _filtros;
   bool _filtrosLoading = true;
@@ -101,12 +94,9 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
     _initialized = true;
     WidgetsBinding.instance.addObserver(this);
 
-    final saved = await _readMunicipio();
-    _municipioMenus = saved;
-    _municipioPlatos = saved;
-
+    // Como React (useExplore.js): el lugar por defecto es siempre "todos los lugares" (null).
+    // No se restaura de almacenamiento ni se autollena con el municipio del perfil.
     await cargarFiltros();
-    await _aplicarMunicipioPerfil(isLoggedIn);
     await loadMenus(reset: true);
   }
 
@@ -116,16 +106,13 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
       if (_municipioMenus == null && _municipioPlatos == null) return;
       _municipioMenus = null;
       _municipioPlatos = null;
-      await _guardarMunicipio(null);
       if (_initialized) {
         await loadMenus(reset: true);
         if (_vista == 'platos') await loadProductos(reset: true);
       }
       return;
     }
-    if (_municipioMenus != null || _filtros == null) return;
-    await _aplicarMunicipioPerfil(true);
-    await loadMenus(reset: true);
+    // Al iniciar sesión no se autoselecciona ningún lugar: sigue en "todos los lugares" (como React).
   }
 
   Future<void> cargarFiltros() async {
@@ -152,20 +139,6 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
     return filtros.lugares.any((l) => l.codigo == codigo) ? codigo : null;
   }
 
-  Future<void> _aplicarMunicipioPerfil(bool isLoggedIn) async {
-    if (!isLoggedIn || _municipioMenus != null || _filtros == null) return;
-    try {
-      final me = await ColaboracionService.getMe();
-      final ubicacion = me?['ubicacion'];
-      if (ubicacion is! Map) return;
-      final codigo = ubicacion['municipioCodigo']?.toString();
-      if (codigo == null || codigo.isEmpty) return;
-      if (!_filtros!.lugares.any((l) => l.codigo == codigo)) return;
-      _municipioMenus = codigo;
-      _municipioPlatos = codigo;
-      notifyListeners();
-    } catch (_) {}
-  }
 
   Future<void> loadMenus({bool reset = false}) async {
     if (!reset && (_menuLoading || !_menuHasMore)) return;
@@ -291,7 +264,6 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
 
   void cambiarMunicipioMenus(String? codigo) {
     _municipioMenus = codigo;
-    _guardarMunicipio(codigo);
     _searchTimer?.cancel();
     loadMenus(reset: true);
     if (showingSearch) _doSearch();
@@ -306,7 +278,6 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
 
   void cambiarMunicipioPlatos(String? codigo) {
     _municipioPlatos = codigo;
-    _guardarMunicipio(codigo);
     loadProductos(reset: true);
   }
 
@@ -389,25 +360,6 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
         await loadMenus(reset: true);
       } else {
         await loadProductos(reset: true);
-      }
-    } catch (_) {}
-  }
-
-  Future<String?> _readMunicipio() async {
-    try {
-      final value = await _storage.read(key: _municipioKey);
-      return value == null || value.isEmpty ? null : value;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _guardarMunicipio(String? codigo) async {
-    try {
-      if (codigo == null || codigo.isEmpty) {
-        await _storage.delete(key: _municipioKey);
-      } else {
-        await _storage.write(key: _municipioKey, value: codigo);
       }
     } catch (_) {}
   }
