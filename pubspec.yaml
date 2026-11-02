@@ -23,6 +23,9 @@ dependencies:
   # Almacenamiento seguro (JWT tokens)
   flutter_secure_storage: ^9.2.2
 
+  # Datos del dispositivo (marca/modelo/versión Android) para "Sesiones activas"
+  device_info_plus: ^11.1.0
+
   # SVG
   flutter_svg: ^2.0.10+1
 

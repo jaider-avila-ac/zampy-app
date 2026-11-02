@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'api.dart';
+import 'device_info_service.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -118,7 +119,12 @@ class ApiClient {
         ? base
         : base.replace(queryParameters: {...base.queryParameters, ...query});
 
-    final headers = <String, String>{'Accept': 'application/json', ...?extraHeaders};
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      // Identifica el dispositivo para "Sesiones activas" (el backend solo lo lee al abrir sesión)
+      ...DeviceInfoService.headers,
+      ...?extraHeaders,
+    };
     if (body != null) headers['Content-Type'] = 'application/json';
 
     final token = auth ? tokenProvider?.call() : null;

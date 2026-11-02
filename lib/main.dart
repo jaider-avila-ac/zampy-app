@@ -7,6 +7,7 @@ import 'context/cart_context.dart';
 import 'context/likes_context.dart';
 import 'context/notificacion_context.dart';
 import 'modules/explore/hooks/use_explore.dart';
+import 'services/device_info_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,8 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  // Identidad del dispositivo para "Sesiones activas" (antes de cualquier login/refresh)
+  await DeviceInfoService.init();
   final auth = AuthContext();
   auth.init();
 

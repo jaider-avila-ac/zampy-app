@@ -533,33 +533,14 @@ class _SessionCard extends StatelessWidget {
   final String?              revoking;
   final VoidCallback         onRevoke;
 
-  static IconData _deviceIcon(String? ua) {
-    if (ua == null) return Icons.monitor_outlined;
-    final s = ua.toLowerCase();
-    if (s.contains('mobile') || s.contains('android') || s.contains('iphone')) {
-      return Icons.smartphone_outlined;
-    }
+  // El backend ya manda un nombre amable ("Chrome · Windows", "Redmi Note 11 · App Zammpy"):
+  // aquí solo se elige el ícono y se muestra tal cual.
+  static IconData _deviceIcon(String? nombre) {
+    if (nombre == null) return Icons.monitor_outlined;
+    final s = nombre.toLowerCase();
+    const moviles = ['android', 'iphone', 'ipad', 'ios', 'móvil', 'movil', 'app zammpy'];
+    if (moviles.any(s.contains)) return Icons.smartphone_outlined;
     return Icons.monitor_outlined;
-  }
-
-  static String _parseBrowser(String? ua) {
-    if (ua == null) return 'Dispositivo desconocido';
-    if (ua.contains('Chrome') && !ua.contains('Edg')) return 'Chrome';
-    if (ua.contains('Firefox')) return 'Firefox';
-    if (ua.contains('Safari') && !ua.contains('Chrome')) return 'Safari';
-    if (ua.contains('Edg')) return 'Edge';
-    if (ua.contains('Opera') || ua.contains('OPR')) return 'Opera';
-    return 'Navegador';
-  }
-
-  static String _parseOS(String? ua) {
-    if (ua == null) return '';
-    if (ua.contains('Windows')) return 'Windows';
-    if (ua.contains('Mac OS')) return 'macOS';
-    if (ua.contains('Android')) return 'Android';
-    if (ua.contains('iPhone') || ua.contains('iPad')) return 'iOS';
-    if (ua.contains('Linux')) return 'Linux';
-    return '';
   }
 
   static String _formatDate(String? iso) {
@@ -576,14 +557,12 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ua       = d['nombre'] as String?;
+    final nombre   = d['nombre'] as String?;
     final esEste   = d['esEste'] as bool? ?? false;
     final navegando = d['navegando'] as bool? ?? false;
     final ip       = d['ip'] as String? ?? 'IP desconocida';
     final creadoEn = _formatDate(d['creadoEn'] as String?);
-    final browser  = _parseBrowser(ua);
-    final os       = _parseOS(ua);
-    final label    = os.isNotEmpty ? '$browser · $os' : browser;
+    final label    = (nombre == null || nombre.isEmpty) ? 'Dispositivo desconocido' : nombre;
     final isRevoking = revoking == d['codigo']?.toString();
 
     return Container(
@@ -608,7 +587,7 @@ class _SessionCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              _deviceIcon(ua),
+              _deviceIcon(nombre),
               size:  20,
               color: esEste ? AppColors.kBlue : AppColors.kTextMuted,
             ),
