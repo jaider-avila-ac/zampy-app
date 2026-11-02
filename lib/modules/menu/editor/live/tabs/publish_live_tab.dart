@@ -264,7 +264,7 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => context.push('/menu/${widget.menu.slug}'),
+            onPressed: () => context.push('/${widget.menu.slug}'),
             icon: const Icon(Icons.open_in_new, size: 16),
             label: const Text('Ver menú público'),
           ),

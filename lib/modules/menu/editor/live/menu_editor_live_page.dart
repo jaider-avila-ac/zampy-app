@@ -103,20 +103,11 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
       child: Scaffold(
         backgroundColor: AppColors.kBgPage,
         drawer: const AppSidebar(),
+        // Cada sección (Grupos / Plan y visibilidad / Colaboradores) es su propia vista: el título es el
+        // de la sección y no se muestran las otras como pestañas.
         appBar: AppHeader(
-          title: menu?.info.name.isNotEmpty == true
-              ? menu!.info.name
-              : 'Editor del menú',
-          subtitle: menu == null ? null : '/${menu.slug}',
-          actions: [
-            // Una sola acción, como el EditorHeader de React: abrir el menú para editarlo (/<slug>).
-            if (menu != null)
-              IconButton(
-                tooltip: 'Editar menú',
-                onPressed: () => context.push('/${menu.slug}'),
-                icon: const Icon(Icons.edit_outlined, size: 19),
-              ),
-          ],
+          title: _tituloTab(_tab),
+          subtitle: menu?.info.name,
         ),
         body: _buildBody(menu),
       ),
@@ -156,49 +147,18 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
       );
     }
 
-    final tabs = _tabs
-        .where((t) => t.$1 != 'collaborators' || menu.esPropio)
-        .toList();
-    final active = tabs.any((t) => t.$1 == _tab) ? _tab : 'groups';
-
-    return Column(
-      children: [
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: tabs.map((t) {
-                final selected = t.$1 == active;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: ChoiceChip(
-                    label: Text(t.$2),
-                    selected: selected,
-                    onSelected: (_) => setState(() => _tab = t.$1),
-                    selectedColor: const Color(0xFFEEF2FF),
-                    side: BorderSide(
-                      color: selected ? AppColors.kBlue : AppColors.kCardBorder,
-                    ),
-                    labelStyle: TextStyle(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected
-                          ? AppColors.kBlue
-                          : AppColors.kTextSecondary,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-        Expanded(child: _tabContent(active, menu)),
-      ],
-    );
+    // Vista única por sección (sin pestañas): colaboradores solo para el dueño; si el tab no aplica, grupos.
+    final puede = (_tab != 'collaborators' || menu.esPropio) &&
+        _tabs.any((t) => t.$1 == _tab);
+    final active = puede ? _tab : 'groups';
+    return _tabContent(active, menu);
   }
+
+  String _tituloTab(String tab) => switch (tab) {
+    'publish' => 'Plan y visibilidad',
+    'collaborators' => 'Colaboradores',
+    _ => 'Grupos de opciones',
+  };
 
   Widget _tabContent(String tab, LiveMenu menu) {
     switch (tab) {

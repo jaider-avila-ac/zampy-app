@@ -43,6 +43,19 @@ import 'shared/app_colors.dart';
 // página reales, NO al cerrar un popup/menú (⋯) o un diálogo (que también son ModalRoute).
 final routeObserver = RouteObserver<PageRoute<void>>();
 
+// Rutas propias de la app de un solo segmento (nunca son el slug de un menú).
+const _rutasReservadas = {
+  'menus', 'perfil', 'settings', 'notifications', 'logros', 'pedidos',
+  'invitaciones', 'suscripcion', 'login', 'register', 'explore', 'about',
+  'menu', 'auth', 'invite', 'billing', 'mesero', 'repartidor', 'preview',
+};
+
+/// Un menú vive en `/slug` (un solo segmento que no es una ruta reservada), como en React.
+bool esSlugDeMenu(String path) {
+  final segs = path.split('/').where((s) => s.isNotEmpty).toList();
+  return segs.length == 1 && !_rutasReservadas.contains(segs.first);
+}
+
 bool _isPublicPath(String path) {
   if (path == '/' || path == '/explore' || path == '/about') return true;
   if (path == '/preview/demo') return true;
@@ -55,6 +68,7 @@ bool _isPublicPath(String path) {
       path == '/auth/reset-password') {
     return true;
   }
+  if (esSlugDeMenu(path)) return true; // el menú público /<slug> no requiere sesión
   return false;
 }
 
@@ -286,6 +300,24 @@ GoRouter _buildRouter(AuthContext auth) {
         },
       ),
       GoRoute(path: '/about', builder: (context, state) => const AboutPage()),
+      // El menú público vive en /<slug> (sin "/menu"), como en React. Va al FINAL para que las rutas
+      // fijas de arriba tengan prioridad; solo captura un segmento que no sea una ruta reservada.
+      GoRoute(
+        path: '/:slug',
+        redirect: (context, state) =>
+            esSlugDeMenu(state.matchedLocation) ? null : '/',
+        builder: (context, state) {
+          final slug = state.pathParameters['slug']!;
+          final query = state.uri.queryParameters;
+          return PublicMenuPage(
+            slug: slug,
+            staffMode: query['staff'] == '1',
+            initialProductId: query['producto'],
+            editar: query['editar'],
+            mesero: DestinoOrden.deQuery(query),
+          );
+        },
+      ),
     ],
   );
 }
@@ -320,7 +352,13 @@ class _ZammpyAppState extends State<ZammpyApp> {
         child: child ?? const SizedBox.shrink(),
       ),
       theme: ThemeData(
-        colorSchemeSeed: AppColors.kBlue,
+        // Se fuerza primary = índigo oficial de Zammpy (#4F46E5): el tono que Material 3 genera
+        // a partir del seed es un morado desaturado y hacía que botones como "Despublicar"/"Aplicar"
+        // no parecieran de Zammpy. Con esto todos los FilledButton/ElevatedButton usan el índigo real.
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.kBlue).copyWith(
+          primary: AppColors.kBlue,
+          onPrimary: Colors.white,
+        ),
         fontFamily: 'Roboto',
         useMaterial3: true,
       ),
