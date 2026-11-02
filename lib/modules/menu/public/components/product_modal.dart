@@ -272,21 +272,30 @@ class _ProductModalState extends State<ProductModal> {
     };
   }
 
+  // Evita el doble toque: al agregar se cierra el modal, pero protegemos la ventana entre toques rápidos.
+  bool _agregando = false;
+
   void _agregarALaOrden() {
+    if (_agregando) return;
+    _agregando = true;
     widget.onConfiguredAdd?.call(_configuredItem());
     Navigator.of(context).pop();
   }
 
   void _agregarAlCarrito() {
+    if (_agregando) return;
     if (!context.read<AuthContext>().isLoggedIn) {
       showAuthRequiredDialog(
         context,
-        returnTo: '/menu/${widget.menuSlug}',
+        returnTo: '/${widget.menuSlug}',
         message: 'Necesitas una cuenta para hacer pedidos.',
       );
       return;
     }
+    _agregando = true;
     context.read<CartContext>().addItem(_configuredItem());
+    // al agregar se cierra el "ver más" (así no se puede volver a tocar y se evita el spam)
+    Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
       content: Text('¡Agregado al carrito!'),
       behavior: SnackBarBehavior.floating,
