@@ -50,16 +50,15 @@ class _AvisoUbicacionState extends State<AvisoUbicacion> {
     super.dispose();
   }
 
-  // El router avisa durante el build al cambiar de ruta: se redibuja al terminar el frame.
+  // El router/auth pueden avisar DURANTE un build (incluido el primer attach, que corre en fase
+  // `idle` pero dentro de buildScope). Llamar setState ahí dispara el assert '!_dirty' del SDK nuevo,
+  // así que el redibujo siempre se difiere al final del frame (nunca durante el build).
   void _cambio() {
-    if (SchedulerBinding.instance.schedulerPhase ==
-        SchedulerPhase.persistentCallbacks) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() {});
-      });
-    } else if (mounted) {
-      setState(() {});
-    }
+    if (!mounted) return;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+    SchedulerBinding.instance.ensureVisualUpdate();
   }
 
   @override
