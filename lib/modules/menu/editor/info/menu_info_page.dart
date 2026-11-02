@@ -48,7 +48,7 @@ class _MenuInfoPageState extends State<MenuInfoPage> {
       backgroundColor: AppColors.kBgPage,
       drawer: const AppSidebar(),
       appBar: AppHeader(
-        title: 'Información del menú',
+        title: widget.enfocarHorario ? 'Horario de atención' : 'Información del menú',
         subtitle: menu?.info.name,
         actions: [
           if (menu != null)

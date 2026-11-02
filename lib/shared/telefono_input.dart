@@ -105,11 +105,14 @@ class _TelefonoInputState extends State<TelefonoInput> {
           ),
           const SizedBox(height: 6),
         ],
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // IntrinsicHeight + stretch: el código de país y el número quedan al mismo alto.
+        IntrinsicHeight(
+          child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: const Color(0xFFFAFAFA),
                 border: Border.all(color: const Color(0xFFCBD5E1)),
@@ -182,6 +185,7 @@ class _TelefonoInputState extends State<TelefonoInput> {
               ),
             ),
           ],
+        ),
         ),
       ],
     );

@@ -264,7 +264,7 @@ class _LocationCascadeInputState extends State<LocationCascadeInput> {
         ),
         const SizedBox(height: 10),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
@@ -316,10 +316,11 @@ class _LocationCascadeInputState extends State<LocationCascadeInput> {
                   decoration: _decoration(
                     hint: !hasDivision
                         ? 'Primero elige la división'
-                        : 'Buscar municipio…',
+                        : 'Seleccionar…',
                     label: 'Municipio / Ciudad',
                     enabled: hasDivision,
                   ),
+                  // Mismo aspecto que el dropdown de departamento: flecha abajo (sin lupa).
                   child: Row(
                     children: [
                       Expanded(
@@ -327,7 +328,7 @@ class _LocationCascadeInputState extends State<LocationCascadeInput> {
                           value.municipio.isNotEmpty ? value.municipio : '',
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 16,
                             color: value.municipio.isNotEmpty
                                 ? AppColors.kTextPrimary
                                 : AppColors.kTextMuted,
@@ -335,9 +336,9 @@ class _LocationCascadeInputState extends State<LocationCascadeInput> {
                         ),
                       ),
                       const Icon(
-                        Icons.search,
-                        size: 16,
-                        color: AppColors.kTextMuted,
+                        Icons.arrow_drop_down,
+                        size: 24,
+                        color: Color(0xFF64748B),
                       ),
                     ],
                   ),

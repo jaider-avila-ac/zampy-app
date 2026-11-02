@@ -313,6 +313,9 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       children: [
+        // El horario se edita de forma independiente: al abrir con enfocarHorario solo se muestra su tarjeta,
+        // sin el resto de la información del negocio ni el diseño (que se edita en el propio menú).
+        if (!widget.enfocarHorario) ...[
         _Card(
           title: 'Identidad',
           child: Column(
@@ -323,7 +326,7 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
                 label: 'Link',
                 controller: _slug,
                 max: 100,
-                prefix: 'zammpy.com/menu/',
+                prefix: 'zammpy.com/',
                 onChanged: (v) {
                   final clean = v.toLowerCase().replaceAll(
                     RegExp(r'[^a-z0-9-]'),
@@ -573,6 +576,7 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
           ),
         ),
         const SizedBox(height: 12),
+        ],
         _Card(
           key: _horarioKey,
           title: 'Horario de atención',
