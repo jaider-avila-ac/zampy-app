@@ -201,7 +201,7 @@ class ProductCard extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Precio: promo tachado + verde, o precio normal en primary
+                          // Precio: promo (tachado el original + promo en el color del tema), o precio normal
                           if (product.hasPromo) ...[
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

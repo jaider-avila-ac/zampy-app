@@ -66,7 +66,7 @@ class LogroCard extends StatelessWidget {
     final borderColor = selected
         ? const Color(0xFFA5B4FC)   // indigo-300
         : logro.desbloqueado
-        ? const Color(0xFF6EE7B7)   // emerald-200
+        ? const Color(0xFFA5B4FC)   // indigo-300 (como React: border-indigo-300)
         : AppColors.kCardBorder;    // slate-200
 
     return Container(

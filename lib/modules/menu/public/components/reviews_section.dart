@@ -345,7 +345,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
         content: Text(msg),
         backgroundColor: isError
             ? const Color(0xFFef4444)
-            : const Color(0xFF22c55e),
+            : const Color(0xFF4F46E5), // índigo (como los toasts de éxito en React), no verde
         behavior: SnackBarBehavior.floating,
       ),
     );

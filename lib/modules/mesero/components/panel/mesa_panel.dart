@@ -200,7 +200,7 @@ class _ResumenCuenta extends StatelessWidget {
       decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(12)),
       child: Row(children: [
         dato('Total', cuenta.total, Colors.white),
-        dato('Pagado', cuenta.totalPagado, const Color(0xFF6EE7B7)),
+        dato('Pagado', cuenta.totalPagado, const Color(0xFFA5B4FC)), // indigo-300 (como React: text-indigo-300)
         dato('Saldo', cuenta.saldoPendiente, const Color(0xFFFCD34D)),
       ]),
     );
