@@ -153,10 +153,16 @@ class _SuscripcionCard extends StatelessWidget {
 
     final (badgeColor, badgeBg, estadoLabel) = _estadoInfo(estadoEfect);
 
-    return Container(
+    // Toda la tarjeta es tocable (como en React: el div entero navega al detalle); la flecha es decorativa.
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onVer,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
@@ -253,20 +259,16 @@ class _SuscripcionCard extends StatelessWidget {
             ),
           ],
 
-          // Chevron ver detalle
-          const SizedBox(width: 4),
-          IconButton(
-            onPressed: onVer,
-            icon: const Icon(
-              Icons.chevron_right,
-              color: Color(0xFFCBD5E1),
-              size: 20,
-            ),
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          // Chevron ver detalle (decorativo: la tarjeta entera es la que navega)
+          const SizedBox(width: 6),
+          const Icon(
+            Icons.chevron_right,
+            color: Color(0xFFCBD5E1),
+            size: 20,
           ),
         ],
+      ),
+        ),
       ),
     );
   }
