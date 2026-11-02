@@ -22,7 +22,6 @@ import 'modules/menu/editor/info/menu_info_page.dart';
 import 'modules/menu/editor/mesas/mesas_page.dart';
 import 'modules/menu/editor/stats/pages/estadisticas_page.dart';
 import 'modules/menu/public/pages/demo_preview_page.dart';
-import 'modules/menu/public/pages/preview_page.dart';
 import 'modules/menu/public/pages/public_menu_page.dart';
 import 'modules/mesero/pages/mesero_page.dart';
 import 'modules/repartidor/pages/repartidor_page.dart';
@@ -111,11 +110,6 @@ GoRouter _buildRouter(AuthContext auth) {
       GoRoute(
         path: '/preview/demo',
         builder: (context, state) => const DemoPreviewPage(),
-      ),
-      GoRoute(
-        path: '/preview/:codigo',
-        builder: (context, state) =>
-            PreviewPage(menuId: state.pathParameters['codigo'] ?? ''),
       ),
       GoRoute(
         path: '/notifications',

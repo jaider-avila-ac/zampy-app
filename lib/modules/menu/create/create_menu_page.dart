@@ -148,7 +148,7 @@ class _CreateMenuPageState extends State<CreateMenuPage> {
     if (_slugAvailable == false) {
       return 'Este link ya está publicado por otro negocio. Elige otro.';
     }
-    return 'zammpy.com/menu/$slug';
+    return 'zammpy.com/$slug';
   }
 
   Color get _slugColor {
@@ -351,7 +351,7 @@ class _CreateMenuPageState extends State<CreateMenuPage> {
                                 ),
                                 color: const Color(0xFFF8FAFC),
                                 child: const Text(
-                                  'zammpy.com/menu/',
+                                  'zammpy.com/',
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: AppColors.kTextMuted,

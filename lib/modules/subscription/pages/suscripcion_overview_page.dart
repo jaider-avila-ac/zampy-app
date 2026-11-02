@@ -71,10 +71,7 @@ class _SuscripcionOverviewPageState extends State<SuscripcionOverviewPage> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_outlined, size: 20),
-            onPressed: _load,
-          ),
+          // La recarga se hace deslizando desde arriba (pull-to-refresh); sin ícono de refrescar.
           Builder(
             builder: (ctx) {
               final hasDrawer = Scaffold.maybeOf(ctx)?.hasDrawer ?? false;
@@ -93,9 +90,16 @@ class _SuscripcionOverviewPageState extends State<SuscripcionOverviewPage> {
               children: [
                 if (_error.isNotEmpty) _ErrorBanner(error: _error),
                 Expanded(
-                  child: _suscripciones.isEmpty
-                      ? _EmptyState()
+                  child: RefreshIndicator(
+                    color: AppColors.kBlue,
+                    onRefresh: _load,
+                    child: _suscripciones.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [_EmptyState()],
+                        )
                       : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: contenidoPadding(context, bottom: 16),
                           itemCount: _suscripciones.length,
                           separatorBuilder: (_, _) =>
@@ -114,6 +118,7 @@ class _SuscripcionOverviewPageState extends State<SuscripcionOverviewPage> {
                             );
                           },
                         ),
+                  ),
                 ),
               ],
             ),

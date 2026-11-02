@@ -70,7 +70,12 @@ class _LogrosView extends StatelessWidget {
               ),
           ],
         ),
-        body: CustomScrollView(
+        // Recarga deslizando desde arriba (pull-to-refresh)
+        body: RefreshIndicator(
+          color: AppColors.kBlue,
+          onRefresh: ctrl.load,
+          child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             // Banner informativo
             SliverPadding(
@@ -154,6 +159,7 @@ class _LogrosView extends StatelessWidget {
                 ),
               ),
           ],
+        ),
         ),
       ),
     );

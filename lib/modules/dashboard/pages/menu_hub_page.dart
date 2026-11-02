@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../components/layout/sidebar.dart';
 import '../../../services/mis_menus_service.dart';
@@ -61,13 +60,6 @@ class _MenuHubPageState extends State<MenuHubPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _share() async {
-    final menu = _menu;
-    if (menu == null) return;
-    final url = 'https://app.zammpy.com/menu/${menu.slug}';
-    await Share.share(url, subject: 'Menú digital de ${menu.nombre}');
   }
 
   Future<void> _unpublish() async {
@@ -159,7 +151,7 @@ class _MenuHubPageState extends State<MenuHubPage> {
       return;
     }
     final editar = _editarPorPaso[paso.codigo];
-    context.push('/menu/${menu.slug}${editar == null ? '' : '?editar=$editar'}');
+    context.push('/${menu.slug}${editar == null ? '' : '?editar=$editar'}');
   }
 
   @override
@@ -179,7 +171,7 @@ class _MenuHubPageState extends State<MenuHubPage> {
         drawer: const AppSidebar(),
         appBar: AppHeader(
           title: menu?.nombre.isNotEmpty == true ? menu!.nombre : 'Menú',
-          subtitle: menu == null ? null : '/menu/${menu.slug}',
+          subtitle: menu == null ? null : '/${menu.slug}',
         ),
         body: _buildBody(menu),
       ),
@@ -314,13 +306,8 @@ class _MenuHubPageState extends State<MenuHubPage> {
 
   List<_HubAction> _actions(MenuResumen menu) {
     final actions = <_HubAction>[];
-    final verPublico = _HubAction(
-      icon: Icons.open_in_new,
-      label: 'Ver menú',
-      onTap: () => context.push('/menu/${menu.slug}'),
-    );
 
-    // el mesero toma pedidos desde su vista (mesas y cuentas), como en React; antes abría el menú en solo lectura
+    // el mesero toma pedidos desde su vista (mesas y cuentas), como en React; sin "Ver menú" aparte
     if (menu.esMesero) {
       actions.add(
         _HubAction(
@@ -329,7 +316,6 @@ class _MenuHubPageState extends State<MenuHubPage> {
           onTap: () => context.push('/mesero/${menu.codigo}'),
         ),
       );
-      actions.add(verPublico);
       return actions;
     }
 
@@ -346,7 +332,7 @@ class _MenuHubPageState extends State<MenuHubPage> {
         _HubAction(
           icon: Icons.open_in_new,
           label: 'Ver menú',
-          onTap: () => context.push('/menu/${menu.slug}?staff=1'),
+          onTap: () => context.push('/${menu.slug}?staff=1'),
         ),
       );
       return actions;
@@ -358,7 +344,7 @@ class _MenuHubPageState extends State<MenuHubPage> {
           icon: Icons.edit_outlined,
           label: 'Editar menú',
           // se edita en el propio menú, como un perfil (igual que React)
-          onTap: () => context.push('/menu/${menu.slug}'),
+          onTap: () => context.push('/${menu.slug}'),
         ),
       );
       actions.add(
@@ -408,10 +394,6 @@ class _MenuHubPageState extends State<MenuHubPage> {
       }
     }
 
-    actions.add(verPublico);
-    actions.add(
-      _HubAction(icon: Icons.share_outlined, label: 'Compartir', onTap: _share),
-    );
     return actions;
   }
 }

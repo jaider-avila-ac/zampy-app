@@ -155,16 +155,10 @@ class _PedidosPageState extends State<PedidosPage> {
     return Scaffold(
       backgroundColor: AppColors.kBgPage,
       drawer: const AppSidebar(),
-      appBar: AppHeader(
+      // La recarga se hace deslizando desde arriba (pull-to-refresh); sin ícono de refrescar en el header.
+      appBar: const AppHeader(
         title: 'Mis pedidos',
         subtitle: 'Pedidos realizados en restaurantes',
-        actions: [
-          IconButton(
-            tooltip: 'Actualizar',
-            onPressed: _loading ? null : _cargar,
-            icon: const Icon(Icons.refresh, size: 20, color: AppColors.kTextPrimary),
-          ),
-        ],
       ),
       body: _loading && _pedidos.isEmpty
           ? const Center(child: CircularProgressIndicator())

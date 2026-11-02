@@ -35,7 +35,7 @@ class _ShareModalState extends State<ShareModal> {
   // La clave para capturar el widget QR como imagen
   final _qrKey = GlobalKey();
 
-  String get _shareUrl => 'https://app.zammpy.com/menu/${widget.slug}';
+  String get _shareUrl => 'https://app.zammpy.com/${widget.slug}';
 
   Future<void> _copyLink() async {
     await Clipboard.setData(ClipboardData(text: _shareUrl));

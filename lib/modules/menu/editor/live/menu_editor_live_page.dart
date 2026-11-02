@@ -55,12 +55,12 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
       final menu = await LiveEditorService.load(widget.codigo);
       if (!mounted) return;
       if (menu.esMesero || menu.esRepartidor) {
-        context.replace('/menu/${menu.slug}?staff=1');
+        context.replace('/${menu.slug}?staff=1');
         return;
       }
       // sin pestaña (o una que ya se edita en el menú): al propio menú, como RedirigirMiMenu de React
       if (!_tabDelEditor) {
-        context.replace('/menu/${menu.slug}');
+        context.replace('/${menu.slug}');
         return;
       }
       setState(() {
@@ -107,20 +107,15 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
           title: menu?.info.name.isNotEmpty == true
               ? menu!.info.name
               : 'Editor del menú',
-          subtitle: menu == null ? null : '/menu/${menu.slug}',
+          subtitle: menu == null ? null : '/${menu.slug}',
           actions: [
-            if (menu != null) ...[
+            // Una sola acción, como el EditorHeader de React: abrir el menú para editarlo (/<slug>).
+            if (menu != null)
               IconButton(
-                tooltip: 'Ver menú público',
-                onPressed: () => context.push('/menu/${menu.slug}'),
-                icon: const Icon(Icons.open_in_new, size: 19),
+                tooltip: 'Editar menú',
+                onPressed: () => context.push('/${menu.slug}'),
+                icon: const Icon(Icons.edit_outlined, size: 19),
               ),
-              IconButton(
-                tooltip: 'Vista previa',
-                onPressed: () => context.push('/preview/${menu.codigo}'),
-                icon: const Icon(Icons.visibility_outlined, size: 19),
-              ),
-            ],
           ],
         ),
         body: _buildBody(menu),

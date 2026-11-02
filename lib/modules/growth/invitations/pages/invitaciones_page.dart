@@ -42,7 +42,12 @@ class _InvitacionesView extends StatelessWidget {
         backgroundColor: AppColors.kBgPage,
         drawer: const AppSidebar(),
         appBar: const AppHeader(title: 'Invitaciones'),
-        body: SingleChildScrollView(
+        // Recarga deslizando desde arriba (pull-to-refresh)
+        body: RefreshIndicator(
+          color: AppColors.kBlue,
+          onRefresh: ctrl.load,
+          child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: contenidoPadding(context, horizontal: 20, top: 20, bottom: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,6 +137,7 @@ class _InvitacionesView extends StatelessWidget {
               ],
             ],
           ),
+        ),
         ),
       ),
     );
