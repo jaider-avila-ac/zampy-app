@@ -174,8 +174,8 @@ class _CartSheetState extends State<CartSheet> {
           Container(
             width: 64,
             height: 64,
-            decoration: const BoxDecoration(color: Color(0xFFD1FAE5), shape: BoxShape.circle),
-            child: const Icon(Icons.check_circle, size: 36, color: Color(0xFF10B981)),
+            decoration: BoxDecoration(color: t.primary, shape: BoxShape.circle),
+            child: const Icon(Icons.check_circle, size: 36, color: Colors.white),
           ),
           const SizedBox(height: 12),
           Text('¡Solicitud registrada!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: t.text)),
@@ -187,28 +187,29 @@ class _CartSheetState extends State<CartSheet> {
           ),
           if (_waUrl.isNotEmpty) ...[
             const SizedBox(height: 20),
+            // Bloque "Recomendado: WhatsApp" — temizado con el color del menú (como c.primary en React), no verde.
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
-                border: Border.all(color: const Color(0xFF25D366), width: 1.5),
+                color: t.surface,
+                border: Border.all(color: t.primary, width: 1.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('★ RECOMENDADO',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF16A34A))),
+                  Text('★ RECOMENDADO',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: t.primary)),
                   const SizedBox(height: 4),
-                  const Text('Confirma tu pedido por WhatsApp',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF15803D))),
-                  const Text(
+                  Text('Confirma tu pedido por WhatsApp',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: t.text)),
+                  Text(
                     'Envía los detalles al restaurante para que puedan prepararlo y coordinarte la entrega.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF166534)),
+                    style: TextStyle(fontSize: 12, color: t.textMuted),
                   ),
                   const SizedBox(height: 10),
                   FilledButton.icon(
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF25D366)),
+                    style: FilledButton.styleFrom(backgroundColor: t.primary, foregroundColor: Colors.white),
                     onPressed: () {
                       abrirUrl(_waUrl);
                       Navigator.pop(context);

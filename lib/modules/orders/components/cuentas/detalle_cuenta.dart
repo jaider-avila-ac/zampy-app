@@ -40,7 +40,7 @@ class DetalleCuenta extends StatelessWidget {
               ),
             ),
             Text(valor,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: positivo ? const Color(0xFF047857) : AppColors.kRed)),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: positivo ? const Color(0xFF4338CA) : AppColors.kRed)),
           ],
         ),
       );

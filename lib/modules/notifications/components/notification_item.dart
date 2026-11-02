@@ -311,7 +311,7 @@ class _NotificationItemState extends State<NotificationItem> {
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: _respuesta == 'aceptada'
-                                    ? AppColors.kGreen
+                                    ? AppColors.kBlue
                                     : AppColors.kTextMuted,
                               ),
                             ),

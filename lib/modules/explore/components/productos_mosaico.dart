@@ -112,43 +112,35 @@ class ProductosMosaico extends StatelessWidget {
             ),
           )
         else
-          MasonryGridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 14,
-            itemCount: items.length,
-            itemBuilder: (context, index) {
-              final producto = items[index];
-              return ProductoCard(
-                producto: producto,
-                liked: likedIds.contains(producto.codigo),
-                conSesion: conSesion,
-                onTap: () => onTap(producto),
-                onToggleLike: () => onToggleLike(producto),
-                onRequireLogin: onRequireLogin,
+          Builder(
+            builder: (_) {
+              // al cargar más, se agregan tarjetas-esqueleto al final del mismo tablero (no un texto aparte)
+              final cargandoMas = loading && items.isNotEmpty;
+              const hs = [190.0, 250.0, 160.0, 220.0, 270.0, 180.0, 230.0, 200.0];
+              final skeletons = cargandoMas ? columns * 2 : 0;
+              return MasonryGridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: columns,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 14,
+                itemCount: items.length + skeletons,
+                itemBuilder: (context, index) {
+                  if (index >= items.length) {
+                    return SkeletonProductCard(height: hs[index % hs.length]);
+                  }
+                  final producto = items[index];
+                  return ProductoCard(
+                    producto: producto,
+                    liked: likedIds.contains(producto.codigo),
+                    conSesion: conSesion,
+                    onTap: () => onTap(producto),
+                    onToggleLike: () => onToggleLike(producto),
+                    onRequireLogin: onRequireLogin,
+                  );
+                },
               );
             },
-          ),
-        if (loading && items.isNotEmpty)
-          const Padding(
-            padding: EdgeInsets.only(top: 14),
-            child: Text(
-              'Cargando más platos…',
-              style: TextStyle(fontSize: 12, color: AppColors.kTextMuted),
-            ),
-          ),
-        if (!loading && hasMore && items.isNotEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 14),
-            child: Center(
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
           ),
       ],
     );

@@ -472,12 +472,9 @@ class _ProductModalState extends State<ProductModal> {
     final info = widget.info;
     final imgSrc = p.imageUrl;
     final hasImg = imgSrc != null && imgSrc.isNotEmpty;
-    final promoOn = p.hasPromo;
     final displayP = _displayPrice;
     final origP = _originalPrice;
-    final priceCol = (promoOn && _sizeObj == null)
-        ? const Color(0xFF22C55E)
-        : t.primary;
+    final priceCol = t.primary;
     final hasWa = info?.hasWhatsapp == true;
     final hasPhone = info?.hasPhone == true;
     final likes = context.watch<LikesContext>();
@@ -1034,9 +1031,9 @@ class _ProductModalState extends State<ProductModal> {
                             : ElevatedButton.icon(
                           onPressed: (hasWa || hasPhone) ? _openWhatsapp : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF25D366),
+                            backgroundColor: t.primary,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: const Color(0xFF25D366),
+                            disabledBackgroundColor: t.primary,
                             disabledForegroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(

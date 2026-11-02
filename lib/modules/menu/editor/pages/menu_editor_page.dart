@@ -146,7 +146,7 @@ class _MenuEditorPageState extends State<MenuEditorPage> with RouteAware {
   void _showSnack(String msg, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: error ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+      backgroundColor: error ? const Color(0xFFDC2626) : const Color(0xFF4F46E5),
       behavior: SnackBarBehavior.floating,
     ));
   }
@@ -374,9 +374,9 @@ class _StatusBadge extends StatelessWidget {
       dot   = const Color(0xFFF59E0B);
       label = 'Cambios';
     } else {
-      bg    = const Color(0xFFF0FDF4);
-      text  = const Color(0xFF16A34A);
-      dot   = const Color(0xFF22C55E);
+      bg    = const Color(0xFFEEF2FF);
+      text  = const Color(0xFF4F46E5);
+      dot   = const Color(0xFF6366F1);
       label = 'Publicado';
     }
 

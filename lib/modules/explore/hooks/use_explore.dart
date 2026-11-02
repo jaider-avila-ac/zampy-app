@@ -237,10 +237,13 @@ class ExploreController extends ChangeNotifier with WidgetsBindingObserver {
       );
       if (seq != _productoSeq) return;
       final vistos = _productos.map((p) => '${p.menuSlug}-${p.codigo}').toSet();
+      // Explore es para ver los platos: los que no tienen foto no se muestran (igual que en la web)
       final nuevos = page.items
           .where(
             (p) =>
                 p.codigo.isNotEmpty &&
+                p.imagenUrl != null &&
+                p.imagenUrl!.isNotEmpty &&
                 !vistos.contains('${p.menuSlug}-${p.codigo}'),
           )
           .toList();

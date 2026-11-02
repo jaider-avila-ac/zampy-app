@@ -221,7 +221,7 @@ class _EnlaceCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                 decoration: BoxDecoration(
                   color:        activo
-                      ? const Color(0xFF059669) // emerald-600
+                      ? const Color(0xFF4F46E5) // emerald-600
                       : AppColors.kTextMuted,
                   borderRadius: BorderRadius.circular(20),
                 ),

@@ -91,10 +91,10 @@ class ProductListItem extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text(
                           '\$${_fmt(product.promoPrice!)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w900,
                             fontSize: 14,
-                            color: Color(0xFF22C55E),
+                            color: theme.primary,
                           ),
                         ),
                       ],

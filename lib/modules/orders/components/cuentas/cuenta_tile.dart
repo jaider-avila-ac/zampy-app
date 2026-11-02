@@ -111,7 +111,7 @@ class _CuentaTileState extends State<CuentaTile> {
             child: Row(
               children: [
                 Icon(enCurso ? Icons.sensors : Icons.receipt_outlined,
-                    size: 17, color: enCurso ? const Color(0xFF10B981) : AppColors.kTextMuted),
+                    size: 17, color: enCurso ? const Color(0xFF4F46E5) : AppColors.kTextMuted),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -158,7 +158,7 @@ class _CuentaTileState extends State<CuentaTile> {
                   children: [
                     if (enCurso) accion(Icons.add_box_outlined, 'Agregar ítem olvidado', AppColors.kBlue, widget.onAgregarItem),
                     accion(Icons.price_change_outlined, 'Registrar ajuste auditado', AppColors.kBlue, widget.onAjustar),
-                    if (c.conSaldo) accion(Icons.account_balance_wallet_outlined, 'Conciliar saldo', const Color(0xFF047857), widget.onPago),
+                    if (c.conSaldo) accion(Icons.account_balance_wallet_outlined, 'Conciliar saldo', const Color(0xFF4338CA), widget.onPago),
                     if (enCurso) ...[
                       accion(Icons.lock_outline, 'Cerrar cuenta', AppColors.kTextSecondary, ocupada ? null : _cerrar,
                           cargando: _cerrando,

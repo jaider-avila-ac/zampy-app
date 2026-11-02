@@ -156,7 +156,7 @@ class _CreateMenuPageState extends State<CreateMenuPage> {
     if (slugError(_slugController.text) != null || _slugAvailable == false) {
       return AppColors.kRed;
     }
-    if (_slugAvailable == true) return AppColors.kGreen;
+    if (_slugAvailable == true) return AppColors.kBlue;
     return AppColors.kTextMuted;
   }
 
@@ -288,7 +288,7 @@ class _CreateMenuPageState extends State<CreateMenuPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('¡Menú creado! Completa lo que falta desde el menú.'),
-          backgroundColor: AppColors.kGreen,
+          backgroundColor: AppColors.kBlue,
           behavior: SnackBarBehavior.floating,
         ),
       );

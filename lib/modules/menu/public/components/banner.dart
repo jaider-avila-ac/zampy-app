@@ -167,7 +167,7 @@ class Banner extends StatelessWidget {
                     if (info.hasWhatsapp)
                       _SocialChip(
                         label: 'WhatsApp',
-                        color: const Color(0xFF25D366),
+                        color: theme.primary, // sin verde: toma el color del tema (como en React)
                         theme: theme,
                         onTap: () => openWhatsapp(info),
                       ),
@@ -229,16 +229,7 @@ class _BannerImage extends StatelessWidget {
   }
 
   Widget _fallback() => Container(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          theme.primary,
-          Color.alphaBlend(Colors.white.withValues(alpha: 0.3), theme.primary),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
+    color: theme.primary,
   );
 }
 

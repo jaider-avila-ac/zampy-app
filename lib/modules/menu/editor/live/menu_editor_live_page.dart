@@ -80,7 +80,7 @@ class _LiveMenuEditorPageState extends State<LiveMenuEditorPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: error ? AppColors.kRed : AppColors.kGreen,
+        backgroundColor: error ? AppColors.kRed : AppColors.kBlue,
         behavior: SnackBarBehavior.floating,
       ),
     );

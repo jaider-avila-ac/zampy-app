@@ -214,8 +214,8 @@ class _OrderSheetState extends State<OrderSheet> {
               child: Container(
                 width: 64,
                 height: 64,
-                decoration: const BoxDecoration(color: Color(0xFFD1FAE5), shape: BoxShape.circle),
-                child: const Icon(Icons.check_circle_outline, size: 34, color: Color(0xFF10B981)),
+                decoration: BoxDecoration(color: t.primary, shape: BoxShape.circle),
+                child: const Icon(Icons.check_circle_outline, size: 34, color: Colors.white),
               ),
             ),
             const SizedBox(height: 12),

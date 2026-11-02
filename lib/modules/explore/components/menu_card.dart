@@ -152,7 +152,7 @@ class MenuCard extends StatelessWidget {
   (String, Color)? _estado(String? estado) {
     switch (estado) {
       case 'publicado':
-        return ('Publicado', const Color(0xFF047857));
+        return ('Publicado', AppColors.kBlue);
       case 'borrador':
         return ('No publicado', AppColors.kTextMuted);
       case 'suspendido':

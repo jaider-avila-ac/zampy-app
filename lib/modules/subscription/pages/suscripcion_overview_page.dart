@@ -273,10 +273,10 @@ class _SuscripcionCard extends StatelessWidget {
 
   (Color, Color, String) _estadoInfo(String estado) {
     return switch (estado) {
-      'ACTIVE' => (const Color(0xFF15803D), const Color(0xFFF0FDF4), 'Activa'),
+      'ACTIVE' => (const Color(0xFF4338CA), const Color(0xFFEEF2FF), 'Activa'),
       'TRIAL' => (
-        const Color(0xFF15803D),
-        const Color(0xFFF0FDF4),
+        const Color(0xFF4338CA),
+        const Color(0xFFEEF2FF),
         'Prueba gratuita',
       ),
       'PAYMENT_REMINDER' => (

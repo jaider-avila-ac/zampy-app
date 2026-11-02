@@ -152,14 +152,14 @@ class LogroCard extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 const Icon(Icons.check_circle_outline,
-                    size: 13, color: Color(0xFF059669)), // emerald-600
+                    size: 13, color: Color(0xFF4F46E5)), // emerald-600
                 const SizedBox(width: 4),
                 Text(
                   logro.aplicado ? 'Aplicado' : 'Disponible',
                   style: const TextStyle(
                     fontSize:   12,
                     fontWeight: FontWeight.w600,
-                    color:      Color(0xFF059669),
+                    color:      Color(0xFF4F46E5),
                   ),
                 ),
                 if (_fmtDate(logro.desbloqueadoEn) != null) ...[

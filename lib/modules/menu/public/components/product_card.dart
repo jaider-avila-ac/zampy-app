@@ -217,10 +217,10 @@ class ProductCard extends StatelessWidget {
                                 ),
                                 Text(
                                   '\$${_fmt(product.promoPrice!)}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 16,
-                                    color: Color(0xFF22C55E),
+                                    color: t.primary,
                                   ),
                                 ),
                               ],

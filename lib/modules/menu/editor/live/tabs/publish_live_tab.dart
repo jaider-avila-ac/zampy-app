@@ -183,12 +183,12 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: widget.menu.publicado
-                ? const Color(0xFFECFDF5)
+                ? const Color(0xFFEEF2FF)
                 : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: widget.menu.publicado
-                  ? const Color(0xFFA7F3D0)
+                  ? const Color(0xFFC7D2FE)
                   : AppColors.kCardBorder,
             ),
           ),
@@ -201,7 +201,7 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
                   color: widget.menu.publicado
-                      ? const Color(0xFF047857)
+                      ? const Color(0xFF4338CA)
                       : AppColors.kTextPrimary,
                 ),
               ),

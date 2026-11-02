@@ -118,7 +118,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   void _showSnack(String msg, {bool error = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: error ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+      backgroundColor: error ? const Color(0xFFDC2626) : const Color(0xFF4F46E5),
       behavior: SnackBarBehavior.floating,
     ));
   }

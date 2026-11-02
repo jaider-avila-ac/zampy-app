@@ -381,7 +381,7 @@ class _InvCodeSection extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color:        ctrl.copied
-                          ? const Color(0xFFD1FAE5)
+                          ? const Color(0xFFE0E7FF)
                           : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -392,7 +392,7 @@ class _InvCodeSection extends StatelessWidget {
                           ctrl.copied ? Icons.check : Icons.copy_outlined,
                           size:  13,
                           color: ctrl.copied
-                              ? const Color(0xFF065F46)
+                              ? const Color(0xFF3730A3)
                               : AppColors.kTextMuted,
                         ),
                         const SizedBox(width: 5),
@@ -402,7 +402,7 @@ class _InvCodeSection extends StatelessWidget {
                             fontSize:   11,
                             fontWeight: FontWeight.w600,
                             color:      ctrl.copied
-                                ? const Color(0xFF065F46)
+                                ? const Color(0xFF3730A3)
                                 : AppColors.kTextMuted,
                           ),
                         ),
@@ -635,8 +635,8 @@ class _SessionCard extends StatelessWidget {
                     if (navegando)
                       _Chip(
                         label: '● Activo',
-                        bg:    const Color(0xFFD1FAE5),
-                        text:  const Color(0xFF065F46),
+                        bg:    const Color(0xFFE0E7FF),
+                        text:  const Color(0xFF3730A3),
                       )
                     else
                       _Chip(

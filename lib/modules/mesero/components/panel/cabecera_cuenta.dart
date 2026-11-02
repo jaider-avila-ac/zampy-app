@@ -117,7 +117,7 @@ class CabeceraCuenta extends StatelessWidget {
                 cargando: acciones.cerrando,
               ),
               if (saldo > 0 && activas == 0)
-                accion(Icons.account_balance_wallet_outlined, 'Abonar', onAbonar, 'Registrar un abono', color: const Color(0xFF047857)),
+                accion(Icons.account_balance_wallet_outlined, 'Abonar', onAbonar, 'Registrar un abono', color: const Color(0xFF4338CA)),
               FilledButton.icon(
                 onPressed: onAgregar,
                 style: FilledButton.styleFrom(

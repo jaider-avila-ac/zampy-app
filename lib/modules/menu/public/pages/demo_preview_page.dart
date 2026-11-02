@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../hooks/use_public_menu.dart';
 import '../components/theme_selector.dart';
@@ -106,7 +107,7 @@ class _DemoViewState extends State<_DemoView> {
                     horizontal: 12,
                     vertical: 8,
                   ),
-                  color: const Color(0xFF7C3AED),
+                  color: AppColors.kBlue,
                   child: Row(
                     children: [
                       const Icon(
@@ -140,6 +141,41 @@ class _DemoViewState extends State<_DemoView> {
                   child: MenuPage(menuData: menuData, isPublished: false),
                 ),
               ],
+            ),
+
+            // Botón "Crear mi menú" (abajo-izquierda, índigo) — como en React.
+            // En la app lleva al flujo de crear menú (si no hay sesión, el router manda a login).
+            Positioned(
+              left: 16,
+              bottom: 20,
+              child: GestureDetector(
+                onTap: () => context.go('/menus/new'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.kBlue,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.25),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Text(
+                    'Crear mi menú',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
             ),
 
             // Botón flotante "Temas" — abre ThemeSelector como bottom sheet

@@ -188,7 +188,7 @@ class MenuFooter extends StatelessWidget {
                 if (info.hasWhatsapp)
                   _SocialChip(
                     label: 'WhatsApp',
-                    color: const Color(0xFF25D366),
+                    color: t.primary, // sin verde: toma el color del tema (como en React)
                     theme: t,
                     onTap: () => openWhatsapp(info),
                   ),

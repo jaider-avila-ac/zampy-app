@@ -12,7 +12,7 @@ String mensajeError(Object e) {
 void avisar(BuildContext context, String mensaje, {bool error = false}) {
   ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
     content: Text(mensaje),
-    backgroundColor: error ? AppColors.kRed : AppColors.kGreen,
+    backgroundColor: error ? AppColors.kRed : AppColors.kBlue,
     behavior: SnackBarBehavior.floating,
   ));
 }

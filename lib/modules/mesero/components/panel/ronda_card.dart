@@ -110,7 +110,7 @@ class RondaCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(children: [
               if (ronda.estado == 'pendiente') avanzar('en_proceso', 'En preparación', AppColors.kBlue),
-              if (ronda.estado == 'en_proceso') avanzar('entregado', 'Entregado', const Color(0xFF059669)),
+              if (ronda.estado == 'en_proceso') avanzar('entregado', 'Entregado', AppColors.kBlue),
               const SizedBox(width: 8),
               OutlinedButton(
                 onPressed: ocupada ? null : onCancelar,

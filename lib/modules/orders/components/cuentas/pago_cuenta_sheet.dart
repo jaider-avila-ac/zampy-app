@@ -106,7 +106,7 @@ class _PagoCuentaSheetState extends State<PagoCuentaSheet> {
               texto: 'Registrar movimiento auditado',
               guardando: _guardando,
               onPressed: _guardar,
-              color: const Color(0xFF059669),
+              color: const Color(0xFF4F46E5),
             ),
           ],
         ),

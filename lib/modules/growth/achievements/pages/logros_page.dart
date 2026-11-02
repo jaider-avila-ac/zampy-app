@@ -190,9 +190,9 @@ class _Avisos extends StatelessWidget {
           ),
         if (ctrl.success.isNotEmpty)
           _Mensaje(
-            color: const Color(0xFF047857),
-            bg: const Color(0xFFECFDF5),
-            border: const Color(0xFFA7F3D0),
+            color: const Color(0xFF4338CA),
+            bg: const Color(0xFFEEF2FF),
+            border: const Color(0xFFC7D2FE),
             texto: ctrl.success,
           ),
         if (ctrl.disponibles.isNotEmpty)

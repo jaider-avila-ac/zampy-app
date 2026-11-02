@@ -36,34 +36,38 @@ class ProductoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Proporción fija por producto: la altura se reserva desde el inicio, así el tablero
+                // (MasonryGridView, que reparte en la columna más corta) queda alineado sin saltos al cargar.
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child:
-                      producto.imagenUrl != null &&
-                          producto.imagenUrl!.isNotEmpty
-                      ? Image.network(
-                          producto.imagenUrl!,
-                          width: double.infinity,
-                          fit: BoxFit.fitWidth,
-                          errorBuilder: (context, error, stack) => _sinImagen(),
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return Container(
-                              height: 180,
-                              color: const Color(0xFFF1F5F9),
-                              child: const Center(
-                                child: SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                  child: AspectRatio(
+                    aspectRatio: _aspect(producto.codigo),
+                    child:
+                        producto.imagenUrl != null &&
+                            producto.imagenUrl!.isNotEmpty
+                        ? Image.network(
+                            producto.imagenUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stack) =>
+                                _sinImagen(),
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return Container(
+                                color: const Color(0xFFF1F5F9),
+                                child: const Center(
+                                  child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
-                        )
-                      : _sinImagen(),
+                              );
+                            },
+                          )
+                        : _sinImagen(),
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Padding(
@@ -136,7 +140,6 @@ class ProductoCard extends StatelessWidget {
 
   Widget _sinImagen() {
     return Container(
-      height: 180,
       color: const Color(0xFFF1F5F9),
       child: const Center(
         child: Icon(
@@ -147,4 +150,8 @@ class ProductoCard extends StatelessWidget {
       ),
     );
   }
+
+  // proporciones variadas (estilo Pinterest) pero estables por producto, para que el tablero no salte
+  static const _aspects = [0.80, 0.72, 1.0, 0.85, 0.75];
+  double _aspect(String codigo) => _aspects[codigo.hashCode.abs() % _aspects.length];
 }

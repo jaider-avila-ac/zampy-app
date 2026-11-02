@@ -330,7 +330,7 @@ class _GrupoCard extends StatelessWidget {
                       child: Icon(
                         isEditing ? Icons.check_circle_outline : Icons.edit_outlined,
                         size: 16,
-                        color: isEditing ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                        color: isEditing ? const Color(0xFF4F46E5) : const Color(0xFF94A3B8),
                       ),
                     ),
                   ),

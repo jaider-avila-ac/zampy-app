@@ -233,7 +233,7 @@ class _PlanBadgeBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final esTrial    = tipoPlan == 'trial';
     final planNombre = esTrial ? 'Prueba gratuita' : (tipoPlan ?? 'Plan activo');
-    final badgeColor = esTrial ? const Color(0xFF16A34A) : AppColors.kBlue;
+    final badgeColor = esTrial ? const Color(0xFF4F46E5) : AppColors.kBlue;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,9 +330,9 @@ class _SubscriptionBanners extends StatelessWidget {
       children: [
         if (ac['mostrarBannerActivo'] == true) ...[
           _Banner(
-            color: const Color(0xFF16A34A),
-            bgColor: const Color(0xFFF0FDF4),
-            borderColor: const Color(0xFFBBF7D0),
+            color: const Color(0xFF4F46E5),
+            bgColor: const Color(0xFFEEF2FF),
+            borderColor: const Color(0xFFC7D2FE),
             icon: Icons.star_outline,
             title: 'Prueba gratuita activa${tiempo.isNotEmpty ? ' · $tiempo restantes' : ''}',
             subtitle: 'Tu menú está publicado. Podrás adquirir un plan cuando se active la ventana de aviso.',
@@ -502,7 +502,7 @@ class _StatusCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               color: published
-                  ? const Color(0xFFF0FDF4)
+                  ? const Color(0xFFEEF2FF)
                   : const Color(0xFFFFFBEB),
               borderRadius: BorderRadius.circular(10),
             ),
@@ -512,7 +512,7 @@ class _StatusCard extends StatelessWidget {
                   published ? Icons.check_circle : Icons.access_time,
                   size: 18,
                   color: published
-                      ? const Color(0xFF16A34A)
+                      ? const Color(0xFF4F46E5)
                       : const Color(0xFFB45309),
                 ),
                 const SizedBox(width: 10),
@@ -527,14 +527,14 @@ class _StatusCard extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: published
-                            ? const Color(0xFF15803D)
+                            ? const Color(0xFF4338CA)
                             : const Color(0xFFB45309),
                       ),
                     ),
                     if (published && menu.publishedAt != null)
                       Text(
                         'Última publicación: ${_fmtDate(menu.publishedAt!)}',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF16A34A)),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFF4F46E5)),
                       ),
                   ],
                 ),
@@ -856,9 +856,9 @@ class _PublishActions extends StatelessWidget {
                   icon: const Icon(Icons.language_outlined, size: 14),
                   label: const Text('Ver público'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF16A34A),
-                    side: const BorderSide(color: Color(0xFFBBF7D0)),
-                    backgroundColor: const Color(0xFFF0FDF4),
+                    foregroundColor: const Color(0xFF4F46E5),
+                    side: const BorderSide(color: Color(0xFFC7D2FE)),
+                    backgroundColor: const Color(0xFFEEF2FF),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),

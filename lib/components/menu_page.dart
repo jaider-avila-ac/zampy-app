@@ -827,9 +827,7 @@ class _FeaturedRow extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,
-                                  color: product.hasPromo
-                                      ? const Color(0xFF22C55E)
-                                      : theme.primary,
+                                  color: theme.primary,
                                 ),
                               ),
                             ],

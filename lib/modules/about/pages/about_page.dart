@@ -34,7 +34,11 @@ class AboutPage extends StatelessWidget {
       appBar: const AppHeader(title: 'Acerca de'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
-        child: Column(
+        // En tablets/escritorio se centra con ancho máximo (como max-w-lg mx-auto en React)
+        child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
@@ -128,8 +132,8 @@ class AboutPage extends StatelessWidget {
             const SizedBox(height: 20),
             _ContactRow(
               icon: Icons.mail_outline,
-              label: 'zampy.software@gmail.com',
-              onTap: () => _launch('mailto:zampy.software@gmail.com'),
+              label: 'zammpy.software@gmail.com',
+              onTap: () => _launch('mailto:zammpy.software@gmail.com'),
             ),
             const SizedBox(height: 20),
             _ContactRow(
@@ -152,11 +156,13 @@ class AboutPage extends StatelessWidget {
                 const SizedBox(width: 20),
                 _LegalLink(
                   label: 'Política de Privacidad',
-                  onTap: () => _launch('https://zammpy.com/privacidad'),
+                  onTap: () => _launch('https://www.zammpy.com/privacidad'),
                 ),
               ],
             ),
           ],
+          ),
+        ),
         ),
       ),
       ),  // Scaffold

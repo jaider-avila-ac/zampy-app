@@ -20,7 +20,6 @@ abstract class AppColors {
   // Skeleton / placeholder
   static const kSkeleton = Color(0xFFF1F5F9); // slate-100
 
-  // Feedback
+  // Feedback — solo rojo para error; el éxito/positivo va en índigo (kBlue), nunca verde
   static const kRed   = Color(0xFFDC2626); // red-600
-  static const kGreen = Color(0xFF16A34A); // green-600
 }

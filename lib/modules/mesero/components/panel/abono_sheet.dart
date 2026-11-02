@@ -86,7 +86,7 @@ class _AbonoSheetState extends State<AbonoSheet> {
               Text(_error!, style: const TextStyle(fontSize: 12, color: AppColors.kRed)),
             ],
             const SizedBox(height: 14),
-            BotonGuardar(texto: 'Confirmar abono', guardando: _guardando, onPressed: _guardar, color: const Color(0xFF059669)),
+            BotonGuardar(texto: 'Confirmar abono', guardando: _guardando, onPressed: _guardar, color: const Color(0xFF4F46E5)),
           ],
         ),
       );

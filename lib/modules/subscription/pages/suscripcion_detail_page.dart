@@ -25,9 +25,9 @@ const Map<String, _Cfg> _estadoCfg = {
   ),
   'TRIAL': (
     'Prueba gratuita',
-    Color(0xFF047857),
-    Color(0xFFECFDF5),
-    Color(0xFFA7F3D0),
+    Color(0xFF4338CA),
+    Color(0xFFEEF2FF),
+    Color(0xFFC7D2FE),
     Icons.schedule,
   ),
   'TRIAL_REMINDER': (
@@ -46,9 +46,9 @@ const Map<String, _Cfg> _estadoCfg = {
   ),
   'ACTIVE': (
     'Activa',
-    Color(0xFF047857),
-    Color(0xFFECFDF5),
-    Color(0xFFA7F3D0),
+    Color(0xFF4338CA),
+    Color(0xFFEEF2FF),
+    Color(0xFFC7D2FE),
     Icons.check_circle_outline,
   ),
   'PAST_DUE': (
@@ -75,7 +75,7 @@ const Map<String, _Cfg> _estadoCfg = {
 };
 
 const Map<String, (String, Color, Color)> _pagoCfg = {
-  'APPROVED': ('Aprobado', Color(0xFF047857), Color(0xFFECFDF5)),
+  'APPROVED': ('Aprobado', Color(0xFF4338CA), Color(0xFFEEF2FF)),
   'PENDING': ('Pendiente', Color(0xFFB45309), Color(0xFFFFFBEB)),
   'DECLINED': ('Rechazado', Color(0xFFB91C1C), Color(0xFFFEF2F2)),
   'REJECTED': ('Rechazado', Color(0xFFB91C1C), Color(0xFFFEF2F2)),
@@ -414,7 +414,7 @@ class _SuscripcionDetailPageState extends State<SuscripcionDetailPage> {
                 const _Dato(
                   'Pago guardado',
                   'Tarjeta registrada',
-                  color: Color(0xFF047857),
+                  color: Color(0xFF4338CA),
                 ),
             ],
           ),
@@ -473,7 +473,7 @@ class _SuscripcionDetailPageState extends State<SuscripcionDetailPage> {
                   const Icon(
                     Icons.check_circle_outline,
                     size: 14,
-                    color: Color(0xFF047857),
+                    color: Color(0xFF4338CA),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
@@ -481,7 +481,7 @@ class _SuscripcionDetailPageState extends State<SuscripcionDetailPage> {
                       'Suscripción activa${sus['cobroAuto'] == true ? ' — se renovará automáticamente' : ' — vence el ${fmtFecha(sus['periodoFin'] as String?)}'}.',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF047857),
+                        color: Color(0xFF4338CA),
                       ),
                     ),
                   ),

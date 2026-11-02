@@ -92,20 +92,23 @@ class _LoginView extends StatelessWidget {
           const SizedBox(height: 20),
           if (registered)
             _Alert(
-              color: const Color(0xFFDCFCE7),
-              textColor: const Color(0xFF166534),
+              color: Colors.white,
+              borderColor: const Color(0xFFA5B4FC),
+              textColor: const Color(0xFF3730A3),
               text: 'Cuenta creada. Ya puedes iniciar sesión.',
             ),
           if (verified)
             _Alert(
-              color: const Color(0xFFDCFCE7),
-              textColor: const Color(0xFF166534),
+              color: Colors.white,
+              borderColor: const Color(0xFFA5B4FC),
+              textColor: const Color(0xFF3730A3),
               text: '¡Correo verificado! Ya puedes iniciar sesión.',
             ),
           if (resetSuccess)
             _Alert(
-              color: const Color(0xFFDCFCE7),
-              textColor: const Color(0xFF166534),
+              color: Colors.white,
+              borderColor: const Color(0xFFA5B4FC),
+              textColor: const Color(0xFF3730A3),
               text:
                   'Contraseña actualizada. Inicia sesión con tu nueva contraseña.',
             ),
@@ -355,21 +358,29 @@ class _Alert extends StatelessWidget {
     required this.color,
     required this.textColor,
     required this.text,
+    this.borderColor,
   });
   final Color color;
   final Color textColor;
   final String text;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(8),
+        border: borderColor != null ? Border.all(color: borderColor!) : null,
       ),
-      child: Text(text, style: TextStyle(fontSize: 13, color: textColor)),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 13, color: textColor, fontWeight: FontWeight.w500),
+      ),
     );
   }
 }

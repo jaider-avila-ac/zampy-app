@@ -168,7 +168,7 @@ class _EstadisticasPageState extends State<EstadisticasPage> {
             ),
             _Metrica(
               icon: Icons.shopping_cart_outlined,
-              color: const Color(0xFF059669),
+              color: const Color(0xFF4F46E5),
               valor: _num(s['totalOperaciones'] as num?),
               label: 'Operaciones entregadas',
               detalle: '${s['pedidosDomicilio'] ?? 0} domicilio · ${s['rondasMesa'] ?? 0} rondas',
@@ -483,7 +483,7 @@ class _FilaPedido extends StatelessWidget {
                 Text('${_num(p['totalPedidos'] as num?)} oper. · ${_num(p['totalUnidades'] as num?)} und.',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.kBlue)),
                 Text(_money(p['ingresos']),
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF047857))),
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF4338CA))),
               ],
             ),
           ],

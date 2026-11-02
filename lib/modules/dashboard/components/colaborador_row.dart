@@ -107,13 +107,7 @@ class _LogoFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const DecoratedBox(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-      ),
-    ),
+    decoration: BoxDecoration(color: Color(0xFF6366F1)),
   );
 }
 

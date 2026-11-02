@@ -372,9 +372,9 @@ class _PedidoCardState extends State<_PedidoCard> {
                   onPressed: widget.marcando ? null : widget.onRecibido,
                   icon: widget.marcando
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.check_circle_outline, color: Color(0xFF059669)),
+                      : const Icon(Icons.check_circle_outline, color: AppColors.kBlue),
                 ),
-              if (estado == 'entregado') const Icon(Icons.check_circle, size: 18, color: Color(0xFF059669)),
+              if (estado == 'entregado') const Icon(Icons.check_circle, size: 18, color: AppColors.kTextSecondary),
               if (estado == 'cancelado') const Icon(Icons.cancel, size: 18, color: AppColors.kTextMuted),
             ],
           ),

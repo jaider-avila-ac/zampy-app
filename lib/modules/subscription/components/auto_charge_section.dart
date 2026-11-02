@@ -191,7 +191,7 @@ class _AutoChargeSectionState extends State<AutoChargeSection> {
                     Icons.autorenew,
                     size: 17,
                     color: _cobroActivo
-                        ? const Color(0xFF10B981)
+                        ? const Color(0xFF4F46E5)
                         : AppColors.kTextMuted,
                   ),
                   const SizedBox(width: 10),
@@ -224,7 +224,7 @@ class _AutoChargeSectionState extends State<AutoChargeSection> {
                     ),
                     decoration: BoxDecoration(
                       color: _cobroActivo
-                          ? const Color(0xFFECFDF5)
+                          ? const Color(0xFFEEF2FF)
                           : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(99),
                     ),
@@ -234,7 +234,7 @@ class _AutoChargeSectionState extends State<AutoChargeSection> {
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: _cobroActivo
-                            ? const Color(0xFF047857)
+                            ? const Color(0xFF4338CA)
                             : AppColors.kTextSecondary,
                       ),
                     ),
@@ -396,17 +396,17 @@ class _AutoChargeSectionState extends State<AutoChargeSection> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFECFDF5),
+            color: const Color(0xFFEEF2FF),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Row(
             children: [
-              Icon(Icons.check, size: 16, color: Color(0xFF047857)),
+              Icon(Icons.check, size: 16, color: Color(0xFF4338CA)),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
                   '¡Listo! Tu tarjeta fue guardada y el cobro automático está activo.',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF047857)),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF4338CA)),
                 ),
               ),
             ],

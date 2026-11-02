@@ -1042,10 +1042,16 @@ class _QrScannerSheetState extends State<_QrScannerSheet> {
       final host = uri.host.toLowerCase();
       const valid = {'zammpy.com', 'www.zammpy.com', 'app.zammpy.com'};
       if (!valid.contains(host)) return null;
-      final segs = uri.pathSegments;
-      if (segs.length >= 2 && segs[0] == 'menu' && segs[1].isNotEmpty) {
-        return segs[1];
-      }
+      final segs = uri.pathSegments.where((s) => s.isNotEmpty).toList();
+      // QR viejo: /menu/<slug>
+      if (segs.length >= 2 && segs[0] == 'menu') return segs[1];
+      // QR nuevo: /<slug> (el menú vive en la raíz; se descartan las rutas propias de la app)
+      const reservadas = {
+        'menu', 'menus', 'explore', 'login', 'register', 'auth', 'about',
+        'perfil', 'settings', 'notifications', 'logros', 'invitaciones',
+        'pedidos', 'suscripcion', 'billing', 'mesero', 'repartidor', 'preview', 'invite',
+      };
+      if (segs.length == 1 && !reservadas.contains(segs[0])) return segs[0];
       return null;
     } catch (_) {
       return null;

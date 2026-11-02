@@ -191,7 +191,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         _Step.processing => _ProcessingStep(),
         _Step.success => _ResultStep(
           icon: Icons.check_circle_outline,
-          color: const Color(0xFF16A34A),
+          color: const Color(0xFF4F46E5),
           title: '¡Pago aprobado!',
           message: _resultMensaje ?? 'Tu suscripción ha sido activada.',
           onAction: () => context.go('/billing/${widget.menuId}'),

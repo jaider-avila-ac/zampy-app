@@ -170,7 +170,7 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: error ? AppColors.kRed : AppColors.kGreen,
+        backgroundColor: error ? AppColors.kRed : AppColors.kBlue,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -351,7 +351,7 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
               if (_slugAvailable == true)
                 const Text(
                   'Link disponible.',
-                  style: TextStyle(fontSize: 11, color: AppColors.kGreen),
+                  style: TextStyle(fontSize: 11, color: AppColors.kBlue),
                 ),
               _SaveButton(
                 busy: _busy,

@@ -265,7 +265,7 @@ class _MenuInfoPageState extends State<MenuInfoPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Cambios guardados'),
-        backgroundColor: Color(0xFF16A34A),
+        backgroundColor: Color(0xFF4F46E5),
         behavior: SnackBarBehavior.floating,
       ));
       context.pop();
@@ -403,7 +403,7 @@ class _ProgressBar extends StatelessWidget {
         children: List.generate(total, (i) {
           final done     = i < step;
           final current  = i == step;
-          final color    = done    ? const Color(0xFF16A34A)
+          final color    = done    ? const Color(0xFF4F46E5)
                          : current ? AppColors.kBlue
                                    : const Color(0xFFCBD5E1);
           return Flexible(
@@ -419,7 +419,7 @@ class _ProgressBar extends StatelessWidget {
                         width: 28, height: 28,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: done    ? const Color(0xFF16A34A)
+                          color: done    ? const Color(0xFF4F46E5)
                                : current ? const Color(0xFFEEF2FF)
                                          : Colors.white,
                           border: Border.all(color: color, width: 2),
@@ -438,7 +438,7 @@ class _ProgressBar extends StatelessWidget {
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
                           color: current ? AppColors.kBlue
-                               : done    ? const Color(0xFF16A34A)
+                               : done    ? const Color(0xFF4F46E5)
                                          : const Color(0xFF94A3B8),
                         ),
                       ),
@@ -451,7 +451,7 @@ class _ProgressBar extends StatelessWidget {
                       duration: const Duration(milliseconds: 200),
                       height: 2,
                       margin: const EdgeInsets.only(bottom: 14),
-                      color: done ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+                      color: done ? const Color(0xFFA5B4FC) : const Color(0xFFE2E8F0),
                     ),
                   ),
               ],
@@ -683,7 +683,7 @@ class _StepIdentityState extends State<_StepIdentity> {
   Color get _slugColor {
     if (_slugError(widget.data.slug) != null) return const Color(0xFFDC2626);
     if (_slugAvailable == false)              return const Color(0xFFDC2626);
-    if (_slugAvailable == true)               return const Color(0xFF16A34A);
+    if (_slugAvailable == true)               return const Color(0xFF4F46E5);
     return const Color(0xFF94A3B8);
   }
 
