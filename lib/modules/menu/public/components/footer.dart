@@ -2,6 +2,7 @@ import 'package:flutter/material.dart' hide MenuTheme;
 
 import '../models/public_menu_model.dart';
 import '../utils/contact_links.dart';
+import 'social_icons.dart';
 
 // Equivalente a src/components/Footer.jsx en React
 // Muestra logo, info, redes sociales y créditos del menú
@@ -173,6 +174,7 @@ class MenuFooter extends StatelessWidget {
               children: [
                 if (info.hasInstagram)
                   _SocialChip(
+                    iconKey: 'instagram',
                     label: 'Instagram',
                     color: const Color(0xFFE1306C),
                     theme: t,
@@ -180,6 +182,7 @@ class MenuFooter extends StatelessWidget {
                   ),
                 if (info.hasFacebook)
                   _SocialChip(
+                    iconKey: 'facebook',
                     label: 'Facebook',
                     color: const Color(0xFF1877F2),
                     theme: t,
@@ -187,6 +190,7 @@ class MenuFooter extends StatelessWidget {
                   ),
                 if (info.hasWhatsapp)
                   _SocialChip(
+                    iconKey: 'whatsapp',
                     label: 'WhatsApp',
                     color: t.primary, // sin verde: toma el color del tema (como en React)
                     theme: t,
@@ -194,6 +198,7 @@ class MenuFooter extends StatelessWidget {
                   ),
                 if (info.hasTiktok)
                   _SocialChip(
+                    iconKey: 'tiktok',
                     label: 'TikTok',
                     color: const Color(0xFF010101),
                     theme: t,
@@ -201,6 +206,7 @@ class MenuFooter extends StatelessWidget {
                   ),
                 if (info.hasWebsite)
                   _SocialChip(
+                    iconKey: 'website',
                     label: 'Web',
                     color: const Color(0xFF6366F1),
                     theme: t,
@@ -312,11 +318,13 @@ class _InfoRow extends StatelessWidget {
 
 class _SocialChip extends StatelessWidget {
   const _SocialChip({
+    required this.iconKey,
     required this.label,
     required this.color,
     required this.theme,
     this.onTap,
   });
+  final String iconKey;
   final String label;
   final Color color;
   final MenuTheme theme;
@@ -335,11 +343,8 @@ class _SocialChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
+          // ícono real de la red (antes era un punto de color), teñido como en React
+          socialIcon(iconKey, color, size: 14),
           const SizedBox(width: 6),
           Text(
             label,

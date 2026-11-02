@@ -6,6 +6,7 @@ import '../utils/contact_links.dart';
 import '../utils/horario.dart';
 import 'galeria_aside_panel.dart';
 import 'schedule_aside_panel.dart';
+import 'social_icons.dart';
 
 // Equivalente a src/components/Banner.jsx en React — layout móvil
 // React: banner h-72, logo -mt-12 (Stack overlap), info centrada debajo
@@ -166,6 +167,7 @@ class Banner extends StatelessWidget {
                   children: [
                     if (info.hasWhatsapp)
                       _SocialChip(
+                        iconKey: 'whatsapp',
                         label: 'WhatsApp',
                         color: theme.primary, // sin verde: toma el color del tema (como en React)
                         theme: theme,
@@ -173,6 +175,7 @@ class Banner extends StatelessWidget {
                       ),
                     if (info.hasInstagram)
                       _SocialChip(
+                        iconKey: 'instagram',
                         label: 'Instagram',
                         color: const Color(0xFFE1306C),
                         theme: theme,
@@ -180,6 +183,7 @@ class Banner extends StatelessWidget {
                       ),
                     if (info.hasFacebook)
                       _SocialChip(
+                        iconKey: 'facebook',
                         label: 'Facebook',
                         color: const Color(0xFF1877F2),
                         theme: theme,
@@ -187,6 +191,7 @@ class Banner extends StatelessWidget {
                       ),
                     if (info.hasTiktok)
                       _SocialChip(
+                        iconKey: 'tiktok',
                         label: 'TikTok',
                         color: const Color(0xFF010101),
                         theme: theme,
@@ -194,6 +199,7 @@ class Banner extends StatelessWidget {
                       ),
                     if (info.hasWebsite)
                       _SocialChip(
+                        iconKey: 'website',
                         label: 'Web',
                         color: const Color(0xFF6366F1),
                         theme: theme,
@@ -317,11 +323,13 @@ class _InfoChip extends StatelessWidget {
 
 class _SocialChip extends StatelessWidget {
   const _SocialChip({
+    required this.iconKey,
     required this.label,
     required this.color,
     required this.theme,
     this.onTap,
   });
+  final String iconKey;
   final String label;
   final Color color;
   final MenuTheme theme;
@@ -340,12 +348,9 @@ class _SocialChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 4),
+          // ícono real de la red (antes era un punto de color), teñido como en React
+          socialIcon(iconKey, color, size: 13),
+          const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
