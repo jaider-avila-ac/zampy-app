@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../../../services/suscripcion_service.dart';
 import '../../../shared/app_colors.dart';
+import '../../../shared/responsive.dart';
 import '../../../shared/wompi_card_form.dart';
 
 // Equivalente a src/modules/subscription/pages/CheckoutPage.jsx en React
@@ -265,7 +266,7 @@ class _SelectStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: contenidoPadding(context, maxWidth: 560, horizontal: 20, top: 20, bottom: 20),
       children: [
         const Icon(Icons.lock_outline, size: 36, color: AppColors.kBlue),
         const SizedBox(height: 14),
@@ -420,7 +421,7 @@ class _CardTermsStep extends StatelessWidget {
     final publicKey = tokens['publicKey'] as String? ?? '';
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: contenidoPadding(context, maxWidth: 560, horizontal: 20, top: 20, bottom: 20),
       children: [
         const Text(
           'Términos y condiciones',

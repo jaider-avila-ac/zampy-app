@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../services/suscripcion_service.dart';
 import '../../../services/live_editor_service.dart';
 import '../../../shared/app_colors.dart';
+import '../../../shared/responsive.dart';
 import '../../../components/layout/sidebar.dart';
 
 // Equivalente a src/modules/subscription/pages/PlanesPage.jsx en React
@@ -181,7 +182,7 @@ class _PlanesPageState extends State<PlanesPage> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+          padding: contenidoPadding(context, maxWidth: 640, horizontal: 20, top: 12, bottom: 40),
           children: [
             // ── Intro ──────────────────────────────────────────────────────
             Text(
