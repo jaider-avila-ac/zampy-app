@@ -51,10 +51,11 @@ class _MenuInfoPageState extends State<MenuInfoPage> {
         title: widget.enfocarHorario ? 'Horario de atención' : 'Información del menú',
         subtitle: menu?.info.name,
         actions: [
-          if (menu != null)
+          // En el editor de horario (independiente) no va el "Ver mi menú": sobra.
+          if (menu != null && !widget.enfocarHorario)
             IconButton(
               tooltip: 'Ver mi menú',
-              onPressed: () => context.go('/menu/${menu.slug}'),
+              onPressed: () => context.go('/${menu.slug}'),
               icon: const Icon(Icons.open_in_new, size: 19),
             ),
         ],
