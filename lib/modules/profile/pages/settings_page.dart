@@ -380,8 +380,9 @@ class _InvCodeSection extends StatelessWidget {
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
+                      // como React: copiado = índigo sólido con texto blanco
                       color:        ctrl.copied
-                          ? const Color(0xFFE0E7FF)
+                          ? AppColors.kBlue
                           : const Color(0xFFF1F5F9),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -392,7 +393,7 @@ class _InvCodeSection extends StatelessWidget {
                           ctrl.copied ? Icons.check : Icons.copy_outlined,
                           size:  13,
                           color: ctrl.copied
-                              ? const Color(0xFF3730A3)
+                              ? Colors.white
                               : AppColors.kTextMuted,
                         ),
                         const SizedBox(width: 5),
@@ -402,7 +403,7 @@ class _InvCodeSection extends StatelessWidget {
                             fontSize:   11,
                             fontWeight: FontWeight.w600,
                             color:      ctrl.copied
-                                ? const Color(0xFF3730A3)
+                                ? Colors.white
                                 : AppColors.kTextMuted,
                           ),
                         ),
@@ -633,10 +634,11 @@ class _SessionCard extends StatelessWidget {
                       _Chip(label: 'Este dispositivo',
                           bg: AppColors.kBlue, text: Colors.white),
                     if (navegando)
+                      // como React: "Activo" = índigo sólido con texto blanco
                       _Chip(
                         label: '● Activo',
-                        bg:    const Color(0xFFE0E7FF),
-                        text:  const Color(0xFF3730A3),
+                        bg:    AppColors.kBlue,
+                        text:  Colors.white,
                       )
                     else
                       _Chip(
