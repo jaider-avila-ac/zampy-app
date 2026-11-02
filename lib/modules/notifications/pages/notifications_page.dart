@@ -129,7 +129,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
 
             if (!notifCtx.websocketConectado)
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                padding: contenidoPadding(context, horizontal: 20, top: 0, bottom: 12),
                 sliver: SliverToBoxAdapter(
                   child: _ConnectionNotice(error: notifCtx.websocketError),
                 ),
@@ -158,7 +158,7 @@ class _NotificationsViewState extends State<_NotificationsView> {
               )
             else ...[
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                padding: contenidoPadding(context, horizontal: 20, top: 0, bottom: 8),
                 sliver: SliverList.separated(
                   itemCount: ctrl.items.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
