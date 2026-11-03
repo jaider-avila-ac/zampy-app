@@ -212,41 +212,7 @@ class _MainCard extends StatelessWidget {
                 ),
               ),
 
-              // Rating badge arriba derecha
-              if (p.rating != null)
-                Positioned(
-                  top: 14,
-                  right: 14,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.star,
-                          size: 12,
-                          color: Color(0xFFFFD700),
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          p.rating!.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              // (Sin badge de rating: React tampoco muestra estrellas en el carrusel)
 
               // Tags arriba izquierda
               if (p.tags.isNotEmpty)

@@ -48,6 +48,7 @@ class _MenuPedidosPageState extends State<MenuPedidosPage> {
   String _desde = bogotaHoy();
   String _hasta = bogotaHoy();
   String? _nombre;
+  String? _slug;
   bool _sinPermiso = false;
 
   @override
@@ -73,6 +74,7 @@ class _MenuPedidosPageState extends State<MenuPedidosPage> {
       if (!mounted) return;
       setState(() {
         _nombre = menu.nombre;
+        _slug = menu.slug;
         _sinPermiso = !menu.puedeGestionar;
       });
     } catch (_) {
@@ -109,7 +111,11 @@ class _MenuPedidosPageState extends State<MenuPedidosPage> {
     return Scaffold(
       backgroundColor: AppColors.kBgPage,
       drawer: const AppSidebar(),
-      appBar: AppHeader(title: 'Pedidos', subtitle: _nombre),
+      // Mismo header que el editor (nombre + /slug): así no "salta" el layout al cambiar de pestaña
+      appBar: AppHeader(
+        title: (_nombre != null && _nombre!.isNotEmpty) ? _nombre! : 'Pedidos',
+        subtitle: (_slug != null && _slug!.isNotEmpty) ? '/$_slug' : null,
+      ),
       body: Column(children: [
         EditorTabsBar(codigo: widget.codigo, active: 'pedidos'),
         Expanded(child: _sinPermiso

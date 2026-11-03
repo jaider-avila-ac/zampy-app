@@ -30,11 +30,26 @@ class DeviceInfoService {
   }
 
   /// Cabeceras para ApiClient. Si aún no se inicializó, va vacío (el backend lo tolera).
+  ///
+  /// IMPORTANTE: los valores de cabecera HTTP deben ser ASCII. Un modelo con acentos/símbolos
+  /// (o el separador "·") haría que `package:http` lance y **toda** petición fallara (la app
+  /// parecería "sin conexión"). Por eso se sanea a ASCII imprimible aquí.
   static Map<String, String> get headers {
     final h = <String, String>{};
-    if (_id != null && _id!.isNotEmpty) h['X-Device-Id'] = _id!;
-    if (_nombre != null && _nombre!.isNotEmpty) h['X-Device-Name'] = _nombre!;
+    final id = _ascii(_id);
+    final nombre = _ascii(_nombre);
+    if (id.isNotEmpty) h['X-Device-Id'] = id;
+    if (nombre.isNotEmpty) h['X-Device-Name'] = nombre;
     return h;
+  }
+
+  /// Deja solo ASCII imprimible (0x20–0x7E), colapsa espacios y recorta. Vacío si no queda nada.
+  static String _ascii(String? v) {
+    if (v == null) return '';
+    return v
+        .replaceAll(RegExp(r'[^\x20-\x7E]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   static Future<String> _leerOCrearId() async {
@@ -59,14 +74,14 @@ class DeviceInfoService {
             ? info.model.trim()
             : info.device.trim());
         final base = modelo.isNotEmpty ? modelo : 'Android';
-        return '$base · App Zammpy';
+        return '$base - App Zammpy';
       }
       if (Platform.isIOS) {
         final info = await plugin.iosInfo;
         final modelo = info.utsname.machine.trim().isNotEmpty
             ? info.utsname.machine.trim()
             : (info.name.trim().isNotEmpty ? info.name.trim() : 'iPhone');
-        return '$modelo · App Zammpy';
+        return '$modelo - App Zammpy';
       }
     } catch (_) {
       // sin permisos o plugin no disponible → etiqueta genérica

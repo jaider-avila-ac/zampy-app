@@ -104,6 +104,18 @@ class AuthService {
     );
   }
 
+  // POST /api/v1/auth/verify-reset-code — valida el código antes de pedir la nueva contraseña
+  static Future<void> verifyResetCode(String code) async {
+    await _call(
+      () => ApiClient.instance.post(
+        '/api/v1/auth/verify-reset-code',
+        body: {'code': code.trim()},
+        auth: false,
+      ),
+      fallback: 'Código incorrecto.',
+    );
+  }
+
   // POST /api/v1/auth/reset-password
   static Future<void> resetPassword(String token, String password) async {
     await _call(

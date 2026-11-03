@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -7,10 +6,11 @@ import '../../../context/auth_context.dart';
 import '../../../services/auth_redirect.dart';
 import '../../../services/google_auth_service.dart';
 import '../../../shared/app_colors.dart';
+import '../components/auth_layout.dart';
 import '../hooks/use_forgot_password.dart';
 
-// Equivalente a src/modules/auth/pages/ForgotPasswordPage.jsx en React
-// Fondo indigo, tarjeta blanca al centro
+// Equivalente a src/modules/auth/pages/ForgotPasswordPage.jsx en React.
+// Mismo diseño que el resto de auth: fondo blanco + logo (AuthLayout).
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -50,63 +50,27 @@ class _ForgotView extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = context.watch<UseForgotPassword>();
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(color: Color(0xFF4F46E5)),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              children: [
-                // Logo blanco
-                SvgPicture.asset(
-                  'assets/logos/imagotipo-blanco-zammpy.svg',
-                  height: 32,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
-                const SizedBox(height: 32),
-
-                // Tarjeta blanca
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: _buildContent(context, ctrl),
-                ),
-
-                const SizedBox(height: 20),
-                // Volver al login
-                TextButton.icon(
-                  onPressed: () => context.go('/login'),
-                  icon: const Icon(
-                    Icons.arrow_back,
-                    size: 15,
-                    color: Colors.white,
-                  ),
-                  label: const Text(
-                    'Volver al inicio de sesión',
-                    style: TextStyle(fontSize: 14, color: Colors.white),
-                  ),
-                ),
-              ],
+    return AuthLayout(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildContent(context, ctrl),
+          const SizedBox(height: 20),
+          Center(
+            child: TextButton.icon(
+              onPressed: () => context.go('/login'),
+              icon: const Icon(
+                Icons.arrow_back,
+                size: 15,
+                color: AppColors.kTextSecondary,
+              ),
+              label: const Text(
+                'Volver al inicio de sesión',
+                style: TextStyle(fontSize: 14, color: AppColors.kTextSecondary),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -2,7 +2,6 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart' hide MenuTheme;
 import 'package:provider/provider.dart';
 import '../../../../shared/responsive.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../components/ui/auth_required_modal.dart';
 import '../../../../context/auth_context.dart';
@@ -303,40 +302,6 @@ class _ProductModalState extends State<ProductModal> {
     ));
   }
 
-  // Construye el mensaje de WhatsApp incluyendo selecciones — igual que React
-  String _buildWaMessage() {
-    final p = widget.product;
-    final sizeObj = _sizeObj;
-    final lines = <String>['Hola, quiero hacer un pedido:\n*${p.name}*'];
-    if (sizeObj != null) lines.add('• Tamaño: ${sizeObj.label}');
-    if (_selIngredients.isNotEmpty) {
-      final names = _selIngredients
-          .map(
-            (id) => p.ingredients.where((i) => i.id == id).firstOrNull?.label,
-          )
-          .whereType<String>()
-          .join(', ');
-      if (names.isNotEmpty) lines.add('• Personalización: $names');
-    }
-    if (_selExtras.isNotEmpty) {
-      final names = _selExtras
-          .map((id) => p.extras.where((e) => e.id == id).firstOrNull?.label)
-          .whereType<String>()
-          .join(', ');
-      if (names.isNotEmpty) lines.add('• Adiciones: $names');
-    }
-    for (final g in _visibleGrupos) {
-      final sel = _selGrupos[g.id] ?? {};
-      if (sel.isNotEmpty) lines.add('• ${g.name}: ${sel.join(', ')}');
-    }
-    final price = _displayPrice;
-    if (price > 0) lines.add('\nTotal: \$${_fmt(price)}');
-    lines.add(
-      '\nPor favor indícame tu *nombre completo* y *dirección de entrega* para coordinar el pedido.',
-    );
-    return lines.join('\n');
-  }
-
   void _openImageViewer(String imgSrc) {
     showGeneralDialog(
       context: context,
@@ -365,20 +330,6 @@ class _ProductModalState extends State<ProductModal> {
         );
       },
     );
-  }
-
-  Future<void> _openWhatsapp() async {
-    final info = widget.info;
-    final raw = info?.whatsapp?.isNotEmpty == true
-        ? info!.whatsapp!
-        : (info?.phone ?? '');
-    if (raw.isEmpty) return;
-    final number = raw.replaceAll(RegExp(r'\D'), '');
-    final encoded = Uri.encodeComponent(_buildWaMessage());
-    final url = Uri.parse('https://wa.me/$number?text=$encoded');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
   }
 
   static String _fmt(double p) {
@@ -484,7 +435,6 @@ class _ProductModalState extends State<ProductModal> {
     final displayP = _displayPrice;
     final origP = _originalPrice;
     final priceCol = t.primary;
-    final hasWa = info?.hasWhatsapp == true;
     final hasPhone = info?.hasPhone == true;
     final likes = context.watch<LikesContext>();
     final productLiked =
@@ -1009,41 +959,18 @@ class _ProductModalState extends State<ProductModal> {
                       ),
                     ],
 
-                    // ── Botón WhatsApp ─────────────────────────────────
+                    // ── Acción: carrito / orden, o contacto (igual que React:
+                    //    ya no hay botón "Pedir por WhatsApp") ───────────────
                     const SizedBox(height: 24),
-                    Opacity(
-                      opacity: (_pedidosActivos || _tomaOrden || hasWa || hasPhone) ? 1.0 : 0.5,
-                      child: SizedBox(
+                    if (_pedidosActivos || _tomaOrden)
+                      SizedBox(
                         width: double.infinity,
                         height: 48,
-                        // Con pedidos activos el cliente arma su carrito (como React); el personal agrega a la
-                        // orden; si no, se mantiene el pedido directo por WhatsApp.
-                        child: (_pedidosActivos || _tomaOrden)
-                            ? ElevatedButton.icon(
-                                onPressed: _tomaOrden ? _agregarALaOrden : _agregarAlCarrito,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: t.primary,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      t.badgeRadius.clamp(0, 16),
-                                    ),
-                                  ),
-                                ),
-                                icon: const Icon(Icons.shopping_cart_outlined, size: 17),
-                                label: Text(
-                                  _tomaOrden ? 'Agregar a la orden' : 'Agregar al carrito',
-                                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                                ),
-                              )
-                            : ElevatedButton.icon(
-                          onPressed: (hasWa || hasPhone) ? _openWhatsapp : null,
+                        child: ElevatedButton.icon(
+                          onPressed: _tomaOrden ? _agregarALaOrden : _agregarAlCarrito,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: t.primary,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: t.primary,
-                            disabledForegroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
@@ -1051,20 +978,14 @@ class _ProductModalState extends State<ProductModal> {
                               ),
                             ),
                           ),
-                          icon: const Icon(Icons.chat_outlined, size: 17),
-                          label: const Text(
-                            'Pedir por WhatsApp',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
+                          icon: const Icon(Icons.shopping_cart_outlined, size: 17),
+                          label: Text(
+                            _tomaOrden ? 'Agregar a la orden' : 'Agregar al carrito',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                           ),
                         ),
-                      ),
-                    ),
-
-                    if (!hasWa && hasPhone) ...[
-                      const SizedBox(height: 10),
+                      )
+                    else if (hasPhone)
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -1078,20 +999,13 @@ class _ProductModalState extends State<ProductModal> {
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.phone_outlined,
-                              size: 14,
-                              color: t.primary,
-                            ),
+                            Icon(Icons.phone_outlined, size: 14, color: t.primary),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text.rich(
                                 TextSpan(
                                   text: 'Contáctanos: ',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: t.textMuted,
-                                  ),
+                                  style: TextStyle(fontSize: 13, color: t.textMuted),
                                   children: [
                                     TextSpan(
                                       text: info!.phone!,
@@ -1107,7 +1021,6 @@ class _ProductModalState extends State<ProductModal> {
                           ],
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),

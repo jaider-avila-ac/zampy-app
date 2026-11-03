@@ -39,6 +39,11 @@ class ProductosMosaico extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Igual que React (ProductosMosaico): un producto sin foto NO se muestra ni ocupa lugar.
+    final visibles = items
+        .where((p) => (p.imagenUrl ?? '').trim().isNotEmpty)
+        .toList();
+
     final width = MediaQuery.sizeOf(context).width;
     final columns = width >= 1200
         ? 5
@@ -124,12 +129,12 @@ class ProductosMosaico extends StatelessWidget {
                 crossAxisCount: columns,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 14,
-                itemCount: items.length + skeletons,
+                itemCount: visibles.length + skeletons,
                 itemBuilder: (context, index) {
-                  if (index >= items.length) {
+                  if (index >= visibles.length) {
                     return SkeletonProductCard(height: hs[index % hs.length]);
                   }
-                  final producto = items[index];
+                  final producto = visibles[index];
                   return ProductoCard(
                     producto: producto,
                     liked: likedIds.contains(producto.codigo),

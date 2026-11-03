@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../components/layout/sidebar.dart';
 import '../../../../context/notificacion_context.dart';
+import '../../../../services/mis_menus_service.dart';
 import '../../../../shared/app_colors.dart';
 import '../../../../shared/app_header.dart';
 import '../../../../shared/confirmar_dialog.dart';
@@ -41,12 +42,28 @@ class MesasPage extends StatefulWidget {
 class _MesasPageState extends State<MesasPage> {
   late final _mesas = UseMesas(widget.codigo);
   late final EventosPedidos _eventos;
+  String? _nombre;
+  String? _slug;
 
   @override
   void initState() {
     super.initState();
     _eventos = EventosPedidos(context.read<NotificacionContext>(), widget.codigo, () => _mesas.cargar(silencioso: true));
     _mesas.cargar();
+    _cargarMenu();
+  }
+
+  Future<void> _cargarMenu() async {
+    try {
+      final menu = await MisMenusService.getResumen(widget.codigo);
+      if (!mounted) return;
+      setState(() {
+        _nombre = menu.nombre;
+        _slug = menu.slug;
+      });
+    } catch (_) {
+      // el título queda genérico si falla
+    }
   }
 
   @override
@@ -86,7 +103,11 @@ class _MesasPageState extends State<MesasPage> {
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: AppColors.kBgPage,
         drawer: const AppSidebar(),
-        appBar: const AppHeader(title: 'Gestión de Mesas'),
+        // Mismo header que el editor (nombre + /slug): el layout no cambia al pasar entre pestañas
+        appBar: AppHeader(
+          title: (_nombre != null && _nombre!.isNotEmpty) ? _nombre! : 'Mesas',
+          subtitle: (_slug != null && _slug!.isNotEmpty) ? '/$_slug' : null,
+        ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _formulario(),
           backgroundColor: AppColors.kBlue,
