@@ -277,10 +277,10 @@ class _MenuPageState extends State<MenuPage> {
       widget.menuCodigo != null &&
       widget.menuData.info.pedidosActivos;
 
-  // Botón flotante con la cantidad de productos del carrito.
+  // Botón flotante del carrito. Como en React, está visible siempre que haya pedidos activos
+  // (no solo cuando ya hay ítems); la cantidad se muestra cuando el carrito tiene algo.
   Widget _botonCarrito(MenuTheme theme) {
     final count = context.watch<CartContext>().count;
-    if (count == 0) return const SizedBox.shrink();
     return Positioned(
       right: 16,
       bottom: 16 + MediaQuery.of(context).padding.bottom,
@@ -295,7 +295,7 @@ class _MenuPageState extends State<MenuPage> {
           info: widget.menuData.info,
         ),
         icon: const Icon(Icons.shopping_cart_outlined),
-        label: Text('Carrito · $count'),
+        label: Text(count > 0 ? 'Carrito · $count' : 'Carrito'),
       ),
     );
   }
