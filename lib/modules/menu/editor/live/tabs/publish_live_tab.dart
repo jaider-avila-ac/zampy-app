@@ -238,22 +238,18 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
           FilledButton.icon(
             onPressed: _busy || bloqueadoColaborador
                 ? null
+                // Igual que React: con acceso (plan/cupón) se publica; sin acceso se abre la
+                // página de planes — donde la prueba gratuita es UNA opción más, no algo forzado.
                 : () {
                     if (widget.menu.tieneAcceso) {
                       _confirmAndPublish();
-                    } else if (!sub.trialUsado) {
-                      _confirmAndPublish(trial: true);
                     } else {
                       context.push('/menus/${widget.menu.codigo}/planes');
                     }
                   },
             icon: const Icon(Icons.rocket_launch_outlined, size: 17),
             label: Text(
-              widget.menu.tieneAcceso
-                  ? 'Publicar menú'
-                  : sub.trialUsado
-                  ? 'Ver planes'
-                  : 'Iniciar prueba y publicar',
+              widget.menu.tieneAcceso ? 'Publicar menú' : 'Ver planes',
             ),
           ),
         if (widget.menu.publicado) ...[
