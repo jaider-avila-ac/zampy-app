@@ -260,7 +260,6 @@ class _MenuPageState extends State<MenuPage> {
             BannerOrdenMesero(orden: orden, onVolver: () => context.pop()),
             Expanded(child: _contenido(theme, info)),
           ]),
-        if (_pedidosActivos) _botonCarrito(theme),
         if (orden != null)
           Positioned(
             right: 16,
@@ -277,25 +276,57 @@ class _MenuPageState extends State<MenuPage> {
       widget.menuCodigo != null &&
       widget.menuData.info.pedidosActivos;
 
-  // Botón flotante del carrito. Como en React, está visible siempre que haya pedidos activos
-  // (no solo cuando ya hay ítems); la cantidad se muestra cuando el carrito tiene algo.
-  Widget _botonCarrito(MenuTheme theme) {
+  // Botón del carrito en la fila de controles (igual que React: ícono cuadrado con badge rojo,
+  // junto al selector de vista). Visible siempre que haya pedidos activos; el badge sale con ítems.
+  Widget _cartButton(MenuTheme theme) {
+    if (!_pedidosActivos) return const SizedBox.shrink();
     final count = context.watch<CartContext>().count;
-    return Positioned(
-      right: 16,
-      bottom: 16 + MediaQuery.of(context).padding.bottom,
-      child: FloatingActionButton.extended(
-        heroTag: 'carrito',
-        backgroundColor: theme.primary,
-        foregroundColor: Colors.white,
-        onPressed: () => CartSheet.show(
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
+        onTap: () => CartSheet.show(
           context,
           menuCodigo: widget.menuCodigo!,
           theme: theme,
           info: widget.menuData.info,
         ),
-        icon: const Icon(Icons.shopping_cart_outlined),
-        label: Text(count > 0 ? 'Carrito · $count' : 'Carrito'),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: theme.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.shopping_cart_outlined, size: 16, color: Colors.white),
+            ),
+            if (count > 0)
+              Positioned(
+                top: -5,
+                right: -5,
+                child: Container(
+                  height: 16,
+                  constraints: const BoxConstraints(minWidth: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Text(
+                    count > 99 ? '99+' : '$count',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -433,6 +464,8 @@ class _MenuPageState extends State<MenuPage> {
                       ),
                     ),
                   const SizedBox(width: 6),
+                  // Carrito (como React): ícono con badge, junto al selector de vista.
+                  _cartButton(theme),
                   // Toggle de vistas. React deja solo "Lista" cuando la
                   // categoría activa es sin_imagenes.
                   _ViewToggle(
