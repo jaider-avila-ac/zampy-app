@@ -8,8 +8,7 @@ import 'skeleton_product_card.dart';
 
 // Equivalente a src/modules/explore/components/ProductosMosaico.jsx en React.
 // La paginación la controla ExploreController.
-
-class ProductosMosaico extends StatelessWidget {
+class ProductosMosaico extends StatefulWidget {
   const ProductosMosaico({
     super.key,
     required this.items,
@@ -38,10 +37,26 @@ class ProductosMosaico extends StatelessWidget {
   final String q;
 
   @override
+  State<ProductosMosaico> createState() => _ProductosMosaicoState();
+}
+
+class _ProductosMosaicoState extends State<ProductosMosaico> {
+  // Productos cuya imagen falló al cargar (URL rota / 404): como React, no se muestran.
+  final Set<String> _fallidos = {};
+
+  void _marcarFallo(String codigo) {
+    if (_fallidos.contains(codigo)) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _fallidos.add(codigo)) setState(() {});
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Igual que React (ProductosMosaico): un producto sin foto NO se muestra ni ocupa lugar.
-    final visibles = items
-        .where((p) => (p.imagenUrl ?? '').trim().isNotEmpty)
+    // Igual que React: un producto sin foto (URL vacía) o cuya imagen falla al cargar NO se muestra.
+    final visibles = widget.items
+        .where((p) =>
+            (p.imagenUrl ?? '').trim().isNotEmpty && !_fallidos.contains(p.codigo))
         .toList();
 
     final width = MediaQuery.sizeOf(context).width;
@@ -53,7 +68,7 @@ class ProductosMosaico extends StatelessWidget {
         ? 3
         : 2;
 
-    if (loading && items.isEmpty) {
+    if (widget.loading && widget.items.isEmpty) {
       const heights = [190.0, 250.0, 160.0, 220.0, 270.0, 180.0, 230.0, 200.0];
       return MasonryGridView.count(
         shrinkWrap: true,
@@ -66,13 +81,13 @@ class ProductosMosaico extends StatelessWidget {
       );
     }
 
-    if (items.isEmpty && error == null) {
+    if (widget.items.isEmpty && widget.error == null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 56),
         child: Center(
           child: Text(
-            q.isNotEmpty
-                ? 'No hay platos que coincidan con "$q".'
+            widget.q.isNotEmpty
+                ? 'No hay platos que coincidan con "${widget.q}".'
                 : 'No hay platos con estos filtros.',
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 13, color: AppColors.kTextMuted),
@@ -83,7 +98,7 @@ class ProductosMosaico extends StatelessWidget {
 
     return Column(
       children: [
-        if (error != null && items.isEmpty)
+        if (widget.error != null && widget.items.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -93,34 +108,24 @@ class ProductosMosaico extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 18,
-                  color: Color(0xFFB91C1C),
-                ),
+                const Icon(Icons.error_outline, size: 18, color: Color(0xFFB91C1C)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    error!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF991B1B),
-                    ),
+                    widget.error!,
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF991B1B)),
                   ),
                 ),
-                if (onRetry != null)
-                  TextButton(
-                    onPressed: onRetry,
-                    child: const Text('Reintentar'),
-                  ),
+                if (widget.onRetry != null)
+                  TextButton(onPressed: widget.onRetry, child: const Text('Reintentar')),
               ],
             ),
           )
         else
           Builder(
             builder: (_) {
-              // al cargar más, se agregan tarjetas-esqueleto al final del mismo tablero (no un texto aparte)
-              final cargandoMas = loading && items.isNotEmpty;
+              // al cargar más, se agregan tarjetas-esqueleto al final del mismo tablero
+              final cargandoMas = widget.loading && widget.items.isNotEmpty;
               const hs = [190.0, 250.0, 160.0, 220.0, 270.0, 180.0, 230.0, 200.0];
               final skeletons = cargandoMas ? columns * 2 : 0;
               return MasonryGridView.count(
@@ -137,11 +142,12 @@ class ProductosMosaico extends StatelessWidget {
                   final producto = visibles[index];
                   return ProductoCard(
                     producto: producto,
-                    liked: likedIds.contains(producto.codigo),
-                    conSesion: conSesion,
-                    onTap: () => onTap(producto),
-                    onToggleLike: () => onToggleLike(producto),
-                    onRequireLogin: onRequireLogin,
+                    liked: widget.likedIds.contains(producto.codigo),
+                    conSesion: widget.conSesion,
+                    onTap: () => widget.onTap(producto),
+                    onToggleLike: () => widget.onToggleLike(producto),
+                    onRequireLogin: widget.onRequireLogin,
+                    onImageError: () => _marcarFallo(producto.codigo),
                   );
                 },
               );

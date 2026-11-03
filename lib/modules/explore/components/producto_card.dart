@@ -15,6 +15,7 @@ class ProductoCard extends StatelessWidget {
     this.onTap,
     this.onToggleLike,
     this.onRequireLogin,
+    this.onImageError,
   });
 
   final TarjetaProducto producto;
@@ -23,6 +24,8 @@ class ProductoCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onToggleLike;
   final VoidCallback? onRequireLogin;
+  // Se llama si la imagen no carga (URL rota/404): el mosaico lo quita, como React.
+  final VoidCallback? onImageError;
 
   @override
   Widget build(BuildContext context) {
@@ -48,8 +51,14 @@ class ProductoCard extends StatelessWidget {
                         ? Image.network(
                             producto.imagenUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stack) =>
-                                _sinImagen(),
+                            errorBuilder: (context, error, stack) {
+                              final cb = onImageError;
+                              if (cb != null) {
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) => cb());
+                              }
+                              return _sinImagen();
+                            },
                             loadingBuilder: (context, child, progress) {
                               if (progress == null) return child;
                               return Container(
