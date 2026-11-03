@@ -5,6 +5,7 @@ import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
 import '../services/api.dart';
 import '../services/interaccion_service.dart';
+import '../services/notificaciones_locales.dart';
 
 // Equivalente a src/context/NotificacionContext.jsx en React
 // Incluye WebSocket STOMP igual que React (@stomp/stompjs)
@@ -122,9 +123,17 @@ class NotificacionContext extends ChangeNotifier {
     // Badge en tiempo real — igual que React: client.subscribe('/user/queue/notificaciones', ...)
     _stomp?.subscribe(
       destination: '/user/queue/notificaciones',
-      callback: (_) {
+      callback: (frame) {
         _notificacionSeq++;
         incrementUnread();
+        // Aviso en la barra de estado (si el usuario activó las notificaciones del sistema).
+        try {
+          final data = jsonDecode(frame.body ?? '{}') as Map<String, dynamic>;
+          NotificacionesLocales.mostrar(
+            titulo: (data['entidadNombre'] ?? '').toString(),
+            texto: (data['vistaPrevia'] ?? '').toString(),
+          );
+        } catch (_) {}
       },
     );
 

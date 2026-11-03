@@ -26,6 +26,9 @@ dependencies:
   # Datos del dispositivo (marca/modelo/versión Android) para "Sesiones activas"
   device_info_plus: ^11.1.0
 
+  # Notificaciones del sistema (barra de estado) — avisos de pedidos/suscripción/actividad
+  flutter_local_notifications: ^18.0.1
+
   # SVG
   flutter_svg: ^2.0.10+1
 

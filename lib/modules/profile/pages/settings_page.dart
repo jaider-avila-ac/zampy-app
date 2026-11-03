@@ -6,6 +6,7 @@ import '../../../shared/app_colors.dart';
 import '../../../shared/app_header.dart';
 import '../../../components/layout/sidebar.dart';
 import '../hooks/use_settings.dart';
+import '../../../services/notificaciones_locales.dart';
 import '../../../shared/responsive.dart';
 
 // Equivalente a src/modules/profile/pages/SettingsPage.jsx en React
@@ -51,6 +52,10 @@ class _SettingsView extends StatelessWidget {
 
             // ── Perfil ──────────────────────────────────────────────────────
             _ProfileButton(onTap: () => context.push('/perfil')),
+            const SizedBox(height: 20),
+
+            // ── Notificaciones del sistema ──────────────────────────────────
+            const _NotificationsTile(),
             const SizedBox(height: 20),
 
             // ── Código de invitación ────────────────────────────────────────
@@ -286,6 +291,76 @@ class _DeleteAccountDialog extends StatelessWidget {
               : const Text('Eliminar cuenta definitivamente'),
         ),
       ],
+    );
+  }
+}
+
+// ── Notificaciones del sistema ─────────────────────────────────────────────────
+
+class _NotificationsTile extends StatefulWidget {
+  const _NotificationsTile();
+
+  @override
+  State<_NotificationsTile> createState() => _NotificationsTileState();
+}
+
+class _NotificationsTileState extends State<_NotificationsTile> {
+  late bool _on = NotificacionesLocales.habilitadas;
+  bool _busy = false;
+
+  Future<void> _cambiar(bool valor) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final real = await NotificacionesLocales.establecer(valor);
+    if (!mounted) return;
+    setState(() {
+      _on = real;
+      _busy = false;
+    });
+    // Si se pidió activar pero el sistema negó el permiso, avisar.
+    if (valor && !real) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          'Permite las notificaciones de Zammpy en los ajustes del sistema para activarlas.',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.kCardBorder),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.notifications_active_outlined, size: 20, color: AppColors.kBlue),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Notificaciones',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                        color: AppColors.kTextPrimary)),
+                Text('Recibe avisos de pedidos y actividad en la barra de estado',
+                    style: TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
+              ],
+            ),
+          ),
+          Switch(
+            value: _on,
+            onChanged: _busy ? null : _cambiar,
+            activeThumbColor: Colors.white,
+            activeTrackColor: AppColors.kBlue,
+          ),
+        ],
+      ),
     );
   }
 }
