@@ -109,10 +109,24 @@ class _FormOpcionesState extends State<FormOpciones> with GuardarSeccion {
               ],
             ),
           OutlinedButton.icon(
-            onPressed: () => setState(() => _filas.add(_Fila())),
+            onPressed: _filas.length >= _opcion.max
+                ? null
+                : () => setState(() => _filas.add(_Fila())),
             icon: const Icon(Icons.add, size: 16),
             label: const Text('Agregar'),
           ),
+          // El aviso solo aparece al acercarse al tope
+          if (_opcion.max - _filas.length <= 2)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                _filas.length >= _opcion.max
+                    ? 'Llegaste al máximo (${_opcion.max}).'
+                    : 'Puedes agregar ${_opcion.max - _filas.length} más.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 11, color: AppColors.kTextMuted),
+              ),
+            ),
           const SizedBox(height: 12),
           BotonGuardar(guardando: guardando, onPressed: _guardar),
         ],

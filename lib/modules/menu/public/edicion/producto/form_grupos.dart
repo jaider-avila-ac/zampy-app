@@ -21,6 +21,8 @@ class FormGrupos extends StatefulWidget {
   State<FormGrupos> createState() => _FormGruposState();
 }
 
+const _maxGrupos = 6; // tope por producto (coincide con el backend)
+
 class _FormGruposState extends State<FormGrupos> with GuardarSeccion {
   List<LiveGroup>? _grupos;
   late final Set<String> _elegidos = {...widget.producto.grupoIds};
@@ -51,12 +53,29 @@ class _FormGruposState extends State<FormGrupos> with GuardarSeccion {
         const SizedBox(height: 10),
         if (grupos.isEmpty) const Text('Aún no tienes grupos.', style: TextStyle(fontSize: 13)),
         for (final g in grupos)
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _elegidos.contains(g.codigo),
-            onChanged: (v) => setState(() => v == true ? _elegidos.add(g.codigo) : _elegidos.remove(g.codigo)),
-            title: Text(g.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            secondary: Text('${g.items.length} opciones', style: const TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
+          Builder(builder: (_) {
+            final elegido = _elegidos.contains(g.codigo);
+            final bloqueado = !elegido && _elegidos.length >= _maxGrupos;
+            return CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: elegido,
+              onChanged: bloqueado
+                  ? null
+                  : (v) => setState(() => v == true ? _elegidos.add(g.codigo) : _elegidos.remove(g.codigo)),
+              title: Text(g.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              secondary: Text('${g.items.length} opciones', style: const TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
+            );
+          }),
+        // El aviso solo aparece al acercarse al tope
+        if (_maxGrupos - _elegidos.length <= 2)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              _elegidos.length >= _maxGrupos
+                  ? 'Llegaste al máximo ($_maxGrupos grupos).'
+                  : 'Puedes elegir ${_maxGrupos - _elegidos.length} grupo(s) más.',
+              style: const TextStyle(fontSize: 11, color: AppColors.kTextMuted),
+            ),
           ),
         Align(
           alignment: Alignment.centerLeft,

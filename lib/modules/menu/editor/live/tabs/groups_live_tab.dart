@@ -4,6 +4,8 @@ import '../../../../../services/live_editor_service.dart';
 import '../../../../../shared/app_colors.dart';
 import '../editor_models.dart';
 
+const _maxOpcionesGrupo = 30; // tope por grupo (coincide con el backend)
+
 class GroupsLiveTab extends StatefulWidget {
   const GroupsLiveTab({super.key, required this.menu, required this.onChanged});
 
@@ -122,11 +124,25 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
                     ),
                   ),
                 TextButton.icon(
-                  onPressed: () =>
-                      setModal(() => items.add(_ItemRow(name: '', price: '0'))),
+                  onPressed: items.length >= _maxOpcionesGrupo
+                      ? null
+                      : () => setModal(
+                            () => items.add(_ItemRow(name: '', price: '0')),
+                          ),
                   icon: const Icon(Icons.add, size: 14),
                   label: const Text('Agregar opción'),
                 ),
+                // El aviso solo aparece al acercarse al tope
+                if (_maxOpcionesGrupo - items.length <= 2)
+                  Text(
+                    items.length >= _maxOpcionesGrupo
+                        ? 'Llegaste al máximo ($_maxOpcionesGrupo opciones).'
+                        : 'Puedes agregar ${_maxOpcionesGrupo - items.length} más.',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.kTextMuted,
+                    ),
+                  ),
                 const SizedBox(height: 6),
                 Row(
                   children: [
