@@ -12,11 +12,13 @@ class ProductListItem extends StatelessWidget {
     required this.product,
     required this.theme,
     required this.onTap,
+    this.logoUrl,
   });
 
   final MenuProduct product;
   final MenuTheme theme;
   final VoidCallback onTap;
+  final String? logoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +43,7 @@ class ProductListItem extends StatelessWidget {
                 ),
                 child: ProductImage(
                   url: product.imageUrl,
+                  logoUrl: logoUrl,
                   alignment: product.imageAlignment,
                   width: 76,
                   height: 76,

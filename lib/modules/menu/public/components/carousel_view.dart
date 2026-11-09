@@ -10,10 +10,12 @@ class CarouselView extends StatefulWidget {
     required this.products,
     required this.theme,
     required this.onProductTap,
+    this.logoUrl,
   });
   final List<MenuProduct> products;
   final MenuTheme theme;
   final ValueChanged<MenuProduct> onProductTap;
+  final String? logoUrl;
 
   @override
   State<CarouselView> createState() => _CarouselViewState();
@@ -79,6 +81,7 @@ class _CarouselViewState extends State<CarouselView> {
                   child: _MainCard(
                     product: p,
                     theme: t,
+                    logoUrl: widget.logoUrl,
                     onTap: () => widget.onProductTap(p),
                   ),
                 ),
@@ -147,10 +150,12 @@ class _MainCard extends StatelessWidget {
     required this.product,
     required this.theme,
     required this.onTap,
+    this.logoUrl,
   });
   final MenuProduct product;
   final MenuTheme theme;
   final VoidCallback onTap;
+  final String? logoUrl;
 
   static String _fmt(double price) {
     final s = price.toStringAsFixed(0);
@@ -162,6 +167,29 @@ class _MainCard extends StatelessWidget {
       c++;
     }
     return buf.toString().split('').reversed.join();
+  }
+
+  Widget _logoFallback(MenuTheme t) {
+    final logo = logoUrl;
+    return Container(
+      color: t.surfaceAlt,
+      alignment: Alignment.center,
+      child: logo != null && logo.isNotEmpty
+          ? FractionallySizedBox(
+              widthFactor: 0.4,
+              heightFactor: 0.4,
+              child: Opacity(
+                opacity: 0.3,
+                child: Image.network(
+                  logo,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) =>
+                      Icon(Icons.fastfood_outlined, size: 64, color: t.border),
+                ),
+              ),
+            )
+          : Icon(Icons.fastfood_outlined, size: 64, color: t.border),
+    );
   }
 
   @override
@@ -179,22 +207,15 @@ class _MainCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Imagen
+              // Imagen (sin foto del producto → logo del menú como respaldo)
               if (img != null && img.isNotEmpty)
                 Image.network(
                   img,
                   fit: BoxFit.cover,
-                  errorBuilder: (ctx, e, st) => Container(color: t.surfaceAlt),
+                  errorBuilder: (ctx, e, st) => _logoFallback(t),
                 )
               else
-                Container(
-                  color: t.surfaceAlt,
-                  child: Icon(
-                    Icons.fastfood_outlined,
-                    size: 64,
-                    color: t.border,
-                  ),
-                ),
+                _logoFallback(t),
 
               // Gradiente igual que React
               Container(

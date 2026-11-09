@@ -59,16 +59,10 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
   bool get _hasCategories => widget.menu.categories.isNotEmpty;
   bool get _hasProducts => widget.menu.products.isNotEmpty;
 
-  List<LiveProduct> get _incomplete {
-    final sinImagenes = widget.menu.categories
-        .where((c) => c.tipoContenido == 'sin_imagenes')
-        .map((c) => c.codigo)
-        .toSet();
-    return widget.menu.products.where((p) {
-      final needsImage = !sinImagenes.contains(p.categoryId);
-      return (!needsImage ? false : (p.imageUrl ?? '').isEmpty) || p.price <= 0;
-    }).toList();
-  }
+  // La foto del producto ya no es obligatoria (el menú muestra el logo como respaldo):
+  // un producto solo está "incompleto" si le falta el precio.
+  List<LiveProduct> get _incomplete =>
+      widget.menu.products.where((p) => p.price <= 0).toList();
 
   bool get _canPublish =>
       _hasLogo &&
@@ -322,7 +316,7 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
       if (!_hasProducts) 'Agrega al menos un producto.',
       if (_slugTaken) 'El link ya está publicado por otro negocio.',
       for (final p in _incomplete.take(6))
-        'Completa "${p.name}" (imagen o precio).',
+        'Ponle precio a "${p.name}".',
     ];
     return Container(
       padding: const EdgeInsets.all(14),

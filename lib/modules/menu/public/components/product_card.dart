@@ -13,11 +13,13 @@ class ProductCard extends StatelessWidget {
     required this.product,
     required this.theme,
     required this.onTap,
+    this.logoUrl,
   });
 
   final MenuProduct product;
   final MenuTheme theme;
   final VoidCallback onTap;
+  final String? logoUrl;
 
   // Mismo formato colombiano que React: 18000 → "18.000"
   static String _fmt(double p) {
@@ -58,6 +60,7 @@ class ProductCard extends StatelessWidget {
                 children: [
                   ProductImage(
                     url: product.imageUrl,
+                    logoUrl: logoUrl,
                     alignment: product.imageAlignment,
                     fit: BoxFit.cover,
                     backgroundColor: t.surfaceAlt,

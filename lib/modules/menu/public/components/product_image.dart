@@ -12,9 +12,12 @@ class ProductImage extends StatefulWidget {
     this.height,
     this.backgroundColor = const Color(0xFFF1F5F9),
     this.foregroundColor = const Color(0xFFCBD5E1),
+    this.logoUrl,
   });
 
   final String? url;
+  // logo del menú: respaldo cuando el producto no tiene foto (o la suya no carga)
+  final String? logoUrl;
   final BoxFit fit;
   // qué parte de la foto se ve (posición elegida por el dueño)
   final Alignment alignment;
@@ -137,16 +140,36 @@ class _ProductImageState extends State<ProductImage> {
   }
 
   Widget _fallback() {
+    final logo = widget.logoUrl;
     return Container(
       width: widget.width,
       height: widget.height,
       color: widget.backgroundColor,
       alignment: Alignment.center,
-      child: Icon(
-        Icons.restaurant_outlined,
-        size: 26,
-        color: widget.foregroundColor,
-      ),
+      // Sin foto del producto: se muestra el logo del menú atenuado (si no hay logo o no carga,
+      // cae al ícono genérico).
+      child: logo != null && logo.isNotEmpty
+          ? FractionallySizedBox(
+              widthFactor: 0.4,
+              heightFactor: 0.4,
+              child: Opacity(
+                opacity: 0.3,
+                child: Image.network(
+                  logo,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, _, _) => Icon(
+                    Icons.restaurant_outlined,
+                    size: 26,
+                    color: widget.foregroundColor,
+                  ),
+                ),
+              ),
+            )
+          : Icon(
+              Icons.restaurant_outlined,
+              size: 26,
+              color: widget.foregroundColor,
+            ),
     );
   }
 }

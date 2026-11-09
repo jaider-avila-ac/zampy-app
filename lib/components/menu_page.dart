@@ -580,6 +580,7 @@ class _MenuPageState extends State<MenuPage> {
             child: CarouselView(
               products: products,
               theme: theme,
+              logoUrl: widget.menuData.info.logoUrl,
               onProductTap: _openProduct,
             ),
           ),
@@ -652,12 +653,12 @@ class _MenuPageState extends State<MenuPage> {
   // Tarjeta y fila de un producto. Editando el menú se envuelven con el "⋯" de edición (ProductoEditable).
   Widget _tarjeta(MenuProduct p, MenuTheme theme) => ProductoEditable(
         producto: p,
-        child: ProductCard(product: p, theme: theme, onTap: () => _openProduct(p)),
+        child: ProductCard(product: p, theme: theme, logoUrl: widget.menuData.info.logoUrl, onTap: () => _openProduct(p)),
       );
 
   Widget _fila(MenuProduct p, MenuTheme theme) => ProductoEditable(
         producto: p,
-        child: ProductListItem(product: p, theme: theme, onTap: () => _openProduct(p)),
+        child: ProductListItem(product: p, theme: theme, logoUrl: widget.menuData.info.logoUrl, onTap: () => _openProduct(p)),
       );
 
   Widget _buildGroup(

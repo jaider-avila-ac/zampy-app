@@ -469,6 +469,7 @@ class _ProductModalState extends State<ProductModal> {
                             children: [
                               ProductImage(
                                 url: imgSrc,
+                                logoUrl: widget.info?.logoUrl,
                                 alignment: p.imageAlignment,
                                 fit: BoxFit.cover,
                                 backgroundColor: t.surfaceAlt,
