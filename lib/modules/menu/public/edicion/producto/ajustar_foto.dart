@@ -52,8 +52,9 @@ class _AjustarFotoState extends State<AjustarFoto> {
             const alto = 200.0;
             final ancho = caja.maxWidth;
             return GestureDetector(
+              // tocar la foto = cambiarla (abre el selector); arrastrarla = elegir qué parte se ve
+              onTap: widget.onCambiar,
               onPanUpdate: (d) {
-                // arrastrar a la derecha muestra más de la izquierda de la foto (como al acomodar una foto de perfil)
                 widget.onPosicion(Offset(
                   _limitar(widget.posicion.dx - d.delta.dx / ancho * 100),
                   _limitar(widget.posicion.dy - d.delta.dy / alto * 100),
@@ -61,7 +62,29 @@ class _AjustarFotoState extends State<AjustarFoto> {
               },
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: SizedBox(height: alto, width: double.infinity, child: imagen),
+                child: SizedBox(
+                  height: alto,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      imagen,
+                      if (widget.onCambiar != null)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.55),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.photo_camera_outlined, size: 15, color: Colors.white),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             );
           },
@@ -72,7 +95,7 @@ class _AjustarFotoState extends State<AjustarFoto> {
             Icon(Icons.open_with, size: 14, color: AppColors.kTextMuted),
             SizedBox(width: 4),
             Expanded(
-              child: Text('Arrastra la foto para elegir qué parte se ve al abrir el producto',
+              child: Text('Toca la foto para cambiarla · arrástrala para elegir qué parte se ve',
                   style: TextStyle(fontSize: 11, color: AppColors.kTextMuted)),
             ),
           ],
@@ -85,12 +108,6 @@ class _AjustarFotoState extends State<AjustarFoto> {
               icon: const Icon(Icons.center_focus_strong_outlined, size: 15),
               label: const Text('Centrar'),
             ),
-            if (widget.onCambiar != null)
-              TextButton.icon(
-                onPressed: widget.onCambiar,
-                icon: const Icon(Icons.image_outlined, size: 15),
-                label: const Text('Cambiar foto'),
-              ),
             if (widget.onQuitar != null)
               TextButton.icon(
                 onPressed: widget.onQuitar,
