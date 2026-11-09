@@ -9,10 +9,7 @@ import '../../../editor/live/editor_models.dart';
 /// El orden se arma en pantalla y se guarda una sola vez (guardar en cada flecha hacía lento reordenar).
 class CategoriasEdicion extends ChangeNotifier {
   CategoriasEdicion({required this.menuCodigo, required this.onCambio, required this.avisar}) {
-    _cargar().catchError((_) {
-      lista = [];
-      notifyListeners();
-    });
+    recargar();
   }
 
   final String menuCodigo;
@@ -28,9 +25,22 @@ class CategoriasEdicion extends ChangeNotifier {
   String? ocupado; // código de la categoría que se está guardando ('orden', 'nueva')
   final Map<String, String> _nombres = {}; // renombres sin guardar, por código
   bool _disposed = false;
+  bool errorCarga = false; // la carga inicial falló (distinto de "sin categorías")
 
   void _notificar() {
     if (!_disposed) notifyListeners();
+  }
+
+  /// Carga inicial / reintento. Un fallo NO se muestra como "sin categorías": marca errorCarga.
+  Future<void> recargar() async {
+    errorCarga = false;
+    _notificar();
+    try {
+      await _cargar();
+    } catch (_) {
+      errorCarga = true;
+      _notificar();
+    }
   }
 
   Future<void> _cargar() async {

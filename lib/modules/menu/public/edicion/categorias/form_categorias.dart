@@ -42,7 +42,27 @@ class _FormCategoriasState extends State<FormCategorias> {
   @override
   Widget build(BuildContext context) {
     final lista = _c.lista;
-    if (lista == null) return cargandoPanel;
+    if (lista == null) {
+      if (_c.errorCarga) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Column(
+            children: [
+              const Text('No se pudieron cargar las categorías.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: AppColors.kTextSecondary)),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: _c.recargar,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
+        );
+      }
+      return cargandoPanel;
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
