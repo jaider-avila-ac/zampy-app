@@ -173,8 +173,15 @@ class UsePublicMenu extends ChangeNotifier {
     final data = await ApiClient.instance.get('/api/v1/menus/$codigo/preview');
     if (data is! Map) return null;
     final root = Map<String, dynamic>.from(data);
-    final theme = await _fallbackTheme(root);
-    return PublicMenuData.fromRoot(root, catalogTheme: theme, incluirOcultos: incluirOcultos);
+    final theme = await _fallbackTheme(root, preferirBorrador: true);
+    // En edición se usa el borrador (lo que el dueño edita), igual que React,
+    // nunca el snapshot publicado (que puede estar vacío o desfasado).
+    return PublicMenuData.fromRoot(
+      root,
+      catalogTheme: theme,
+      incluirOcultos: incluirOcultos,
+      preferirBorrador: true,
+    );
   }
 
   Future<PublicMenuData?> _loadDemo() async {
@@ -193,13 +200,21 @@ class UsePublicMenu extends ChangeNotifier {
     }
   }
 
-  Future<MenuTheme?> _fallbackTheme(Map<String, dynamic> root) async {
+  Future<MenuTheme?> _fallbackTheme(
+    Map<String, dynamic> root, {
+    bool preferirBorrador = false,
+  }) async {
     if (root['theme'] is Map) return null;
     final catalog = await ThemesCatalogService.load();
     if (catalog.isEmpty) return null;
-    final design = root['published'] is Map
-        ? (root['published']['design'] as Map?)?.cast<String, dynamic>()
-        : (root['design'] as Map?)?.cast<String, dynamic>();
+    Map? asDesign(dynamic v) => v is Map ? (v['design'] as Map?) : null;
+    // En edición el diseño sale del borrador (como el contenido); en la vista
+    // pública, del snapshot publicado.
+    final design = preferirBorrador
+        ? (asDesign(root['draft']) ??
+              asDesign(root['published']) ??
+              (root['design'] as Map?))
+        : (asDesign(root['published']) ?? (root['design'] as Map?));
     return ThemesCatalogService.resolveTheme(
       catalog,
       design?['skinId'],

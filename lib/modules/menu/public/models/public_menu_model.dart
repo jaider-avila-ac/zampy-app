@@ -574,13 +574,20 @@ class PublicMenuData {
     Map<String, dynamic> root, {
     MenuTheme? catalogTheme,
     bool incluirOcultos = false,
+    bool preferirBorrador = false,
   }) {
     Map<String, dynamic>? asMap(dynamic value) =>
         value is Map ? Map<String, dynamic>.from(value) : null;
 
     final published = asMap(root['published']);
     final draft = asMap(root['draft']);
-    final content = published ?? draft ?? root;
+    // En la edición (preview) se usa SIEMPRE el borrador —lo que el dueño está
+    // editando—, igual que React (getPreviewData usa menu.draft). Nunca el
+    // snapshot publicado, que puede estar vacío o desfasado. En la vista
+    // pública se usa el snapshot publicado.
+    final content = preferirBorrador
+        ? (draft ?? published ?? root)
+        : (published ?? draft ?? root);
 
     final infoMap = asMap(content['info']) ?? content;
     final designMap = asMap(content['design']) ?? asMap(root['design']);
@@ -633,10 +640,15 @@ class PublicMenuData {
       slug: root['slug'] as String? ?? '',
       esPropio: root['esPropio'] == true,
       miRol: root['miRol'] as String?,
-      publicado:
-          published != null ||
-          root['status'] == 'published' ||
-          root['publicado'] == true,
+      // En edición, el estado publicado sale de 'status' (como React:
+      // menu.status === 'published'); un snapshot que haya quedado no implica
+      // que el menú esté publicado ahora. En la vista pública basta con que
+      // venga el snapshot.
+      publicado: preferirBorrador
+          ? (root['status'] == 'published' || root['publicado'] == true)
+          : (published != null ||
+                root['status'] == 'published' ||
+                root['publicado'] == true),
       horario: asMap(root['horario']) ?? asMap(content['horario']),
       categoriaCodigo: (root['categoriaCodigo'] ?? root['categoria'])
           ?.toString(),
