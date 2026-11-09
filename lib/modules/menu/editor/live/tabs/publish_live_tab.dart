@@ -213,9 +213,12 @@ class _PublishLiveTabState extends State<PublishLiveTab> {
               if (coupon?.existe == true) ...[
                 const SizedBox(height: 4),
                 Text(
-                  coupon!.activo
-                      ? 'Cupón activo · ${coupon.diasRestantes} días'
-                      : 'Cupón listo (inicia al publicar) · ${coupon.diasTotal} días',
+                  (coupon!.activo
+                          ? 'Cupón activo · ${coupon.diasRestantes} días'
+                          : 'Cupón listo (inicia al publicar) · ${coupon.diasTotal} días') +
+                      (coupon.planNombre != null && coupon.planNombre!.isNotEmpty
+                          ? ' · ${coupon.planNombre}'
+                          : ''),
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,

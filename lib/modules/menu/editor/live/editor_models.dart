@@ -253,17 +253,20 @@ class LiveCoupon {
   final String estado;
   final int diasRestantes;
   final int diasTotal;
+  final String? planNombre;
 
   const LiveCoupon({
     required this.estado,
     this.diasRestantes = 0,
     this.diasTotal = 0,
+    this.planNombre,
   });
 
   factory LiveCoupon.fromJson(Map<String, dynamic> j) => LiveCoupon(
     estado: j['estado'] as String? ?? '',
     diasRestantes: (j['diasRestantes'] as num?)?.toInt() ?? 0,
     diasTotal: (j['diasTotal'] as num?)?.toInt() ?? 0,
+    planNombre: j['planNombre'] as String?,
   );
 
   bool get activo => estado == 'ACTIVO';
