@@ -14,6 +14,7 @@ class LiveInfo {
   String? municipioCodigo;
   List<String> galeria;
   bool pedidosActivos;
+  String pedidosModo;
 
   LiveInfo({
     this.name = '',
@@ -31,6 +32,7 @@ class LiveInfo {
     this.municipioCodigo,
     this.galeria = const [],
     this.pedidosActivos = false,
+    this.pedidosModo = 'sistema',
   });
 
   factory LiveInfo.fromJson(Map<String, dynamic> j) {
@@ -56,6 +58,7 @@ class LiveInfo {
           j['municipioCodigo']?.toString(),
       galeria: (j['galeria'] as List? ?? []).map((e) => e.toString()).toList(),
       pedidosActivos: j['pedidosActivos'] == true,
+      pedidosModo: j['pedidosModo'] == 'whatsapp' ? 'whatsapp' : 'sistema',
     );
   }
 

@@ -42,6 +42,7 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
 
   String? _municipioCodigo;
   bool _pedidos = false;
+  String _pedidosModo = 'sistema';
   late List<String> _galeria;
   late Map<String, dynamic> _horario;
 
@@ -81,6 +82,7 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
     _address = TextEditingController(text: i.address ?? '');
     _municipioCodigo = i.municipioCodigo;
     _pedidos = i.pedidosActivos;
+    _pedidosModo = i.pedidosModo;
     _galeria = [...i.galeria];
     _horario = _copySchedule(widget.menu.horario);
     _loadPaises();
@@ -407,6 +409,20 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
                 value: _pedidos,
                 onChanged: (v) => setState(() => _pedidos = v),
               ),
+              if (_pedidos && _whatsapp.text.trim().isNotEmpty) ...[
+                _OpcionModo(
+                  activo: _pedidosModo != 'whatsapp',
+                  titulo: 'Pedido con seguimiento',
+                  detalle: 'Se registra en Pedidos; el cliente también puede enviarlo por WhatsApp.',
+                  onTap: () => setState(() => _pedidosModo = 'sistema'),
+                ),
+                _OpcionModo(
+                  activo: _pedidosModo == 'whatsapp',
+                  titulo: 'Solo por WhatsApp',
+                  detalle: 'Arma el mensaje y abre WhatsApp. No se guarda en Pedidos ni en Mis pedidos.',
+                  onTap: () => setState(() => _pedidosModo = 'whatsapp'),
+                ),
+              ],
               _SaveButton(
                 busy: _busy,
                 onTap: () => _save('contacto', {
@@ -414,6 +430,7 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
                   'whatsapp': _whatsapp.text.trim(),
                   'email': _email.text.trim(),
                   'pedidosActivos': _pedidos,
+                  'pedidosModo': _pedidosModo,
                 }),
               ),
             ],
@@ -594,6 +611,50 @@ class _InfoMenuFormState extends State<InfoMenuForm> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _OpcionModo extends StatelessWidget {
+  const _OpcionModo({required this.activo, required this.titulo, required this.detalle, required this.onTap});
+  final bool activo;
+  final String titulo;
+  final String detalle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          border: Border.all(color: activo ? color : const Color(0xFFE2E8F0), width: activo ? 1.5 : 1),
+          borderRadius: BorderRadius.circular(12),
+          color: activo ? color.withValues(alpha: 0.06) : null,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(activo ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                size: 18, color: activo ? color : const Color(0xFF94A3B8)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titulo, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: activo ? color : null)),
+                  const SizedBox(height: 2),
+                  Text(detalle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

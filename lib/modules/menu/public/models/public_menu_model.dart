@@ -160,6 +160,7 @@ class MenuInfo {
   final List<String> galeria;
   final List<String> tags;
   final bool pedidosActivos;
+  final String pedidosModo; // 'sistema' (se registra) | 'whatsapp' (solo mensaje)
   final MenuUbicacion? ubicacion;
 
   const MenuInfo({
@@ -182,6 +183,7 @@ class MenuInfo {
     this.galeria = const [],
     this.tags = const [],
     this.pedidosActivos = false,
+    this.pedidosModo = 'sistema',
     this.ubicacion,
   });
 
@@ -229,6 +231,7 @@ class MenuInfo {
         const [],
     tags: (json['tags'] as List?)?.cast<String>() ?? const [],
     pedidosActivos: json['pedidosActivos'] as bool? ?? false,
+    pedidosModo: json['pedidosModo'] == 'whatsapp' ? 'whatsapp' : 'sistema',
     ubicacion: json['ubicacion'] is Map
         ? MenuUbicacion.fromJson(
             Map<String, dynamic>.from(json['ubicacion'] as Map),

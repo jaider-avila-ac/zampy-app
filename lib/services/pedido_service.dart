@@ -33,6 +33,22 @@ class PedidoService {
         'items': items,
       }));
 
+  /// POST /api/v1/pedidos/whatsapp → { ok, waUrl } (solo arma el mensaje, no guarda el pedido)
+  static Future<Map<String, dynamic>> crearWhatsapp({
+    required String menuCodigo,
+    required List<Map<String, dynamic>> items,
+    String? direccionEntrega,
+    String? direccionReferencia,
+    String? telefono,
+  }) async =>
+      _map(await ApiClient.instance.post('/api/v1/pedidos/whatsapp', body: {
+        'menuCodigo': menuCodigo,
+        'direccionEntrega': direccionEntrega,
+        'direccionReferencia': direccionReferencia,
+        'telefono': telefono,
+        'items': items,
+      }));
+
   /// GET /api/v1/pedidos/mis-pedidos → { items, siguiente } (cursor; null = no hay más)
   static Future<Map<String, dynamic>> misPedidos({String? despues}) async =>
       _map(await ApiClient.instance.get(

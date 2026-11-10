@@ -98,14 +98,32 @@ class _CartSheetState extends State<CartSheet> {
       _error = '';
       _sending = true;
     });
+    final items = cart.items.map(toOrderItemPayload).toList();
     try {
+      // Modo "solo WhatsApp": el backend arma el mensaje sin guardar; se abre WhatsApp y se cierra.
+      if (_esWhatsapp) {
+        final r = await PedidoService.crearWhatsapp(
+          menuCodigo: widget.menuCodigo,
+          direccionEntrega: _direccion.text.trim(),
+          direccionReferencia: _referencia.text.trim().isEmpty ? null : _referencia.text.trim(),
+          telefono: _telefono.text.trim(),
+          items: items,
+        );
+        cart.clearCart();
+        final url = r['waUrl']?.toString() ?? '';
+        if (url.isNotEmpty) await abrirUrl(url);
+        if (mounted) Navigator.of(context).pop();
+        return;
+      }
+
+      // Modo normal: se registra el pedido y además queda el enlace de WhatsApp.
       final r = await PedidoService.crear(
         menuCodigo: widget.menuCodigo,
         requestId: _requestId,
         direccionEntrega: _direccion.text.trim(),
         direccionReferencia: _referencia.text.trim().isEmpty ? null : _referencia.text.trim(),
         telefono: _telefono.text.trim(),
-        items: cart.items.map(toOrderItemPayload).toList(),
+        items: items,
       );
       cart.clearCart();
       if (!mounted) return;
@@ -115,11 +133,13 @@ class _CartSheetState extends State<CartSheet> {
       });
     } catch (e) {
       final m = e.toString().replaceFirst('Exception: ', '');
-      if (mounted) setState(() => _error = m.isEmpty ? 'No se pudo guardar el pedido. Intenta de nuevo.' : m);
+      if (mounted) setState(() => _error = m.isEmpty ? 'No se pudo enviar el pedido. Intenta de nuevo.' : m);
     } finally {
       if (mounted) setState(() => _sending = false);
     }
   }
+
+  bool get _esWhatsapp => widget.info?.pedidosModo == 'whatsapp';
 
   @override
   Widget build(BuildContext context) {
@@ -286,8 +306,9 @@ class _CartSheetState extends State<CartSheet> {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                'Envías una solicitud a ${widget.info?.name.isNotEmpty == true ? widget.info!.name : 'este negocio'}. '
-                'El negocio confirma el pedido y cobra directamente; Zammpy no recibe ni custodia este dinero.',
+                _esWhatsapp
+                    ? 'Se abrirá WhatsApp con tu pedido para enviarlo a ${widget.info?.name.isNotEmpty == true ? widget.info!.name : 'este negocio'}. El negocio confirma y cobra directamente; Zammpy no recibe ni custodia este dinero.'
+                    : 'Envías una solicitud a ${widget.info?.name.isNotEmpty == true ? widget.info!.name : 'este negocio'}. El negocio confirma el pedido y cobra directamente; Zammpy no recibe ni custodia este dinero.',
                 style: TextStyle(fontSize: 11, color: t.textMuted),
               ),
             ),
@@ -301,8 +322,10 @@ class _CartSheetState extends State<CartSheet> {
             onPressed: puedeEnviar ? () => _enviar(cart) : null,
             icon: _sending
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.check_circle_outline, size: 17),
-            label: Text(_sending ? 'Enviando solicitud…' : 'Enviar solicitud de pedido'),
+                : Icon(_esWhatsapp ? Icons.chat : Icons.check_circle_outline, size: 17),
+            label: Text(_sending
+                ? 'Enviando…'
+                : (_esWhatsapp ? 'Enviar por WhatsApp' : 'Enviar solicitud de pedido')),
           ),
         ),
       ],
