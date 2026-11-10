@@ -48,8 +48,9 @@ class _FormProductoBasicoState extends State<FormProductoBasico> with GuardarSec
 
   bool get _pideFoto => conFotos(categoriaPorId(widget.categorias, _categoria));
 
+  // La foto es opcional aunque la categoría sea "con imágenes": sin foto, el menú muestra el logo como respaldo.
   bool get _listo =>
-      _nombre.text.trim().isNotEmpty && (double.tryParse(_precio.text) ?? 0) > 0 && (!_pideFoto || !_foto.vacia);
+      _nombre.text.trim().isNotEmpty && (double.tryParse(_precio.text) ?? 0) > 0;
 
   Future<void> _guardar() => guardar(
         () async {

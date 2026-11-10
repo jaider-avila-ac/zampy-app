@@ -46,11 +46,11 @@ class _FormNuevoProductoState extends State<FormNuevoProducto> with GuardarSecci
 
   bool get _pideFoto => conFotos(categoriaPorId(widget.categorias, _categoria));
 
+  // La foto es opcional aunque la categoría sea "con imágenes": sin foto, el menú muestra el logo como respaldo.
   bool get _listo =>
       _categoria != null &&
       _nombre.text.trim().isNotEmpty &&
-      (double.tryParse(_precio.text) ?? 0) > 0 &&
-      (!_pideFoto || !_foto.vacia);
+      (double.tryParse(_precio.text) ?? 0) > 0;
 
   Future<void> _crear() => guardar(
         () async {
