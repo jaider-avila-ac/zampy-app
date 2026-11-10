@@ -98,7 +98,7 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
                 for (final o in const [
                   ['ninguno', 'Sin límite', 'Elige las que quiera.'],
                   ['fijo', 'Número fijo', 'Elige hasta N opciones.'],
-                  ['segun_tamano', 'Según el tamaño', 'El número lo da el tamaño/variante elegido.'],
+                  ['segun_cantidad', 'Según la cantidad', 'El número lo da la opción de "Cantidad" elegida en el producto.'],
                 ])
                   _OpcionLimite(
                     activo: modo == o[0],

@@ -16,6 +16,7 @@ class ParteProducto {
 const partesProducto = [
   ParteProducto('producto:basico', 'Editar datos', 'Editar producto', Icons.edit_outlined),
   ParteProducto('producto:tamanos', 'Tamaños', 'Tamaños', Icons.straighten),
+  ParteProducto('producto:cantidades', 'Cantidad', 'Cantidad', Icons.tag),
   ParteProducto('producto:ingredientes', 'Ingredientes', 'Ingredientes', Icons.eco_outlined),
   ParteProducto('producto:adiciones', 'Adiciones', 'Adiciones', Icons.add_circle_outline),
   ParteProducto('producto:grupos', 'Grupos', 'Grupos de opciones', Icons.layers_outlined),

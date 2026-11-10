@@ -119,6 +119,8 @@ class LiveProduct {
   double? promoPrice;
   String? promoEndsAt;
   List<Map<String, dynamic>> sizes;
+  List<Map<String, dynamic>> cantidades;
+  String? cantidadTitulo;
   List<Map<String, dynamic>> ingredients;
   List<Map<String, dynamic>> extras;
   List<String> grupoIds;
@@ -141,6 +143,8 @@ class LiveProduct {
     this.promoPrice,
     this.promoEndsAt,
     this.sizes = const [],
+    this.cantidades = const [],
+    this.cantidadTitulo,
     this.ingredients = const [],
     this.extras = const [],
     this.grupoIds = const [],
@@ -166,6 +170,8 @@ class LiveProduct {
     promoPrice: (j['promoPrice'] as num?)?.toDouble(),
     promoEndsAt: j['promoEndsAt'] as String?,
     sizes: _maps(j['sizes']),
+    cantidades: _maps(j['cantidades']),
+    cantidadTitulo: j['cantidadTitulo'] as String?,
     ingredients: _maps(j['ingredients']),
     extras: _maps(j['extras']),
     grupoIds: (j['grupoIds'] as List? ?? []).map((e) => '$e').toList(),
@@ -208,7 +214,7 @@ class LiveGroup {
         .toList(),
     seleccionModo: j['seleccionModo'] == 'fijo'
         ? 'fijo'
-        : (j['seleccionModo'] == 'segun_tamano' ? 'segun_tamano' : 'ninguno'),
+        : (j['seleccionModo'] == 'segun_cantidad' ? 'segun_cantidad' : 'ninguno'),
     seleccionMax: (j['seleccionMax'] as num?)?.toInt(),
   );
 

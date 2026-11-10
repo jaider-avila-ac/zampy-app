@@ -19,6 +19,7 @@ String buildOrderItemKey(Map<String, dynamic> item) {
   return [
     '${item['productId'] ?? ''}',
     '${item['sizeId'] ?? ''}',
+    '${item['cantidadId'] ?? ''}',
     (_strings(item['ingredientIds'])..sort()).join(','),
     (_strings(item['extraIds'])..sort()).join(','),
     gruposKey,
@@ -63,6 +64,9 @@ Map<String, dynamic> toOrderItemPayload(Map<String, dynamic> item) {
       'subtotal': unit * _num(item['quantity']),
     },
   };
+  if (item['cantidadId'] != null) {
+    entry['cantidad'] = {'id': item['cantidadId'], 'label': item['cantidadLabel'], 'price': breakdown['basePrice']};
+  }
   if (item['sizeId'] != null) {
     entry['size'] = {'id': item['sizeId'], 'label': item['sizeLabel'], 'price': breakdown['basePrice']};
   }

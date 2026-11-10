@@ -84,6 +84,7 @@ class _ProductModalState extends State<ProductModal> {
   double _avgRating = 0;
 
   String? _selectedSizeId;
+  String? _selectedCantidadId;
   final List<String> _selIngredients = [];
   final List<String> _selExtras = [];
   final Map<String, Set<String>> _selGrupos = {};
@@ -96,6 +97,9 @@ class _ProductModalState extends State<ProductModal> {
     // Auto-selecciona el primer tamaño igual que React
     _selectedSizeId = widget.product.sizes.isNotEmpty
         ? widget.product.sizes.first.id
+        : null;
+    _selectedCantidadId = widget.product.cantidades.isNotEmpty
+        ? widget.product.cantidades.first.id
         : null;
 
     if (widget.trackView &&
@@ -120,12 +124,20 @@ class _ProductModalState extends State<ProductModal> {
       ? null
       : widget.product.sizes.where((s) => s.id == _selectedSizeId).firstOrNull;
 
+  ProductSize? get _cantidadObj => _selectedCantidadId == null
+      ? null
+      : widget.product.cantidades.where((c) => c.id == _selectedCantidadId).firstOrNull;
+
   double get _displayPrice {
     final p = widget.product;
     final sizeObj = _sizeObj;
-    final base = sizeObj != null
-        ? sizeObj.price
-        : (p.hasPromo ? p.promoPrice! : p.price);
+    final cantidadObj = _cantidadObj;
+    // La opción "Cantidad" reemplaza la base (como los tamaños); si no hay, se usa el tamaño; si no, el precio.
+    final base = cantidadObj != null
+        ? cantidadObj.price
+        : sizeObj != null
+            ? sizeObj.price
+            : (p.hasPromo ? p.promoPrice! : p.price);
     final ingAdd = _selIngredients
         .map(
           (id) =>
@@ -155,6 +167,7 @@ class _ProductModalState extends State<ProductModal> {
 
   bool get _hasVariants =>
       widget.product.sizes.isNotEmpty ||
+      widget.product.cantidades.isNotEmpty ||
       widget.product.ingredients.isNotEmpty ||
       widget.product.extras.isNotEmpty;
 
@@ -184,8 +197,8 @@ class _ProductModalState extends State<ProductModal> {
     if (g.seleccionModo == 'fijo') {
       return (g.seleccionMax != null && g.seleccionMax! > 0) ? g.seleccionMax : null;
     }
-    if (g.seleccionModo == 'segun_tamano') {
-      final n = _sizeObj?.cantidad ?? 0;
+    if (g.seleccionModo == 'segun_cantidad') {
+      final n = _cantidadObj?.cantidad ?? 0;
       return n > 0 ? n : null;
     }
     return null;
@@ -265,7 +278,12 @@ class _ProductModalState extends State<ProductModal> {
       gruposResumen[g.name] = sel;
       grupoDetails.add({'id': g.id, 'name': g.name, 'selectedItems': sel, 'price': precio});
     }
-    final basePrice = sizeObj != null ? sizeObj.price : (p.hasPromo ? p.promoPrice! : p.price);
+    final cantidadObj = _cantidadObj;
+    final basePrice = cantidadObj != null
+        ? cantidadObj.price
+        : sizeObj != null
+            ? sizeObj.price
+            : (p.hasPromo ? p.promoPrice! : p.price);
     final ingredientsTotal = ingredientDetails.fold<double>(0, (s, i) => s + (i['price'] as double));
     final extrasTotal = extraDetails.fold<double>(0, (s, e) => s + (e['price'] as double));
     return {
@@ -274,6 +292,8 @@ class _ProductModalState extends State<ProductModal> {
       'productImage': p.imageUrl,
       'sizeId': _selectedSizeId,
       'sizeLabel': sizeObj?.label,
+      'cantidadId': cantidadObj != null ? _selectedCantidadId : null,
+      'cantidadLabel': cantidadObj?.label,
       'ingredientIds': [..._selIngredients],
       'ingredientLabels': [for (final i in ingredientDetails) i['label']],
       'extraIds': [..._selExtras],
@@ -791,6 +811,31 @@ class _ProductModalState extends State<ProductModal> {
                                   _selectedSizeId = (_selectedSizeId == id)
                                       ? null
                                       : id;
+                                  _recortarGruposAlTamano();
+                                }),
+                              ),
+
+                            // Cantidad — single-select (sección aparte, título propio)
+                            if (p.cantidades.isNotEmpty)
+                              _variantSelector(
+                                t: t,
+                                title: (p.cantidadTitulo?.trim().isNotEmpty ?? false)
+                                    ? p.cantidadTitulo!.trim()
+                                    : 'Cantidad',
+                                items: p.cantidades
+                                    .map(
+                                      (c) => (
+                                        id: c.id,
+                                        label: c.label,
+                                        price: c.price,
+                                      ),
+                                    )
+                                    .toList(),
+                                multi: false,
+                                isSelected: (id) => id == _selectedCantidadId,
+                                onSelect: (id) => setState(() {
+                                  _selectedCantidadId =
+                                      (_selectedCantidadId == id) ? null : id;
                                   _recortarGruposAlTamano();
                                 }),
                               ),

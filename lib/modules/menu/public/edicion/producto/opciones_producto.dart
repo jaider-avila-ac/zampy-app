@@ -9,22 +9,32 @@ class OpcionProducto {
     required this.placeholder,
     required this.ayuda,
     this.conCantidad = false,
+    this.conTitulo = false,
   });
   final bool conPrecio;
   final int max; // tope por producto (coincide con el backend)
   final String placeholder;
   final String ayuda;
-  // Solo tamaños: campo "cantidad" (el número para grupos con límite "según el tamaño").
+  // Solo "Cantidad": campo "cantidad" (el número para grupos con límite "según la cantidad").
   final bool conCantidad;
+  // Solo "Cantidad": título configurable de la sección.
+  final bool conTitulo;
 }
 
 const opcionesProducto = {
   'tamanos': OpcionProducto(
     conPrecio: true,
-    conCantidad: true,
     max: 10,
     placeholder: 'Ej: Grande',
-    ayuda: 'Cada tamaño tiene su propio precio. La "cantidad" (opcional) es el número que usa un grupo con límite "según el tamaño" (ej. "4 ingredientes" → 4).',
+    ayuda: 'Cada tamaño tiene su propio precio. Sin tamaños se usa el precio del producto.',
+  ),
+  'cantidades': OpcionProducto(
+    conPrecio: true,
+    conCantidad: true,
+    conTitulo: true,
+    max: 12,
+    placeholder: 'Ej: 4 ingredientes',
+    ayuda: 'Una sola elección con su propio precio (reemplaza el precio base). La "cantidad" es el número que usa un grupo con límite "según la cantidad".',
   ),
   'ingredientes': OpcionProducto(
     conPrecio: false,

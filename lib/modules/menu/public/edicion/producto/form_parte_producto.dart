@@ -30,7 +30,7 @@ class FormParteProducto extends StatelessWidget {
     final parte = seccion.split(':').last;
     return switch (parte) {
       'basico' => FormProductoBasico(menuCodigo: menuCodigo, producto: producto, categorias: categorias, onListo: onListo),
-      'tamanos' || 'ingredientes' || 'adiciones' =>
+      'tamanos' || 'cantidades' || 'ingredientes' || 'adiciones' =>
         FormOpciones(key: ValueKey(parte), menuCodigo: menuCodigo, producto: producto, tipo: parte, onListo: onListo),
       'grupos' => FormGrupos(menuCodigo: menuCodigo, producto: producto, onListo: onListo),
       'promocion' => FormPromocion(menuCodigo: menuCodigo, producto: producto, onListo: onListo),

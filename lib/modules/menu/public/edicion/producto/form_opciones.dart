@@ -49,11 +49,14 @@ class FormOpciones extends StatefulWidget {
 class _FormOpcionesState extends State<FormOpciones> with GuardarSeccion {
   OpcionProducto get _opcion => opcionesProducto[widget.tipo]!;
   late final List<_Fila> _filas = _inicial();
+  late final TextEditingController _titulo =
+      TextEditingController(text: widget.producto.cantidadTitulo ?? '');
 
   List<_Fila> _inicial() {
     final p = widget.producto;
     return switch (widget.tipo) {
-      'tamanos' => [for (final s in p.sizes) _Fila(id: s.id, label: s.label, precio: _precioTexto(s.price), cantidad: s.cantidad?.toString() ?? '')],
+      'tamanos' => [for (final s in p.sizes) _Fila(id: s.id, label: s.label, precio: _precioTexto(s.price))],
+      'cantidades' => [for (final s in p.cantidades) _Fila(id: s.id, label: s.label, precio: _precioTexto(s.price), cantidad: s.cantidad?.toString() ?? '')],
       'ingredientes' => [for (final m in p.ingredients) _Fila(id: m.id, label: m.label, precio: _precioTexto(m.price))],
       _ => [for (final m in p.extras) _Fila(id: m.id, label: m.label, precio: _precioTexto(m.price))],
     };
@@ -64,23 +67,31 @@ class _FormOpcionesState extends State<FormOpciones> with GuardarSeccion {
     for (final f in _filas) {
       f.dispose();
     }
+    _titulo.dispose();
     super.dispose();
   }
 
-  Future<void> _guardar() => guardar(
-        () => LiveEditorService.updateProductPart(widget.menuCodigo, widget.producto.id, widget.tipo, [
-          for (final f in _filas)
-            if (f.label.text.trim().isNotEmpty)
-              {
-                if (f.id != null && f.id!.isNotEmpty) 'id': f.id,
-                'label': f.label.text.trim(),
-                'price': _opcion.conPrecio ? (double.tryParse(f.precio.text) ?? 0) : 0,
-                if (_opcion.conCantidad)
-                  'cantidad': (int.tryParse(f.cantidad.text) ?? 0) > 0 ? int.parse(f.cantidad.text) : null,
-              },
-        ]),
-        onListo: widget.onListo,
-      );
+  Future<void> _guardar() {
+    final items = [
+      for (final f in _filas)
+        if (f.label.text.trim().isNotEmpty)
+          {
+            if (f.id != null && f.id!.isNotEmpty) 'id': f.id,
+            'label': f.label.text.trim(),
+            'price': _opcion.conPrecio ? (double.tryParse(f.precio.text) ?? 0) : 0,
+            if (_opcion.conCantidad)
+              'cantidad': (int.tryParse(f.cantidad.text) ?? 0) > 0 ? int.parse(f.cantidad.text) : null,
+          },
+    ];
+    // La sección "Cantidad" guarda además su título; las demás van como lista simple.
+    final Object body = _opcion.conTitulo
+        ? {'titulo': _titulo.text.trim().isEmpty ? null : _titulo.text.trim(), 'items': items}
+        : items;
+    return guardar(
+      () => LiveEditorService.updateProductPart(widget.menuCodigo, widget.producto.id, widget.tipo, body),
+      onListo: widget.onListo,
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Column(
@@ -88,6 +99,15 @@ class _FormOpcionesState extends State<FormOpciones> with GuardarSeccion {
         children: [
           Text(_opcion.ayuda, style: const TextStyle(fontSize: 13, color: AppColors.kTextSecondary)),
           const SizedBox(height: 12),
+          if (_opcion.conTitulo) ...[
+            CampoTexto(
+              etiqueta: 'Título de la sección',
+              hint: 'Ej: Cantidad de ingredientes',
+              controller: _titulo,
+              maxLength: 40,
+            ),
+            const SizedBox(height: 12),
+          ],
           for (var i = 0; i < _filas.length; i++)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,

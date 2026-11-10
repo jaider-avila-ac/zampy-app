@@ -390,7 +390,7 @@ class MenuGrupo {
       items: parsedItems,
       seleccionModo: json['seleccionModo'] == 'fijo'
           ? 'fijo'
-          : (json['seleccionModo'] == 'segun_tamano' ? 'segun_tamano' : 'ninguno'),
+          : (json['seleccionModo'] == 'segun_cantidad' ? 'segun_cantidad' : 'ninguno'),
       seleccionMax: (json['seleccionMax'] as num?)?.toInt(),
     );
   }
@@ -412,6 +412,8 @@ class MenuProduct {
   final List<String> components;
   final List<ProductVariant> variants;
   final List<ProductSize> sizes;
+  final List<ProductSize> cantidades; // selector "Cantidad" (reusa ProductSize + cantidad)
+  final String? cantidadTitulo;
   final List<ProductModifier> ingredients;
   final List<ProductModifier> extras;
   final List<String> grupoIds;
@@ -443,6 +445,8 @@ class MenuProduct {
     this.components = const [],
     this.variants = const [],
     this.sizes = const [],
+    this.cantidades = const [],
+    this.cantidadTitulo,
     this.ingredients = const [],
     this.extras = const [],
     this.grupoIds = const [],
@@ -462,6 +466,9 @@ class MenuProduct {
         .map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
         .toList();
     final sizeList = (json['sizes'] as List? ?? [])
+        .map((s) => ProductSize.fromJson(s as Map<String, dynamic>))
+        .toList();
+    final cantidadList = (json['cantidades'] as List? ?? [])
         .map((s) => ProductSize.fromJson(s as Map<String, dynamic>))
         .toList();
     final ingList = (json['ingredients'] as List? ?? [])
@@ -491,6 +498,8 @@ class MenuProduct {
       components: compList,
       variants: varList,
       sizes: sizeList,
+      cantidades: cantidadList,
+      cantidadTitulo: json['cantidadTitulo'] as String?,
       ingredients: ingList,
       extras: extList,
       grupoIds: grupoIdsList,
