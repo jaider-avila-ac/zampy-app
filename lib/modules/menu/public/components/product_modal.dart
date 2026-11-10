@@ -178,15 +178,41 @@ class _ProductModalState extends State<ProductModal> {
     });
   }
 
-  void _toggleGrupoItem(String grupoId, String itemName) {
+  // Tope de cuántos ítems se pueden elegir en un grupo: 'fijo' → seleccionMax;
+  // 'segun_tamano' → la cantidad del tamaño elegido; si no, sin tope (null).
+  int? _topeGrupo(MenuGrupo g) {
+    if (g.seleccionModo == 'fijo') {
+      return (g.seleccionMax != null && g.seleccionMax! > 0) ? g.seleccionMax : null;
+    }
+    if (g.seleccionModo == 'segun_tamano') {
+      final n = _sizeObj?.cantidad ?? 0;
+      return n > 0 ? n : null;
+    }
+    return null;
+  }
+
+  void _toggleGrupoItem(MenuGrupo g, String itemName) {
     setState(() {
-      final set = _selGrupos.putIfAbsent(grupoId, () => {});
+      final set = _selGrupos.putIfAbsent(g.id, () => {});
       if (set.contains(itemName)) {
         set.remove(itemName);
       } else {
+        final tope = _topeGrupo(g);
+        if (tope != null && set.length >= tope) return; // llegó al tope: no agrega más
         set.add(itemName);
       }
     });
+  }
+
+  // Al cambiar de tamaño, recorta la selección de los grupos "según el tamaño" al nuevo tope.
+  void _recortarGruposAlTamano() {
+    for (final g in _visibleGrupos) {
+      final tope = _topeGrupo(g);
+      final set = _selGrupos[g.id];
+      if (set != null && tope != null && set.length > tope) {
+        _selGrupos[g.id] = set.take(tope).toSet();
+      }
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -765,6 +791,7 @@ class _ProductModalState extends State<ProductModal> {
                                   _selectedSizeId = (_selectedSizeId == id)
                                       ? null
                                       : id;
+                                  _recortarGruposAlTamano();
                                 }),
                               ),
 
@@ -816,19 +843,40 @@ class _ProductModalState extends State<ProductModal> {
                       const SizedBox(height: 12),
                       ...visibleGrupos.map((g) {
                         if (g.items.isEmpty) return const SizedBox.shrink();
+                        final tope = _topeGrupo(g);
+                        final elegidos = _selGrupos[g.id]?.length ?? 0;
+                        final quedan =
+                            tope != null ? (tope - elegidos).clamp(0, tope) : null;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                g.name.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1,
-                                  color: t.textMuted,
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      g.name.toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1,
+                                        color: t.textMuted,
+                                      ),
+                                    ),
+                                  ),
+                                  if (tope != null)
+                                    Text(
+                                      'Elige hasta $tope · quedan $quedan',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            quedan == 0 ? t.primary : t.textMuted,
+                                      ),
+                                    ),
+                                ],
                               ),
                               const SizedBox(height: 6),
                               Wrap(
@@ -838,9 +886,12 @@ class _ProductModalState extends State<ProductModal> {
                                   final sel =
                                       _selGrupos[g.id]?.contains(item.name) ==
                                       true;
+                                  final bloqueado =
+                                      !sel && tope != null && elegidos >= tope;
                                   return GestureDetector(
-                                    onTap: () =>
-                                        _toggleGrupoItem(g.id, item.name),
+                                    onTap: bloqueado
+                                        ? null
+                                        : () => _toggleGrupoItem(g, item.name),
                                     child: AnimatedContainer(
                                       duration: const Duration(
                                         milliseconds: 120,
@@ -856,15 +907,18 @@ class _ProductModalState extends State<ProductModal> {
                                           color: sel ? t.primary : t.border,
                                         ),
                                       ),
-                                      child: Text(
-                                        item.price > 0
-                                            ? '${item.name} +\$${_fmt(item.price)}'
-                                            : item.name,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: sel
-                                              ? Colors.white
-                                              : t.textMuted,
+                                      child: Opacity(
+                                        opacity: bloqueado ? 0.4 : 1,
+                                        child: Text(
+                                          item.price > 0
+                                              ? '${item.name} +\$${_fmt(item.price)}'
+                                              : item.name,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: sel
+                                                ? Colors.white
+                                                : t.textMuted,
+                                          ),
                                         ),
                                       ),
                                     ),

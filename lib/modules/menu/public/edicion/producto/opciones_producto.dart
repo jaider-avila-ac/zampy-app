@@ -8,19 +8,23 @@ class OpcionProducto {
     required this.max,
     required this.placeholder,
     required this.ayuda,
+    this.conCantidad = false,
   });
   final bool conPrecio;
   final int max; // tope por producto (coincide con el backend)
   final String placeholder;
   final String ayuda;
+  // Solo tamaños: campo "cantidad" (el número para grupos con límite "según el tamaño").
+  final bool conCantidad;
 }
 
 const opcionesProducto = {
   'tamanos': OpcionProducto(
     conPrecio: true,
+    conCantidad: true,
     max: 10,
     placeholder: 'Ej: Grande',
-    ayuda: 'Cada tamaño tiene su propio precio. Sin tamaños se usa el precio del producto.',
+    ayuda: 'Cada tamaño tiene su propio precio. La "cantidad" (opcional) es el número que usa un grupo con límite "según el tamaño" (ej. "4 ingredientes" → 4).',
   ),
   'ingredientes': OpcionProducto(
     conPrecio: false,

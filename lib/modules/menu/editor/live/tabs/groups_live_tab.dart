@@ -42,6 +42,8 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
   Future<void> _openForm([LiveGroup? group]) async {
     final name = TextEditingController(text: group?.name ?? '');
     var active = group?.isActive ?? true;
+    var modo = group?.seleccionModo ?? 'ninguno';
+    final maxCtrl = TextEditingController(text: (group?.seleccionMax ?? 2).toString());
     final items = [
       for (final i in (group?.items ?? []))
         _ItemRow(
@@ -84,6 +86,45 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
                   value: active,
                   onChanged: (v) => setModal(() => active = v),
                 ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Límite de selección',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const Text(
+                  'Cuántas opciones puede elegir el cliente.',
+                  style: TextStyle(fontSize: 11, color: AppColors.kTextMuted),
+                ),
+                for (final o in const [
+                  ['ninguno', 'Sin límite', 'Elige las que quiera.'],
+                  ['fijo', 'Número fijo', 'Elige hasta N opciones.'],
+                  ['segun_tamano', 'Según el tamaño', 'El número lo da el tamaño/variante elegido.'],
+                ])
+                  _OpcionLimite(
+                    activo: modo == o[0],
+                    titulo: o[1],
+                    detalle: o[2],
+                    onTap: () => setModal(() => modo = o[0]),
+                  ),
+                if (modo == 'fijo')
+                  Padding(
+                    padding: const EdgeInsets.only(left: 24, top: 4, bottom: 4),
+                    child: Row(
+                      children: [
+                        const Text('Elige hasta ', style: TextStyle(fontSize: 13)),
+                        SizedBox(
+                          width: 56,
+                          child: TextField(
+                            controller: maxCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(isDense: true),
+                          ),
+                        ),
+                        const Text(' opciones', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 10),
                 const Text(
                   'Opciones',
                   style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -171,6 +212,10 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
       'name': name.text.trim(),
       'isActive': active,
       'order': group?.order ?? widget.menu.groups.length,
+      'seleccionModo': modo,
+      'seleccionMax': modo == 'fijo'
+          ? (int.tryParse(maxCtrl.text) ?? 1).clamp(1, 30)
+          : null,
       'items': [
         for (final i in items)
           if (i.name.trim().isNotEmpty)
@@ -295,4 +340,52 @@ class _ItemRow {
   _ItemRow({required this.name, required this.price});
   String name;
   String price;
+}
+
+class _OpcionLimite extends StatelessWidget {
+  const _OpcionLimite({
+    required this.activo,
+    required this.titulo,
+    required this.detalle,
+    required this.onTap,
+  });
+  final bool activo;
+  final String titulo;
+  final String detalle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.primary;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          border: Border.all(color: activo ? color : const Color(0xFFE2E8F0), width: activo ? 1.5 : 1),
+          borderRadius: BorderRadius.circular(10),
+          color: activo ? color.withValues(alpha: 0.06) : null,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(activo ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                size: 18, color: activo ? color : const Color(0xFF94A3B8)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titulo, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: activo ? color : null)),
+                  Text(detalle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

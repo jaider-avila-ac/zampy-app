@@ -9,16 +9,19 @@ import 'opciones_producto.dart';
 // Equivalente a src/modules/menu/public/edicion/producto/FormOpciones.jsx en React.
 
 class _Fila {
-  _Fila({this.id, String label = '', String precio = ''})
+  _Fila({this.id, String label = '', String precio = '', String cantidad = ''})
       : label = TextEditingController(text: label),
-        precio = TextEditingController(text: precio);
+        precio = TextEditingController(text: precio),
+        cantidad = TextEditingController(text: cantidad);
   final String? id;
   final TextEditingController label;
   final TextEditingController precio;
+  final TextEditingController cantidad;
 
   void dispose() {
     label.dispose();
     precio.dispose();
+    cantidad.dispose();
   }
 }
 
@@ -50,7 +53,7 @@ class _FormOpcionesState extends State<FormOpciones> with GuardarSeccion {
   List<_Fila> _inicial() {
     final p = widget.producto;
     return switch (widget.tipo) {
-      'tamanos' => [for (final s in p.sizes) _Fila(id: s.id, label: s.label, precio: _precioTexto(s.price))],
+      'tamanos' => [for (final s in p.sizes) _Fila(id: s.id, label: s.label, precio: _precioTexto(s.price), cantidad: s.cantidad?.toString() ?? '')],
       'ingredientes' => [for (final m in p.ingredients) _Fila(id: m.id, label: m.label, precio: _precioTexto(m.price))],
       _ => [for (final m in p.extras) _Fila(id: m.id, label: m.label, precio: _precioTexto(m.price))],
     };
@@ -72,6 +75,8 @@ class _FormOpcionesState extends State<FormOpciones> with GuardarSeccion {
                 if (f.id != null && f.id!.isNotEmpty) 'id': f.id,
                 'label': f.label.text.trim(),
                 'price': _opcion.conPrecio ? (double.tryParse(f.precio.text) ?? 0) : 0,
+                if (_opcion.conCantidad)
+                  'cantidad': (int.tryParse(f.cantidad.text) ?? 0) > 0 ? int.parse(f.cantidad.text) : null,
               },
         ]),
         onListo: widget.onListo,
@@ -98,6 +103,17 @@ class _FormOpcionesState extends State<FormOpciones> with GuardarSeccion {
                       etiqueta: 'Precio',
                       controller: _filas[i].precio,
                       teclado: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                  ),
+                ],
+                if (_opcion.conCantidad) ...[
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 72,
+                    child: CampoTexto(
+                      etiqueta: 'Cant.',
+                      controller: _filas[i].cantidad,
+                      teclado: TextInputType.number,
                     ),
                   ),
                 ],

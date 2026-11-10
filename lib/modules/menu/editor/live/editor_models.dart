@@ -184,6 +184,8 @@ class LiveGroup {
   bool isActive;
   int order;
   List<Map<String, dynamic>> items;
+  String seleccionModo; // 'ninguno' | 'fijo' | 'segun_tamano'
+  int? seleccionMax;
 
   LiveGroup({
     required this.codigo,
@@ -191,6 +193,8 @@ class LiveGroup {
     this.isActive = true,
     this.order = 0,
     List<Map<String, dynamic>>? items,
+    this.seleccionModo = 'ninguno',
+    this.seleccionMax,
   }) : items = items ?? [];
 
   factory LiveGroup.fromJson(Map<String, dynamic> j) => LiveGroup(
@@ -202,6 +206,10 @@ class LiveGroup {
         .whereType<Map>()
         .map((e) => Map<String, dynamic>.from(e))
         .toList(),
+    seleccionModo: j['seleccionModo'] == 'fijo'
+        ? 'fijo'
+        : (j['seleccionModo'] == 'segun_tamano' ? 'segun_tamano' : 'ninguno'),
+    seleccionMax: (j['seleccionMax'] as num?)?.toInt(),
   );
 
   Map<String, dynamic> toBody() => {
@@ -209,6 +217,10 @@ class LiveGroup {
     'isActive': isActive,
     'order': order,
     'items': items,
+    'seleccionModo': seleccionModo,
+    'seleccionMax': seleccionModo == 'fijo'
+        ? ((seleccionMax != null && seleccionMax! >= 1) ? seleccionMax : 1)
+        : null,
   };
 }
 

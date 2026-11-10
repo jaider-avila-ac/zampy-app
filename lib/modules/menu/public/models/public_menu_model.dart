@@ -286,8 +286,10 @@ class ProductSize {
   final String id;
   final String label;
   final double price;
+  // Número del tamaño (ej. "4 ingredientes" → 4), para grupos con límite "según el tamaño". Null = sin tope.
+  final int? cantidad;
 
-  const ProductSize({required this.id, required this.label, this.price = 0});
+  const ProductSize({required this.id, required this.label, this.price = 0, this.cantidad});
 
   factory ProductSize.fromJson(Map<String, dynamic> json) {
     final label = json['label'] as String? ?? json['name'] as String? ?? '';
@@ -295,6 +297,7 @@ class ProductSize {
       id: (json['id'] ?? label).toString(),
       label: label,
       price: (json['price'] as num?)?.toDouble() ?? 0,
+      cantidad: (json['cantidad'] as num?)?.toInt(),
     );
   }
 }
@@ -358,12 +361,17 @@ class MenuGrupo {
   final String name;
   final bool isActive;
   final List<MenuGrupoItem> items;
+  // Límite de selección: 'ninguno' | 'fijo' | 'segun_tamano'.
+  final String seleccionModo;
+  final int? seleccionMax;
 
   const MenuGrupo({
     required this.id,
     required this.name,
     this.isActive = true,
     this.items = const [],
+    this.seleccionModo = 'ninguno',
+    this.seleccionMax,
   });
 
   List<String> get itemNames => items.map((item) => item.name).toList();
@@ -380,6 +388,10 @@ class MenuGrupo {
       name: json['name'] as String? ?? '',
       isActive: json['isActive'] as bool? ?? true,
       items: parsedItems,
+      seleccionModo: json['seleccionModo'] == 'fijo'
+          ? 'fijo'
+          : (json['seleccionModo'] == 'segun_tamano' ? 'segun_tamano' : 'ninguno'),
+      seleccionMax: (json['seleccionMax'] as num?)?.toInt(),
     );
   }
 }
