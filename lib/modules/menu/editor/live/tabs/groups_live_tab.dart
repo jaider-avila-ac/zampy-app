@@ -42,6 +42,7 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
   Future<void> _openForm([LiveGroup? group]) async {
     final name = TextEditingController(text: group?.name ?? '');
     var active = group?.isActive ?? true;
+    var informativo = group?.informativo ?? false;
     var modo = group?.seleccionModo ?? 'ninguno';
     final maxCtrl = TextEditingController(text: (group?.seleccionMax ?? 2).toString());
     final items = [
@@ -86,27 +87,39 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
                   value: active,
                   onChanged: (v) => setModal(() => active = v),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Límite de selección',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                const Text(
-                  'Cuántas opciones puede elegir el cliente.',
-                  style: TextStyle(fontSize: 11, color: AppColors.kTextMuted),
-                ),
-                for (final o in const [
-                  ['ninguno', 'Sin límite', 'Elige las que quiera.'],
-                  ['fijo', 'Número fijo', 'Elige hasta N opciones.'],
-                  ['segun_cantidad', 'Según la cantidad', 'El número lo da la opción de "Cantidad" elegida en el producto.'],
-                ])
-                  _OpcionLimite(
-                    activo: modo == o[0],
-                    titulo: o[1],
-                    detalle: o[2],
-                    onTap: () => setModal(() => modo = o[0]),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Solo informativo', style: TextStyle(fontSize: 13)),
+                  subtitle: const Text(
+                    'Sus elementos solo se muestran. El cliente no los selecciona ni cambian el precio.',
+                    style: TextStyle(fontSize: 11, color: AppColors.kTextMuted),
                   ),
-                if (modo == 'fijo')
+                  value: informativo,
+                  onChanged: (v) => setModal(() => informativo = v),
+                ),
+                if (!informativo) ...[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Límite de selección',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  const Text(
+                    'Cuántas opciones puede elegir el cliente.',
+                    style: TextStyle(fontSize: 11, color: AppColors.kTextMuted),
+                  ),
+                  for (final o in const [
+                    ['ninguno', 'Sin límite', 'Elige las que quiera.'],
+                    ['fijo', 'Número fijo', 'Elige hasta N opciones.'],
+                    ['segun_cantidad', 'Según la cantidad', 'El número lo da la opción de "Cantidad" elegida en el producto.'],
+                  ])
+                    _OpcionLimite(
+                      activo: modo == o[0],
+                      titulo: o[1],
+                      detalle: o[2],
+                      onTap: () => setModal(() => modo = o[0]),
+                    ),
+                ],
+                if (!informativo && modo == 'fijo')
                   Padding(
                     padding: const EdgeInsets.only(left: 24, top: 4, bottom: 4),
                     child: Row(
@@ -212,8 +225,9 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
       'name': name.text.trim(),
       'isActive': active,
       'order': group?.order ?? widget.menu.groups.length,
-      'seleccionModo': modo,
-      'seleccionMax': modo == 'fijo'
+      'informativo': informativo,
+      'seleccionModo': informativo ? 'ninguno' : modo,
+      'seleccionMax': (!informativo && modo == 'fijo')
           ? (int.tryParse(maxCtrl.text) ?? 1).clamp(1, 30)
           : null,
       'items': [
@@ -315,7 +329,7 @@ class _GroupsLiveTabState extends State<GroupsLiveTab> {
                           ),
                         ),
                         subtitle: Text(
-                          '${g.items.length} opciones · ${g.isActive ? 'Activo' : 'Inactivo'}',
+                          '${g.items.length} opciones · ${g.isActive ? 'Activo' : 'Inactivo'}${g.informativo ? ' · Informativo' : ''}',
                           style: const TextStyle(fontSize: 10),
                         ),
                         trailing: IconButton(

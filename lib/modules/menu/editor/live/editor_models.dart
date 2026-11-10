@@ -190,8 +190,9 @@ class LiveGroup {
   bool isActive;
   int order;
   List<Map<String, dynamic>> items;
-  String seleccionModo; // 'ninguno' | 'fijo' | 'segun_tamano'
+  String seleccionModo; // 'ninguno' | 'fijo' | 'segun_cantidad'
   int? seleccionMax;
+  bool informativo; // solo muestra sus elementos, no se seleccionan ni suman precio
 
   LiveGroup({
     required this.codigo,
@@ -201,6 +202,7 @@ class LiveGroup {
     List<Map<String, dynamic>>? items,
     this.seleccionModo = 'ninguno',
     this.seleccionMax,
+    this.informativo = false,
   }) : items = items ?? [];
 
   factory LiveGroup.fromJson(Map<String, dynamic> j) => LiveGroup(
@@ -216,6 +218,7 @@ class LiveGroup {
         ? 'fijo'
         : (j['seleccionModo'] == 'segun_cantidad' ? 'segun_cantidad' : 'ninguno'),
     seleccionMax: (j['seleccionMax'] as num?)?.toInt(),
+    informativo: j['informativo'] as bool? ?? false,
   );
 
   Map<String, dynamic> toBody() => {
@@ -223,8 +226,9 @@ class LiveGroup {
     'isActive': isActive,
     'order': order,
     'items': items,
-    'seleccionModo': seleccionModo,
-    'seleccionMax': seleccionModo == 'fijo'
+    'informativo': informativo,
+    'seleccionModo': informativo ? 'ninguno' : seleccionModo,
+    'seleccionMax': (!informativo && seleccionModo == 'fijo')
         ? ((seleccionMax != null && seleccionMax! >= 1) ? seleccionMax : 1)
         : null,
   };

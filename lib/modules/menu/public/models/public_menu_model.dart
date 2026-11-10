@@ -361,9 +361,11 @@ class MenuGrupo {
   final String name;
   final bool isActive;
   final List<MenuGrupoItem> items;
-  // Límite de selección: 'ninguno' | 'fijo' | 'segun_tamano'.
+  // Límite de selección: 'ninguno' | 'fijo' | 'segun_cantidad'.
   final String seleccionModo;
   final int? seleccionMax;
+  // Informativo: sus elementos solo se muestran, no se seleccionan ni suman precio.
+  final bool informativo;
 
   const MenuGrupo({
     required this.id,
@@ -372,6 +374,7 @@ class MenuGrupo {
     this.items = const [],
     this.seleccionModo = 'ninguno',
     this.seleccionMax,
+    this.informativo = false,
   });
 
   List<String> get itemNames => items.map((item) => item.name).toList();
@@ -392,6 +395,7 @@ class MenuGrupo {
           ? 'fijo'
           : (json['seleccionModo'] == 'segun_cantidad' ? 'segun_cantidad' : 'ninguno'),
       seleccionMax: (json['seleccionMax'] as num?)?.toInt(),
+      informativo: json['informativo'] as bool? ?? false,
     );
   }
 }

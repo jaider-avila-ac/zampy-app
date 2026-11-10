@@ -888,6 +888,51 @@ class _ProductModalState extends State<ProductModal> {
                       const SizedBox(height: 12),
                       ...visibleGrupos.map((g) {
                         if (g.items.isEmpty) return const SizedBox.shrink();
+                        // Grupo informativo: solo se muestran sus elementos, no se seleccionan ni suman precio.
+                        if (g.informativo) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  g.name.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1,
+                                    color: t.textMuted,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: g.items.map((item) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: t.surfaceAlt,
+                                        borderRadius: BorderRadius.circular(99),
+                                        border: Border.all(color: t.border),
+                                      ),
+                                      child: Text(
+                                        item.name,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: t.textMuted,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
                         final tope = _topeGrupo(g);
                         final elegidos = _selGrupos[g.id]?.length ?? 0;
                         final quedan =
